@@ -20,6 +20,7 @@ interface RowInfo {
 type Phase = 'idle' | 'initializing' | 'ready' | 'error';
 
 export default function DiagnosticsPage() {
+  const [mounted, setMounted] = useState(false);
   const [phase, setPhase] = useState<Phase>('idle');
   const [error, setError] = useState<string | null>(null);
   const [rows, setRows] = useState<RowInfo[]>([]);
@@ -45,9 +46,21 @@ export default function DiagnosticsPage() {
   };
 
   useEffect(() => {
+    setMounted(true);
     void bootstrap();
     // Runs once on mount; explicit re-seed is user-triggered.
   }, []);
+
+  if (!mounted) {
+    return (
+      <main className="mx-auto flex min-h-screen max-w-2xl flex-col items-center justify-center p-8 font-sans">
+        <div className="flex items-center gap-2 text-neutral-600">
+          <Loader2 className="h-5 w-5 animate-spin" aria-hidden />
+          <span>Initializing MedRecord workspace…</span>
+        </div>
+      </main>
+    );
+  }
 
   if (!('indexedDB' in globalThis)) {
     return (

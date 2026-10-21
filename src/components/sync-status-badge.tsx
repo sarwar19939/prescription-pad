@@ -18,9 +18,13 @@ function usePendingCount() {
   return useLiveQuery(
     async () => {
       const counts = await Promise.all(
-        TABLE_NAMES.map((t) =>
-          db[t].where('sync_status').equals('pending').count(),
-        ),
+        TABLE_NAMES.map(async (t) => {
+          try {
+            return await db[t].where('sync_status').equals('pending').count();
+          } catch {
+            return 0;
+          }
+        }),
       );
       return counts.reduce((a, b) => a + b, 0);
     },

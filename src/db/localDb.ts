@@ -22,6 +22,11 @@ const SCHEMA_V1: { [K in keyof DbSchema]: string } = {
   medicine_catalog: 'id, tenant_id, brand_name, generic_name, sync_status',
 };
 
+const SCHEMA_V2: { [K in keyof DbSchema]: string } = {
+  ...SCHEMA_V1,
+  tenants: 'id, tenant_id, phone, sync_status',
+};
+
 export class ClinicLocalDB extends Dexie {
   tenants!: EntityTable<DbSchema['tenants'], 'id'>;
   patients!: EntityTable<DbSchema['patients'], 'id'>;
@@ -33,6 +38,7 @@ export class ClinicLocalDB extends Dexie {
   constructor(dbName: string = LOCAL_DB_NAME) {
     super(dbName);
     this.version(1).stores(SCHEMA_V1);
+    this.version(2).stores(SCHEMA_V2);
   }
 }
 
@@ -40,4 +46,4 @@ export class ClinicLocalDB extends Dexie {
 export const db = new ClinicLocalDB();
 
 /** All 6 table names, for generic iteration (sync engine, stats, wipe). */
-export const TABLE_NAMES = Object.keys(SCHEMA_V1) as Array<keyof DbSchema>;
+export const TABLE_NAMES = Object.keys(SCHEMA_V2) as Array<keyof DbSchema>;
