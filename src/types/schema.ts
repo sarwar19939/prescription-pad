@@ -58,6 +58,7 @@ export interface Tenant extends BaseRecord {
   reg_number?: string;
   ai_provider?: 'cloud' | 'local';
   ai_api_key?: string;
+  nvidia_api_key?: string;
   ollama_base_url?: string;
 }
 

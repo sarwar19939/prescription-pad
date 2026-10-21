@@ -105,6 +105,8 @@ export async function analyzeLabReport(
     provider?: AIProvider;
     mimeType?: string;
     ollamaBaseUrl?: string;
+    geminiApiKey?: string;
+    nvidiaApiKey?: string;
   },
 ): Promise<LabAnalysisResult> {
   const provider = options?.provider ?? (navigator.onLine ? 'cloud' : 'local');
@@ -121,6 +123,8 @@ export async function analyzeLabReport(
       payload: {
         content: imageBase64OrText,
         mimeType: options?.mimeType || 'text/plain',
+        geminiApiKey: options?.geminiApiKey,
+        nvidiaApiKey: options?.nvidiaApiKey,
       },
     }),
   });
@@ -146,6 +150,8 @@ export async function suggestClinicalTrack(
   options?: {
     provider?: AIProvider;
     ollamaBaseUrl?: string;
+    geminiApiKey?: string;
+    nvidiaApiKey?: string;
   },
 ): Promise<ClinicalTrackResult> {
   const anonymized = sanitizePatientContext(
@@ -167,7 +173,11 @@ export async function suggestClinicalTrack(
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({
       action: 'suggest_track',
-      payload: anonymized,
+      payload: {
+        ...anonymized,
+        geminiApiKey: options?.geminiApiKey,
+        nvidiaApiKey: options?.nvidiaApiKey,
+      },
     }),
   });
 

@@ -168,19 +168,35 @@ export default function SettingsPage() {
           </div>
 
           {(tenant.ai_provider || 'cloud') === 'cloud' ? (
-            <label className="grid gap-1 text-xs text-neutral-600">
-              Custom Gemini API Key (optional override)
-              <input
-                type="password"
-                placeholder="AIzaSy... (leave blank to use server environment variable)"
-                className="rounded-md border border-neutral-300 px-2 py-1.5 text-sm outline-none focus:border-emerald-600 max-w-md font-mono"
-                value={tenant.ai_api_key || ''}
-                onChange={(e) => patch({ ai_api_key: e.target.value })}
-              />
-              <span className="text-[11px] text-neutral-400">
-                If blank, system uses server-configured GEMINI_API_KEY. PII is always stripped.
-              </span>
-            </label>
+            <div className="space-y-3">
+              <label className="grid gap-1 text-xs text-neutral-600">
+                <span className="font-semibold text-slate-800">Primary AI: Google Gemini API Key</span>
+                <input
+                  type="password"
+                  placeholder="AQ.Ab8... (or configured in server .env.local)"
+                  className="rounded-md border border-neutral-300 px-2 py-1.5 text-sm outline-none focus:border-teal-600 max-w-md font-mono"
+                  value={tenant.ai_api_key || ''}
+                  onChange={(e) => patch({ ai_api_key: e.target.value })}
+                />
+                <span className="text-[11px] text-neutral-400">
+                  Primary clinical intelligence engine. PII is always stripped client-side.
+                </span>
+              </label>
+
+              <label className="grid gap-1 text-xs text-neutral-600">
+                <span className="font-semibold text-slate-800">High-Performance Fallback: NVIDIA NIM API Key</span>
+                <input
+                  type="password"
+                  placeholder="nvapi-... (or configured in server .env.local)"
+                  className="rounded-md border border-neutral-300 px-2 py-1.5 text-sm outline-none focus:border-teal-600 max-w-md font-mono"
+                  value={tenant.nvidia_api_key || ''}
+                  onChange={(e) => patch({ nvidia_api_key: e.target.value })}
+                />
+                <span className="text-[11px] text-neutral-400">
+                  Automatic resilient failover powered by NVIDIA Nemotron 30B / 120B reasoning models.
+                </span>
+              </label>
+            </div>
           ) : (
             <label className="grid gap-1 text-xs text-neutral-600">
               Local Ollama Base URL
