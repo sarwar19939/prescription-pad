@@ -13,7 +13,7 @@ import type { MedicineCatalog } from '@/types/schema';
 
 export function useMedicineSearch(query: string) {
   return useLiveQuery(
-    () => searchMedicinesRanked(query, 12),
+    () => searchMedicinesRanked(query, 18),
     [query],
     [],
   );
@@ -84,7 +84,19 @@ export function MedicineSearch({ value, onChange, onPick, placeholder, autoFocus
                   </span>
                 </div>
                 <div className="flex items-center gap-2 shrink-0 ml-3">
-                  <span className="rounded-md bg-slate-100 border border-slate-200 px-2 py-0.5 text-xs font-semibold text-slate-700">
+                  <span
+                    className={`rounded-md border px-2 py-0.5 text-xs font-bold ${
+                      m.dosage_form === 'Cap'
+                        ? 'bg-amber-50 border-amber-300 text-amber-900'
+                        : m.dosage_form === 'Tab'
+                          ? 'bg-sky-50 border-sky-300 text-sky-900'
+                          : m.dosage_form === 'Syr'
+                            ? 'bg-emerald-50 border-emerald-300 text-emerald-900'
+                            : m.dosage_form === 'Inj'
+                              ? 'bg-rose-50 border-rose-300 text-rose-900'
+                              : 'bg-slate-100 border-slate-200 text-slate-700'
+                    }`}
+                  >
                     {m.dosage_form}
                   </span>
                   <span className="truncate max-w-[140px] text-xs text-slate-400 font-medium hidden sm:inline">

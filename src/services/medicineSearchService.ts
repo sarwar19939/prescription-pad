@@ -134,7 +134,7 @@ export function scoreMedicine(
  */
 export async function searchMedicinesRanked(
   query: string,
-  limit = 12,
+  limit = 20,
 ): Promise<MedicineCatalog[]> {
   const clean = query.trim().toLowerCase();
   if (!clean) return [];
@@ -148,7 +148,7 @@ export async function searchMedicinesRanked(
   const prefixCandidates = await db.medicine_catalog
     .where('brand_name')
     .startsWithIgnoreCase(firstToken)
-    .limit(60)
+    .limit(100)
     .toArray();
 
   let candidatePool = prefixCandidates;
@@ -200,7 +200,9 @@ export async function searchMedicinesRanked(
   // 4. Sort strictly by descending relevance score, then alphabetically
   scored.sort((a, b) => {
     if (b.score !== a.score) return b.score - a.score;
-    return a.medicine.brand_name.localeCompare(b.medicine.brand_name);
+    const nameCmp = a.medicine.brand_name.localeCompare(b.medicine.brand_name);
+    if (nameCmp !== 0) return nameCmp;
+    return a.medicine.dosage_form.localeCompare(b.medicine.dosage_form);
   });
 
   return scored.slice(0, limit).map((s) => s.medicine);

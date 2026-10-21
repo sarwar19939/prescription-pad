@@ -7,6 +7,7 @@
  */
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
+import { useEffect, type ReactNode } from 'react';
 import { useLiveQuery } from 'dexie-react-hooks';
 import {
   ClipboardPlus,
@@ -18,11 +19,11 @@ import {
   Stethoscope,
   Users,
 } from 'lucide-react';
-import type { ReactNode } from 'react';
 
 import { SyncStatusBadge } from '@/components/sync-status-badge';
 import { db } from '@/db/localDb';
 import { getCachedSession, getCurrentTenantId, logoutDoctor } from '@/services/auth';
+import { ensureMedexSeeded } from '@/services/medexService';
 import { cn } from '@/lib/utils';
 
 const NAV_ITEMS = [
@@ -160,6 +161,12 @@ export function DashboardSidebar() {
 }
 
 export function DashboardHeader() {
+  const tenantId = getCurrentTenantId();
+
+  useEffect(() => {
+    void ensureMedexSeeded(tenantId);
+  }, [tenantId]);
+
   return (
     <header className="sticky top-0 z-40 flex h-16 items-center justify-between border-b border-slate-200/80 bg-white/95 px-8 backdrop-blur-md">
       <div className="flex items-center gap-2">

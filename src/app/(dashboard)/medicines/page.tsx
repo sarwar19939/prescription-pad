@@ -63,11 +63,11 @@ export default function MedicinesPage() {
 
   const handleImportMedex = async () => {
     setImporting(true);
-    setProgress({ imported: 0, total: 21382, percent: 0 });
+    setProgress({ imported: 0, total: 23656, percent: 0 });
     try {
       await importMedexIntoDexie(tenantId, (imported, total, percent) => {
         setProgress({ imported, total, percent });
-      });
+      }, true);
     } catch (err) {
       alert(`Import error: ${err instanceof Error ? err.message : String(err)}`);
     } finally {
@@ -92,29 +92,29 @@ export default function MedicinesPage() {
         </div>
 
         <div className="flex items-center gap-3">
-          {totalCount < 1000 && (
-            <Button
-              onClick={handleImportMedex}
-              disabled={importing}
-              className="h-11 px-5 rounded-xl font-semibold text-sm bg-teal-600 hover:bg-teal-700 text-white shadow-xs"
-            >
-              {importing ? (
-                <Loader2 className="h-4 w-4 animate-spin mr-2" />
-              ) : (
-                <DownloadCloud className="h-4 w-4 mr-2" />
-              )}
-              {importing && progress
-                ? `Importing ${progress.percent}% (${progress.imported.toLocaleString()}/${progress.total.toLocaleString()})`
-                : 'Import 21,000+ MedEx BD Database'}
-            </Button>
-          )}
-
           {totalCount >= 1000 && (
-            <Badge variant="outline" className="border-teal-300 bg-teal-50 text-teal-800 py-1.5 px-3 text-sm font-semibold gap-1.5 rounded-xl">
+            <Badge variant="outline" className="border-teal-300 bg-teal-50 text-teal-800 py-1.5 px-3 text-sm font-semibold gap-1.5 rounded-xl hidden sm:inline-flex">
               <CheckCircle2 className="h-4 w-4 text-teal-600" />
-              MedEx Database Loaded ({totalCount.toLocaleString()} items)
+              MedEx Database ({totalCount.toLocaleString()} items)
             </Badge>
           )}
+
+          <Button
+            onClick={handleImportMedex}
+            disabled={importing}
+            className="h-11 px-5 rounded-xl font-semibold text-sm bg-teal-600 hover:bg-teal-700 text-white shadow-xs"
+          >
+            {importing ? (
+              <Loader2 className="h-4 w-4 animate-spin mr-2" />
+            ) : (
+              <DownloadCloud className="h-4 w-4 mr-2" />
+            )}
+            {importing && progress
+              ? `Syncing ${progress.percent}% (${progress.imported.toLocaleString()}/${progress.total.toLocaleString()})`
+              : totalCount < 1000
+                ? 'Import 23,600+ MedEx BD Catalog'
+                : 'Re-sync / Update MedEx (Cap + Tab)'}
+          </Button>
         </div>
       </div>
 
