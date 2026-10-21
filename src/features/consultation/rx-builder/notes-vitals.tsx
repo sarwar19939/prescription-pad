@@ -5,10 +5,13 @@
  * straight to Dexie (debounced for text, immediate for tag changes), each
  * marking the record sync_status: 'pending'.
  */
-import { useEffect, useRef } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
+import { AlertCircle, CheckCircle, Sparkles } from 'lucide-react';
 
 import { db } from '@/db/localDb';
 import { TagInput } from '@/components/tag-input';
+import { Badge } from '@/components/ui/badge';
+import { analyzeVitals } from '@/services/vitalsService';
 import type { Encounter, Vitals as VitalsT } from '@/types/schema';
 
 const COMPLAINT_SUGGESTIONS = [
@@ -24,38 +27,62 @@ const VITAL_FIELDS: Array<{ key: keyof VitalsT; label: string; unit: string; pla
   { key: 'spo2', label: 'SpO₂', unit: '%', placeholder: '98' },
 ];
 
-function useDebouncedWrite(encounter: Encounter, delay = 400) {
-  const timers = useRef(new Map<string, ReturnType<typeof setTimeout>>());
-  useEffect(() => {
-    const map = timers.current;
-    return () => {
-      for (const t of map.values()) clearTimeout(t);
-    };
-  }, []);
-  return (patch: Partial<Encounter>): void => {
-    for (const key of Object.keys(patch)) {
-      const prev = timers.current.get(key);
-      if (prev) clearTimeout(prev);
-      timers.current.set(
-        key,
-        setTimeout(() => {
-          void db.encounters.update(encounter.id, {
-            ...patch,
-            updated_at: new Date().toISOString(),
-            sync_status: 'pending',
-          });
-        }, delay),
-      );
-    }
-  };
-}
-
 export function NotesVitals({ encounter }: { encounter: Encounter }) {
-  const write = useDebouncedWrite(encounter);
-  const vital = encounter.vitals;
+  // Fluid 0ms local state prevents cursor freezing, character drops & stale race conditions
+  const [localVitals, setLocalVitals] = useState<VitalsT>({
+    bp: encounter.vitals?.bp || '',
+    pulse: encounter.vitals?.pulse || '',
+    temp: encounter.vitals?.temp || '',
+    weight: encounter.vitals?.weight || '',
+    spo2: encounter.vitals?.spo2 || '',
+  });
 
-  const setVital = (key: keyof VitalsT, value: string) =>
-    write({ vitals: { ...vital, [key]: value } });
+  const vitalsTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const encounterIdRef = useRef(encounter.id);
+
+  // Sync state if switching between encounters
+  useEffect(() => {
+    if (encounterIdRef.current !== encounter.id) {
+      encounterIdRef.current = encounter.id;
+      setLocalVitals({
+        bp: encounter.vitals?.bp || '',
+        pulse: encounter.vitals?.pulse || '',
+        temp: encounter.vitals?.temp || '',
+        weight: encounter.vitals?.weight || '',
+        spo2: encounter.vitals?.spo2 || '',
+      });
+    }
+  }, [encounter.id, encounter.vitals]);
+
+  const saveVitalsDebounced = (nextVitals: VitalsT) => {
+    if (vitalsTimer.current) clearTimeout(vitalsTimer.current);
+    vitalsTimer.current = setTimeout(() => {
+      void db.encounters.update(encounter.id, {
+        vitals: nextVitals,
+        updated_at: new Date().toISOString(),
+        sync_status: 'pending',
+      });
+    }, 350);
+  };
+
+  const setVital = (key: keyof VitalsT, val: string) => {
+    setLocalVitals((prev) => {
+      const next = { ...prev, [key]: val };
+      saveVitalsDebounced(next);
+      return next;
+    });
+  };
+
+  const writeEncounterField = (patch: Partial<Encounter>) => {
+    void db.encounters.update(encounter.id, {
+      ...patch,
+      updated_at: new Date().toISOString(),
+      sync_status: 'pending',
+    });
+  };
+
+  // AI & Clinical Rule Evaluation of Live Vitals
+  const vitalAnalysis = useMemo(() => analyzeVitals(localVitals), [localVitals]);
 
   const vitalCell =
     'h-11 w-full rounded-xl border border-slate-300 px-3 py-2 font-mono text-base font-bold text-slate-900 outline-none focus:border-teal-600 focus:ring-2 focus:ring-teal-500/30 transition-all placeholder:font-sans placeholder:font-normal placeholder:text-slate-400';
@@ -72,7 +99,7 @@ export function NotesVitals({ encounter }: { encounter: Encounter }) {
             <button
               key={s}
               type="button"
-              onClick={() => write({ chief_complaints: [...encounter.chief_complaints, s] })}
+              onClick={() => writeEncounterField({ chief_complaints: [...encounter.chief_complaints, s] })}
               className="rounded-full border border-slate-200 bg-white px-3 py-1 text-xs font-semibold text-slate-700 shadow-xs hover:border-teal-600 hover:bg-teal-50/50 hover:text-teal-700 transition-all"
             >
               + {s}
@@ -84,15 +111,23 @@ export function NotesVitals({ encounter }: { encounter: Encounter }) {
         </div>
         <TagInput
           value={encounter.chief_complaints}
-          onChange={(tags) => write({ chief_complaints: tags })}
+          onChange={(tags) => writeEncounterField({ chief_complaints: tags })}
           placeholder="Free-text complaint + Enter…"
         />
       </div>
 
       <div>
-        <span className="mb-2 block text-xs font-bold uppercase tracking-wider text-slate-600">
-          Vitals (Monitored Metrics)
-        </span>
+        <div className="flex items-center justify-between mb-2">
+          <span className="text-xs font-bold uppercase tracking-wider text-slate-600">
+            Vitals &amp; Patient Metrics
+          </span>
+          {vitalAnalysis.alerts.length > 0 && (
+            <span className="flex items-center gap-1.5 text-xs font-semibold text-teal-800 bg-teal-50 border border-teal-200 px-2.5 py-0.5 rounded-full">
+              <Sparkles className="h-3.5 w-3.5 text-teal-600" /> AI Insights Active
+            </span>
+          )}
+        </div>
+
         <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-3">
           {VITAL_FIELDS.map((f) => (
             <label key={f.key} className="grid gap-1.5 text-xs font-semibold text-slate-600">
@@ -103,12 +138,40 @@ export function NotesVitals({ encounter }: { encounter: Encounter }) {
               <input
                 className={vitalCell}
                 placeholder={f.placeholder}
-                value={vital[f.key]}
+                value={localVitals[f.key]}
                 onChange={(e) => setVital(f.key, e.target.value)}
               />
             </label>
           ))}
         </div>
+
+        {/* AI Clinical Vitals Interpretation Banner */}
+        {vitalAnalysis.alerts.length > 0 && (
+          <div className="mt-3 flex flex-wrap items-center gap-2 rounded-xl border border-teal-200/90 bg-teal-50/60 p-3 shadow-2xs">
+            <span className="text-xs font-bold text-teal-900 flex items-center gap-1.5">
+              <Sparkles className="h-4 w-4 text-teal-600 shrink-0" />
+              AI Live Assessment:
+            </span>
+            <div className="flex flex-wrap gap-1.5">
+              {vitalAnalysis.alerts.map((a, i) => (
+                <Badge
+                  key={i}
+                  className={`text-xs font-semibold px-2.5 py-0.5 rounded-lg border ${
+                    a.severity === 'rose'
+                      ? 'bg-rose-50 text-rose-700 border-rose-200'
+                      : 'bg-amber-50 text-amber-700 border-amber-200'
+                  }`}
+                  title={a.detail}
+                >
+                  {a.badge}
+                </Badge>
+              ))}
+            </div>
+            <span className="text-xs text-slate-500 font-medium ml-auto hidden md:inline">
+              Adjusts prescription doses in real-time
+            </span>
+          </div>
+        )}
       </div>
 
       <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
@@ -120,7 +183,7 @@ export function NotesVitals({ encounter }: { encounter: Encounter }) {
             className="min-h-[96px] w-full rounded-xl border border-slate-300 p-3.5 text-base text-slate-800 outline-none focus:border-teal-600 focus:ring-2 focus:ring-teal-500/30 leading-relaxed transition-all placeholder:text-slate-400"
             placeholder="Chest clear, no added sounds, abdominal soft…"
             defaultValue={encounter.clinical_findings}
-            onChange={(e) => write({ clinical_findings: e.target.value })}
+            onChange={(e) => writeEncounterField({ clinical_findings: e.target.value })}
           />
         </div>
         <div>
@@ -129,7 +192,7 @@ export function NotesVitals({ encounter }: { encounter: Encounter }) {
           </span>
           <TagInput
             value={encounter.diagnosis}
-            onChange={(tags) => write({ diagnosis: tags })}
+            onChange={(tags) => writeEncounterField({ diagnosis: tags })}
             placeholder="e.g. Acute Bronchitis + Enter"
           />
         </div>

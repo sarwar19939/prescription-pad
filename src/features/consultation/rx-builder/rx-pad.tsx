@@ -9,6 +9,7 @@ import { useLiveQuery } from 'dexie-react-hooks';
 import { Loader2, Plus, Sparkles, Trash2 } from 'lucide-react';
 
 import { db } from '@/db/localDb';
+import { calculateSmartDose } from '@/services/dosingEngine';
 import { MedicineSearch } from './medicine-search';
 import { RxRow } from './rx-row';
 import { AnimatedList, AnimatedListItem } from '@/components/ui/motion';
@@ -16,6 +17,12 @@ import type { MedicineCatalog, Patient, PrescriptionItem } from '@/types/schema'
 
 export function RxPad({ patient, encounterId }: { patient: Patient; encounterId: string }) {
   const [search, setSearch] = useState('');
+
+  const encounter = useLiveQuery(
+    () => db.encounters.get(encounterId),
+    [encounterId],
+  );
+
   const items = useLiveQuery(
     async () => {
       const rows = await db.prescription_items
@@ -29,23 +36,36 @@ export function RxPad({ patient, encounterId }: { patient: Patient; encounterId:
 
   const addItem = async (med: MedicineCatalog | { freeText: true }) => {
     const ts = new Date().toISOString();
+    const brand = 'freeText' in med ? (search.trim() || 'New Medicine') : med.brand_name;
+    const generic = 'freeText' in med ? '' : med.generic_name;
+    const form = 'freeText' in med ? 'Tab' : med.dosage_form;
+    const str = 'freeText' in med ? '' : med.strength;
+
+    // AI & Clinical Rule Auto-Dosing based on patient age, weight & live vitals
+    const smart = calculateSmartDose(
+      { brand_name: brand, generic_name: generic, dosage_form: form, strength: str },
+      patient,
+      encounter?.vitals,
+    );
+
     const row: PrescriptionItem = {
       id: crypto.randomUUID(),
       tenant_id: patient.tenant_id,
       encounter_id: encounterId,
       patient_id: patient.id,
-      brand_name: 'freeText' in med ? (search.trim() || 'New Medicine') : med.brand_name,
-      generic_name: 'freeText' in med ? '' : med.generic_name,
-      dosage_form: 'freeText' in med ? 'Tab' : med.dosage_form,
-      strength: 'freeText' in med ? '' : med.strength,
-      schedule: '1+0+1',
-      meal_timing: 'After Meal',
-      duration: '7 Days',
-      special_instructions: '',
+      brand_name: brand,
+      generic_name: generic,
+      dosage_form: smart.hasAdjustment && smart.dosage_form ? smart.dosage_form : form,
+      strength: smart.hasAdjustment && smart.strength ? smart.strength : str,
+      schedule: smart.hasAdjustment && smart.schedule ? smart.schedule : '1+0+1',
+      meal_timing: smart.hasAdjustment && smart.meal_timing ? smart.meal_timing : 'After Meal',
+      duration: smart.hasAdjustment && smart.duration ? smart.duration : '7 Days',
+      special_instructions: smart.hasAdjustment && smart.special_instructions ? smart.special_instructions : '',
       created_at: ts,
       updated_at: ts,
       sync_status: 'pending',
     };
+
     await db.prescription_items.put(row);
     setSearch('');
   };
@@ -61,9 +81,17 @@ export function RxPad({ patient, encounterId }: { patient: Patient; encounterId:
           <span className="font-serif text-2xl font-bold text-teal-700">℞</span>
           <h3 className="text-base font-bold text-slate-900 tracking-tight">Prescription Pad</h3>
         </div>
-        <span className="rounded-full bg-slate-100 px-2.5 py-0.5 text-xs font-semibold text-slate-500 uppercase tracking-wider">
-          {items?.length || 0} {items?.length === 1 ? 'Medication' : 'Medications'}
-        </span>
+        <div className="flex items-center gap-2">
+          {encounter?.vitals && (encounter.vitals.bp || encounter.vitals.temp || encounter.vitals.weight) && (
+            <span className="hidden sm:inline-flex items-center gap-1 rounded-full bg-teal-50 border border-teal-200 px-2.5 py-0.5 text-xs font-semibold text-teal-800">
+              <Sparkles className="h-3.5 w-3.5 text-teal-600" />
+              Smart Auto-Dosing Active
+            </span>
+          )}
+          <span className="rounded-full bg-slate-100 px-2.5 py-0.5 text-xs font-semibold text-slate-500 uppercase tracking-wider">
+            {items?.length || 0} {items?.length === 1 ? 'Medication' : 'Medications'}
+          </span>
+        </div>
       </div>
 
       <MedicineSearch
@@ -91,7 +119,13 @@ export function RxPad({ patient, encounterId }: { patient: Patient; encounterId:
       <AnimatedList className="flex flex-col gap-3">
         {(items ?? []).map((item, i) => (
           <AnimatedListItem key={item.id}>
-            <RxRow item={item} patient={patient} index={i} onRemove={(id) => void removeItem(id)} />
+            <RxRow
+              item={item}
+              patient={patient}
+              vitals={encounter?.vitals}
+              index={i}
+              onRemove={(id) => void removeItem(id)}
+            />
           </AnimatedListItem>
         ))}
       </AnimatedList>
