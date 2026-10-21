@@ -10,6 +10,7 @@ import { Loader2, Plus, Sparkles, Trash2 } from 'lucide-react';
 
 import { db } from '@/db/localDb';
 import { calculateSmartDose } from '@/services/dosingEngine';
+import { getDrugGuideline } from '@/services/drugGuidelinesService';
 import { MedicineSearch } from './medicine-search';
 import { RxRow } from './rx-row';
 import { AnimatedList, AnimatedListItem } from '@/components/ui/motion';
@@ -48,6 +49,21 @@ export function RxPad({ patient, encounterId }: { patient: Patient; encounterId:
       encounter?.vitals,
     );
 
+    // Synchronize MedEx patient administration guidelines (when & how to take)
+    const guide = getDrugGuideline(brand || generic);
+
+    const initialSchedule = smart.hasAdjustment && smart.schedule
+      ? smart.schedule
+      : (guide?.standardSchedule || '1+0+1');
+
+    const initialMealTiming = smart.hasAdjustment && smart.meal_timing
+      ? smart.meal_timing
+      : (guide?.standardMealTiming || 'After Meal');
+
+    const initialInstructions = smart.hasAdjustment && smart.special_instructions
+      ? smart.special_instructions
+      : (guide ? `${guide.whenToTake}` : '');
+
     const row: PrescriptionItem = {
       id: crypto.randomUUID(),
       tenant_id: patient.tenant_id,
@@ -57,10 +73,10 @@ export function RxPad({ patient, encounterId }: { patient: Patient; encounterId:
       generic_name: generic,
       dosage_form: smart.hasAdjustment && smart.dosage_form ? smart.dosage_form : form,
       strength: smart.hasAdjustment && smart.strength ? smart.strength : str,
-      schedule: smart.hasAdjustment && smart.schedule ? smart.schedule : '1+0+1',
-      meal_timing: smart.hasAdjustment && smart.meal_timing ? smart.meal_timing : 'After Meal',
+      schedule: initialSchedule,
+      meal_timing: initialMealTiming,
       duration: smart.hasAdjustment && smart.duration ? smart.duration : '7 Days',
-      special_instructions: smart.hasAdjustment && smart.special_instructions ? smart.special_instructions : '',
+      special_instructions: initialInstructions,
       created_at: ts,
       updated_at: ts,
       sync_status: 'pending',

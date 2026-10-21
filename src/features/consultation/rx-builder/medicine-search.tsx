@@ -1,30 +1,19 @@
 'use client';
 
 /**
- * Medicine autocomplete: instant (0ms) filtering of the local Dexie
- * MedicineCatalog (21,000+ MedEx items) — brand, generic, strength, manufacturer.
+ * Medicine autocomplete: instant (0ms) ranked search of the local Dexie
+ * MedicineCatalog (21,000+ MedEx items) with word-by-word relevance scoring.
  */
 import { useState } from 'react';
 import { useLiveQuery } from 'dexie-react-hooks';
 import { Pill, Search } from 'lucide-react';
 
-import { db } from '@/db/localDb';
+import { searchMedicinesRanked } from '@/services/medicineSearchService';
 import type { MedicineCatalog } from '@/types/schema';
 
 export function useMedicineSearch(query: string) {
   return useLiveQuery(
-    async () => {
-      const q = query.trim().toLowerCase();
-      if (!q) return [];
-      return db.medicine_catalog
-        .filter(
-          (m) =>
-            m.brand_name.toLowerCase().includes(q) ||
-            m.generic_name.toLowerCase().includes(q),
-        )
-        .limit(10)
-        .toArray();
-    },
+    () => searchMedicinesRanked(query, 12),
     [query],
     [],
   );
@@ -46,11 +35,11 @@ export function MedicineSearch({ value, onChange, onPick, placeholder, autoFocus
 
   return (
     <div className="relative">
-      <div className="flex items-center gap-2 rounded-md border border-neutral-300 bg-white px-2 py-1.5 focus-within:border-emerald-600">
-        <Search className="h-4 w-4 shrink-0 text-neutral-400" aria-hidden />
+      <div className="flex items-center gap-3 rounded-xl border border-slate-300 bg-white px-3.5 py-2.5 shadow-2xs focus-within:border-teal-600 focus-within:ring-2 focus-within:ring-teal-500/30 transition-all">
+        <Search className="h-5 w-5 shrink-0 text-slate-400" aria-hidden />
         <input
-          className="w-full border-0 bg-transparent text-sm outline-none placeholder:text-neutral-400"
-          placeholder={placeholder ?? 'Search medicine (Napa, Seclo, Maxpro...) or type brand + Enter'}
+          className="w-full border-0 bg-transparent text-base md:text-sm font-medium outline-none placeholder:text-slate-400"
+          placeholder={placeholder ?? 'Search by brand (Napa, Seclo, Maxpro...) or generic (Paracetamol)...'}
           value={value}
           autoFocus={autoFocus}
           onChange={(e) => {
@@ -71,30 +60,36 @@ export function MedicineSearch({ value, onChange, onPick, placeholder, autoFocus
       {showResults && (
         <ul
           role="listbox"
-          className="absolute z-20 mt-1 max-h-64 w-full overflow-y-auto rounded-md border border-neutral-200 bg-white shadow-lg"
+          className="absolute z-40 mt-1.5 max-h-80 w-full overflow-y-auto rounded-xl border border-slate-200 bg-white p-1.5 shadow-xl divide-y divide-slate-100"
           onMouseDown={(e) => e.preventDefault()}
         >
           {results!.map((m) => (
             <li key={m.id}>
               <button
                 type="button"
-                className="flex w-full items-center justify-between px-3 py-2 text-left text-sm hover:bg-emerald-50"
+                className="flex w-full items-center justify-between px-3.5 py-2.5 text-left rounded-lg hover:bg-teal-50/70 transition-colors"
                 onClick={() => {
                   onPick(m);
                   setOpen(false);
                 }}
               >
-                <div className="flex items-center gap-2 truncate">
-                  <Pill className="h-3.5 w-3.5 shrink-0 text-emerald-700" aria-hidden />
-                  <span className="font-semibold text-neutral-900">{m.brand_name}</span>
-                  <span className="text-xs text-neutral-500 font-mono">{m.strength}</span>
-                  <span className="truncate text-xs text-neutral-400">
+                <div className="flex flex-wrap items-center gap-2 min-w-0">
+                  <Pill className="h-4 w-4 shrink-0 text-teal-700" aria-hidden />
+                  <span className="text-base font-bold text-slate-950">{m.brand_name}</span>
+                  <span className="text-sm font-mono font-bold text-teal-800 bg-teal-50 border border-teal-200 px-2 py-0.5 rounded-md">
+                    {m.strength}
+                  </span>
+                  <span className="truncate text-xs text-slate-500 font-medium">
                     ({m.generic_name})
                   </span>
                 </div>
-                <div className="flex items-center gap-1.5 shrink-0 text-[10px] text-neutral-400">
-                  <span className="rounded bg-neutral-100 px-1.5 py-0.5 text-neutral-600">{m.dosage_form}</span>
-                  <span className="truncate max-w-[120px]">{m.manufacturer}</span>
+                <div className="flex items-center gap-2 shrink-0 ml-3">
+                  <span className="rounded-md bg-slate-100 border border-slate-200 px-2 py-0.5 text-xs font-semibold text-slate-700">
+                    {m.dosage_form}
+                  </span>
+                  <span className="truncate max-w-[140px] text-xs text-slate-400 font-medium hidden sm:inline">
+                    {m.manufacturer}
+                  </span>
                 </div>
               </button>
             </li>

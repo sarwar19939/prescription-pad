@@ -3,17 +3,18 @@
 /**
  * One prescription line: medicine identity + editable schedule/timing/duration.
  * High-legibility clinical typography: text-lg medicine titles, spacious inputs,
- * and high-contrast allergy warning banners.
+ * MedEx patient instructions card, and high-contrast allergy warning banners.
  */
 import { useEffect, useRef, useState } from 'react';
 import { useLiveQuery } from 'dexie-react-hooks';
-import { Sparkles, Trash2, TriangleAlert, WandSparkles } from 'lucide-react';
+import { Sparkles, Trash2, WandSparkles } from 'lucide-react';
 
 import { db } from '@/db/localDb';
 import { calculateSmartDose } from '@/services/dosingEngine';
 import { checkMedicineWithCatalog, type SafetyWarning } from './safety';
 import { SafetyBanners } from './safety-banners';
 import { parseShorthand } from './shorthand';
+import { MedExGuidelineCard } from './medex-guideline-card';
 import type { MealTiming, Patient, PrescriptionItem, Vitals } from '@/types/schema';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -27,11 +28,7 @@ function useDebouncedField(item: PrescriptionItem, field: 'strength' | 'special_
   useEffect(() => {
     setValue(item[field]);
   }, [item[field]]);
-  useEffect(() => {
-    return () => {
-      if (timer.current) clearTimeout(timer.current);
-    };
-  }, []);
+  useEffect(() => () => { if (timer.current) clearTimeout(timer.current); }, []);
   const onChange = (next: string) => {
     setValue(next);
     if (timer.current) clearTimeout(timer.current);
@@ -132,7 +129,7 @@ export function RxRow({
 
   return (
     <div className="rounded-2xl border border-slate-200/90 bg-white p-4.5 shadow-xs transition-all hover:border-slate-300">
-      {/* Title Bar: Medicine name in text-lg font-semibold */}
+      {/* Title Bar */}
       <div className="flex items-center justify-between gap-3">
         <div className="flex flex-wrap items-baseline gap-2">
           <span className="font-mono text-base font-bold text-slate-400">{index + 1}.</span>
@@ -160,14 +157,12 @@ export function RxRow({
         </Button>
       </div>
 
-      {/* AI Smart Dose Recommendation Banner if discrepancy detected */}
+      {/* AI Smart Dose Recommendation Banner */}
       {hasDiscrepancy && (
         <div className="mt-3 flex flex-wrap items-center justify-between gap-2 rounded-xl border border-teal-200 bg-teal-50/80 px-3.5 py-2.5 text-sm shadow-2xs">
           <div className="flex items-center gap-2">
             <Sparkles className="h-4 w-4 text-teal-600 shrink-0" />
-            <span className="font-bold text-teal-950">
-              AI Dose Recommendation ({smartDose.badge}):
-            </span>
+            <span className="font-bold text-teal-950">AI Dose Recommendation ({smartDose.badge}):</span>
             <span className="text-teal-800 text-xs font-semibold">{smartDose.reason}</span>
           </div>
           <Button
@@ -181,7 +176,7 @@ export function RxRow({
         </div>
       )}
 
-      {/* Inputs Grid: Form, Strength, Schedule, Meal Timing, Duration */}
+      {/* Inputs Grid */}
       <div className="mt-3.5 grid grid-cols-2 gap-3 sm:grid-cols-4">
         <label className="grid gap-1 text-xs font-semibold uppercase tracking-wider text-slate-600">
           Form
@@ -280,6 +275,18 @@ export function RxRow({
           </Button>
         )}
       </div>
+
+      {/* MedEx Patient Drug Administration Guideline Card */}
+      <MedExGuidelineCard
+        item={item}
+        onApplyInstruction={(inst) => {
+          setInstructions(inst);
+          write({ special_instructions: inst });
+        }}
+        onApplyScheduleAndMeal={(sched, meal) => {
+          write({ schedule: sched, meal_timing: meal });
+        }}
+      />
 
       {/* Safety Warnings with High-Contrast Alerts */}
       <SafetyBanners warnings={warnings} />

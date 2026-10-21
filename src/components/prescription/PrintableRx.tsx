@@ -118,7 +118,9 @@ export function PrintableRx({
                     : ''}
                 </span>
                 {item.special_instructions && (
-                  <span className="text-[10px] italic"> — {item.special_instructions}</span>
+                  <div className="ml-3 mt-0.5 text-[10px] text-neutral-800 font-medium">
+                    ↳ নির্দেশিকা: {item.special_instructions}
+                  </div>
                 )}
               </li>
             ))}
