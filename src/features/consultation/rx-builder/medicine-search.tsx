@@ -2,34 +2,32 @@
 
 /**
  * Medicine autocomplete: instant (0ms) filtering of the local Dexie
- * MedicineCatalog — brand or generic, optionally strength — no network.
+ * MedicineCatalog (21,000+ MedEx items) — brand, generic, strength, manufacturer.
  */
-import { useMemo, useState } from 'react';
+import { useState } from 'react';
 import { useLiveQuery } from 'dexie-react-hooks';
 import { Pill, Search } from 'lucide-react';
 
 import { db } from '@/db/localDb';
-import { DEFAULT_TENANT_ID } from '@/db/seedData';
 import type { MedicineCatalog } from '@/types/schema';
 
 export function useMedicineSearch(query: string) {
-  const catalog = useLiveQuery(
-    () => db.medicine_catalog.where('tenant_id').equals(DEFAULT_TENANT_ID).toArray(),
+  return useLiveQuery(
+    async () => {
+      const q = query.trim().toLowerCase();
+      if (!q) return [];
+      return db.medicine_catalog
+        .filter(
+          (m) =>
+            m.brand_name.toLowerCase().includes(q) ||
+            m.generic_name.toLowerCase().includes(q),
+        )
+        .limit(10)
+        .toArray();
+    },
+    [query],
     [],
   );
-  return useMemo(() => {
-    if (!catalog) return undefined; // loading
-    const q = query.trim().toLowerCase();
-    if (!q) return [];
-    return catalog
-      .filter(
-        (m) =>
-          m.brand_name.toLowerCase().includes(q) ||
-          m.generic_name.toLowerCase().includes(q),
-      )
-      .sort((a, b) => a.brand_name.localeCompare(b.brand_name))
-      .slice(0, 8);
-  }, [catalog, query]);
 }
 
 export interface MedicineSearchProps {
@@ -52,7 +50,7 @@ export function MedicineSearch({ value, onChange, onPick, placeholder, autoFocus
         <Search className="h-4 w-4 shrink-0 text-neutral-400" aria-hidden />
         <input
           className="w-full border-0 bg-transparent text-sm outline-none placeholder:text-neutral-400"
-          placeholder={placeholder ?? 'Search medicine (Tab/Dolo/…) or type new brand + Enter'}
+          placeholder={placeholder ?? 'Search medicine (Napa, Seclo, Maxpro...) or type brand + Enter'}
           value={value}
           autoFocus={autoFocus}
           onChange={(e) => {
@@ -80,17 +78,24 @@ export function MedicineSearch({ value, onChange, onPick, placeholder, autoFocus
             <li key={m.id}>
               <button
                 type="button"
-                className="flex w-full items-center gap-2 px-3 py-2 text-left text-sm hover:bg-emerald-50"
+                className="flex w-full items-center justify-between px-3 py-2 text-left text-sm hover:bg-emerald-50"
                 onClick={() => {
                   onPick(m);
                   setOpen(false);
                 }}
               >
-                <Pill className="h-3.5 w-3.5 shrink-0 text-emerald-700" aria-hidden />
-                <span className="font-medium">{m.brand_name} {m.strength}</span>
-                <span className="ml-1 truncate text-xs text-neutral-500">
-                  {m.generic_name} · {m.dosage_form}
-                </span>
+                <div className="flex items-center gap-2 truncate">
+                  <Pill className="h-3.5 w-3.5 shrink-0 text-emerald-700" aria-hidden />
+                  <span className="font-semibold text-neutral-900">{m.brand_name}</span>
+                  <span className="text-xs text-neutral-500 font-mono">{m.strength}</span>
+                  <span className="truncate text-xs text-neutral-400">
+                    ({m.generic_name})
+                  </span>
+                </div>
+                <div className="flex items-center gap-1.5 shrink-0 text-[10px] text-neutral-400">
+                  <span className="rounded bg-neutral-100 px-1.5 py-0.5 text-neutral-600">{m.dosage_form}</span>
+                  <span className="truncate max-w-[120px]">{m.manufacturer}</span>
+                </div>
               </button>
             </li>
           ))}
