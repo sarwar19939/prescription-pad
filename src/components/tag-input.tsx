@@ -39,31 +39,31 @@ export function TagInput({ value, onChange, placeholder, danger }: TagInputProps
 
   return (
     <div
-      className="flex min-h-10 flex-wrap items-center gap-1.5 rounded-md border border-neutral-300 bg-white px-2 py-1.5 focus-within:border-emerald-600"
+      className="flex min-h-[44px] flex-wrap items-center gap-2 rounded-xl border border-slate-300 bg-white px-3 py-1.5 focus-within:border-teal-600 focus-within:ring-2 focus-within:ring-teal-500/30 transition-all"
       onClick={(e) => (e.currentTarget.querySelector('input') as HTMLInputElement)?.focus()}
     >
       {value.map((tag) => (
         <Badge
           key={tag}
           variant={danger ? 'destructive' : 'secondary'}
-          className="gap-1 text-xs"
+          className="gap-1.5 text-sm py-1 px-2.5 rounded-lg font-medium"
         >
           {tag}
           <button
             type="button"
             aria-label={`Remove ${tag}`}
-            className="rounded-sm hover:text-black/60"
+            className="rounded-sm hover:opacity-75 transition-opacity"
             onClick={(e) => {
               e.stopPropagation();
               onChange(value.filter((t) => t !== tag));
             }}
           >
-            <X className="h-3 w-3" aria-hidden />
+            <X className="h-3.5 w-3.5" aria-hidden />
           </button>
         </Badge>
       ))}
       <input
-        className="h-7 min-w-24 flex-1 border-0 bg-transparent text-sm outline-none placeholder:text-neutral-400"
+        className="h-8 min-w-28 flex-1 border-0 bg-transparent text-sm font-medium outline-none placeholder:text-slate-400"
         placeholder={value.length === 0 ? placeholder : 'Add more…'}
         aria-label={placeholder}
         value={draft}

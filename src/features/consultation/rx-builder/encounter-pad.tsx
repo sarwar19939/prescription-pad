@@ -88,41 +88,48 @@ export function EncounterPad({ patient }: { patient: Patient }) {
   }
 
   return (
-    <div className="flex flex-col gap-4">
-      <div className="flex items-center gap-2 print:hidden">
-        <h2 className="text-lg font-semibold">Consultation Pad</h2>
-        <span className="rounded-full bg-neutral-100 px-2 py-0.5 text-[10px] uppercase tracking-wide text-neutral-500">
+    <div className="flex flex-col gap-6">
+      <div className="flex flex-wrap items-center gap-3 print:hidden">
+        <h2 className="text-xl font-bold tracking-tight text-slate-900">Consultation Pad</h2>
+        <span className="rounded-full bg-slate-100 px-3 py-1 text-xs font-semibold uppercase tracking-wider text-slate-600 border border-slate-200/80">
           active draft · autosaved locally
         </span>
         {finalized && (
-          <span className="ml-auto flex items-center gap-1 text-xs font-medium text-emerald-700">
-            <CheckCircle2 className="h-4 w-4" aria-hidden /> Visit saved & finalized
+          <span className="ml-auto flex items-center gap-1.5 text-sm font-semibold text-teal-700 bg-teal-50 border border-teal-200 px-3 py-1 rounded-xl">
+            <CheckCircle2 className="h-4 w-4 text-teal-600" aria-hidden /> Visit saved &amp; finalized
           </span>
         )}
       </div>
 
-      <div className="rounded-lg border border-neutral-200 bg-white p-4 print:hidden">
+      <div className="rounded-2xl border border-slate-200/80 bg-white p-6 shadow-xs print:hidden">
         <NotesVitals encounter={encounter} />
       </div>
 
-      <div className="rounded-lg border border-neutral-200 bg-white p-4 print:hidden">
+      <div className="rounded-2xl border border-slate-200/80 bg-white p-6 shadow-xs print:hidden">
         <RxPad patient={patient} encounterId={encounter.id} />
       </div>
 
-      <div className="rounded-lg border border-neutral-200 bg-white p-4 print:hidden">
+      <div className="rounded-2xl border border-slate-200/80 bg-white p-6 shadow-xs print:hidden">
         <AdviceSection encounter={encounter} />
       </div>
 
-      <div className="flex items-center gap-2 print:hidden">
-        <Button onClick={() => void finalize()}>
-          {finalized ? <CheckCircle2 className="h-4 w-4" aria-hidden /> : <Save className="h-4 w-4" aria-hidden />}
-          Save & Finalize Visit
+      <div className="flex flex-wrap items-center gap-3 pt-2 print:hidden">
+        <Button
+          onClick={() => void finalize()}
+          className="h-12 px-6 rounded-xl font-semibold text-base bg-teal-600 hover:bg-teal-700 text-white shadow-sm transition-all"
+        >
+          {finalized ? <CheckCircle2 className="h-5 w-5 mr-2" aria-hidden /> : <Save className="h-5 w-5 mr-2" aria-hidden />}
+          Save &amp; Finalize Visit
         </Button>
-        <Button variant="outline" onClick={() => window.print()}>
-          <Printer className="h-4 w-4" aria-hidden /> Print Prescription
+        <Button
+          variant="outline"
+          onClick={() => window.print()}
+          className="h-12 px-6 rounded-xl font-semibold text-base border-slate-300 text-slate-700 hover:text-teal-700 hover:border-teal-500 transition-all"
+        >
+          <Printer className="h-5 w-5 mr-2" aria-hidden /> Print Prescription
         </Button>
-        <span className="text-[10px] text-neutral-400">
-          everything stores offline first, syncs when online
+        <span className="text-xs text-slate-400 font-medium">
+          Zero-delay local storage (Dexie.js), synced when online
         </span>
       </div>
 

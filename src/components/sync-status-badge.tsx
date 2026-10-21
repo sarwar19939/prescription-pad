@@ -77,27 +77,27 @@ export function SyncStatusBadge() {
   };
 
   return (
-    <div className="flex items-center gap-2">
+    <div className="flex items-center gap-3">
       {!online ? (
-        <Badge variant="destructive" className="gap-1.5 py-1 text-xs">
-          <CloudOff className="h-3.5 w-3.5" aria-hidden />
+        <Badge variant="destructive" className="gap-2 px-3 py-1.5 text-xs font-semibold">
+          <CloudOff className="h-4 w-4" aria-hidden />
           Offline Mode
         </Badge>
       ) : pendingCount > 0 ? (
         <Badge
           variant="outline"
-          className="gap-1.5 border-amber-300 bg-amber-100 py-1 text-xs text-amber-800"
+          className="gap-2 border-amber-300 bg-amber-50 px-3 py-1.5 text-xs font-semibold text-amber-900"
         >
-          <CloudUpload className="h-3.5 w-3.5" aria-hidden />
-          {pendingCount} pending sync
+          <CloudUpload className="h-4 w-4 text-amber-600" aria-hidden />
+          {pendingCount} Pending Sync
         </Badge>
       ) : (
         <Badge
-          variant="outline"
-          className="gap-1.5 border-emerald-300 bg-emerald-100 py-1 text-xs text-emerald-800"
+          variant="default"
+          className="gap-2 px-3 py-1.5 text-xs font-semibold"
         >
-          <CircleCheck className="h-3.5 w-3.5" aria-hidden />
-          Online · all synced
+          <CircleCheck className="h-4 w-4 text-teal-600" aria-hidden />
+          Online · Synced
         </Badge>
       )}
 
@@ -105,16 +105,16 @@ export function SyncStatusBadge() {
         <Button
           type="button"
           size="sm"
-          variant="ghost"
+          variant="outline"
           onClick={handleManualSync}
           disabled={syncing}
-          className="h-7 px-2 text-xs text-neutral-600 hover:text-emerald-700 hover:bg-neutral-100"
+          className="h-9 px-3 rounded-lg text-xs font-semibold text-slate-700 hover:text-teal-700 hover:border-teal-300"
           title="Manually trigger synchronization with Supabase"
         >
           {syncing ? (
-            <Loader2 className="h-3.5 w-3.5 animate-spin mr-1 text-emerald-600" />
+            <Loader2 className="h-4 w-4 animate-spin mr-1.5 text-teal-600" />
           ) : (
-            <RefreshCw className="h-3.5 w-3.5 mr-1" />
+            <RefreshCw className="h-4 w-4 mr-1.5 text-slate-500" />
           )}
           Sync Now
         </Button>

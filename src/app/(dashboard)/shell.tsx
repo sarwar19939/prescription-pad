@@ -1,8 +1,9 @@
 'use client';
 
 /**
- * Client shell pieces for the dashboard layout: navigation sidebar and the
- * sync-badge header.
+ * Client shell pieces for the dashboard layout:
+ * - DashboardSidebar: Ergonomic 64-width navigation sidebar with high-contrast active states.
+ * - DashboardHeader: Sticky header carrying the workspace title and sync engine controls.
  */
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
@@ -22,13 +23,14 @@ import type { ReactNode } from 'react';
 import { SyncStatusBadge } from '@/components/sync-status-badge';
 import { db } from '@/db/localDb';
 import { getCachedSession, getCurrentTenantId, logoutDoctor } from '@/services/auth';
+import { cn } from '@/lib/utils';
 
 const NAV_ITEMS = [
   { label: 'Queue / Dashboard', href: '/dashboard', icon: LayoutDashboard },
-  { label: 'Patients', href: '/patients', icon: Users },
-  { label: 'Consultation', href: 'CONSULT', icon: ClipboardPlus },
+  { label: 'Patients Directory', href: '/patients', icon: Users },
+  { label: 'Consultation Suite', href: 'CONSULT', icon: ClipboardPlus },
   { label: 'Medicine Catalog', href: '/medicines', icon: Pill },
-  { label: 'Settings', href: '/settings', icon: Settings },
+  { label: 'Settings & Pad Setup', href: '/settings', icon: Settings },
   { label: 'Billing & Plans', href: '/settings/billing', icon: CreditCard },
 ] as const;
 
@@ -62,24 +64,28 @@ function NavItem({ label, href, icon: Icon, active, consultHref }: NavItemProps)
   const disabled = href === 'CONSULT' && !consultHref;
   const content: ReactNode = (
     <>
-      <Icon className="h-4 w-4" aria-hidden />
-      {label}
+      <Icon className={cn('h-5 w-5 shrink-0 transition-colors', active ? 'text-teal-700' : 'text-slate-400 group-hover:text-slate-600')} aria-hidden />
+      <span className="truncate">{label}</span>
     </>
   );
+
   if (disabled) {
     return (
-      <span className="block cursor-not-allowed rounded-md px-3 py-2 text-sm font-medium text-neutral-400">
+      <span className="flex h-11 items-center gap-3 rounded-xl px-3.5 text-sm font-medium text-slate-300 cursor-not-allowed">
         {content}
       </span>
     );
   }
+
   return (
     <Link
       href={resolved ?? '#'}
-      className={
-        'flex items-center gap-2 rounded-md px-3 py-2 text-sm font-medium transition-colors ' +
-        (active ? 'bg-primary/10 text-primary' : 'text-neutral-600 hover:bg-neutral-100')
-      }
+      className={cn(
+        'group flex h-11 items-center gap-3 rounded-xl px-3.5 text-sm font-medium transition-all focus:ring-2 focus:ring-teal-500/30 outline-none',
+        active
+          ? 'bg-teal-50 font-bold text-teal-900 border border-teal-200/80 shadow-2xs'
+          : 'text-slate-600 hover:bg-slate-100 hover:text-slate-900',
+      )}
     >
       {content}
     </Link>
@@ -101,13 +107,21 @@ export function DashboardSidebar() {
   };
 
   return (
-    <aside className="flex w-60 shrink-0 flex-col justify-between border-r border-neutral-200 bg-white p-4">
-      <div className="flex flex-col gap-4">
-        <Link href="/patients" className="flex items-center gap-2 px-1">
-          <Stethoscope className="h-6 w-6 text-emerald-700" aria-hidden />
-          <span className="text-lg font-semibold">MedRecord</span>
+    <aside className="flex w-64 shrink-0 flex-col justify-between border-r border-slate-200/80 bg-white p-5">
+      <div className="flex flex-col gap-6">
+        <Link href="/patients" className="flex items-center gap-2.5 px-1 py-1 focus:outline-none">
+          <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-teal-600 text-white shadow-xs">
+            <Stethoscope className="h-6 w-6" aria-hidden />
+          </div>
+          <div>
+            <span className="text-lg font-bold text-slate-950 tracking-tight block leading-none">MedRecord</span>
+            <span className="text-[11px] font-semibold text-teal-700 uppercase tracking-wider block mt-1">
+              Offline-First EHR
+            </span>
+          </div>
         </Link>
-        <nav className="flex flex-col gap-1">
+
+        <nav className="flex flex-col gap-1.5">
           {NAV_ITEMS.map((item) => (
             <NavItem
               key={item.label}
@@ -121,13 +135,13 @@ export function DashboardSidebar() {
         </nav>
       </div>
 
-      <div className="border-t border-neutral-100 pt-3">
-        <div className="flex items-center justify-between text-xs text-neutral-600 px-1">
-          <div className="truncate">
-            <div className="font-semibold text-neutral-900 truncate">
+      <div className="border-t border-slate-100 pt-4">
+        <div className="flex items-center justify-between rounded-xl border border-slate-200/80 bg-slate-50 p-3">
+          <div className="min-w-0 pr-2">
+            <div className="truncate text-sm font-bold text-slate-900">
               {session?.doctorName || 'Dr. Verma'}
             </div>
-            <div className="text-[10px] text-neutral-400 truncate">
+            <div className="truncate text-xs font-medium text-slate-500">
               {session?.clinicName || 'Demo Clinic'}
             </div>
           </div>
@@ -135,9 +149,9 @@ export function DashboardSidebar() {
             type="button"
             onClick={handleLogout}
             title="Switch Doctor / Sign Out"
-            className="rounded p-1 text-neutral-400 hover:text-red-600 hover:bg-neutral-100"
+            className="rounded-lg p-2 text-slate-400 hover:bg-slate-200 hover:text-slate-700 transition-colors focus:ring-2 focus:ring-teal-500/30"
           >
-            <LogOut className="h-4 w-4" />
+            <LogOut className="h-4.5 w-4.5" />
           </button>
         </div>
       </div>
@@ -147,8 +161,12 @@ export function DashboardSidebar() {
 
 export function DashboardHeader() {
   return (
-    <header className="sticky top-0 z-40 flex items-center justify-between border-b border-neutral-200 bg-white/90 px-6 py-3 backdrop-blur">
-      <span className="text-sm font-medium text-neutral-500">MedRecord Clinic Workspace</span>
+    <header className="sticky top-0 z-40 flex h-16 items-center justify-between border-b border-slate-200/80 bg-white/95 px-8 backdrop-blur-md">
+      <div className="flex items-center gap-2">
+        <span className="text-base font-bold text-slate-900 tracking-tight">Clinical Suite</span>
+        <span className="text-slate-300">/</span>
+        <span className="text-sm font-medium text-slate-500">Practice Chamber</span>
+      </div>
       <SyncStatusBadge />
     </header>
   );

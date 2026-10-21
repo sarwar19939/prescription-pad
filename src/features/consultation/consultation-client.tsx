@@ -67,43 +67,42 @@ export function ConsultationClient({ patientId }: { patientId: string }) {
     <div className="flex min-h-0 flex-col gap-0">
       <PatientBanner patient={patient} onOpenCopilot={() => setCopilotOpen(true)} />
 
-      <div className="grid min-h-0 grid-cols-1 gap-6 px-4 py-4 lg:grid-cols-2">
+      <div className="grid min-h-0 grid-cols-1 gap-8 px-6 py-6 lg:grid-cols-2">
         {/* Left column: Tabbed between Longitudinal History and Lab Reports & Trends */}
-        <div className="flex flex-col gap-3">
-          <div className="flex items-center justify-between border-b border-neutral-200 pb-2">
-            <div className="inline-flex rounded-lg border border-neutral-200 bg-neutral-100 p-1 text-xs">
+        <div className="flex flex-col gap-4">
+          <div className="flex items-center justify-between border-b border-slate-200/80 pb-3">
+            <div className="inline-flex rounded-xl border border-slate-200 bg-slate-100 p-1 text-sm font-medium">
               <button
                 type="button"
                 onClick={() => setLeftTab('history')}
-                className={`flex items-center gap-1.5 rounded-md px-3 py-1 font-medium transition-all ${
+                className={`flex items-center gap-2 rounded-lg px-4 py-2 font-semibold transition-all ${
                   leftTab === 'history'
-                    ? 'bg-white text-emerald-800 shadow-xs'
-                    : 'text-neutral-600 hover:text-neutral-900'
+                    ? 'bg-white text-teal-800 shadow-xs'
+                    : 'text-slate-600 hover:text-slate-900'
                 }`}
               >
-                <Clock className="h-3.5 w-3.5" /> Past Encounters ({historyCount})
+                <Clock className="h-4 w-4 text-teal-600" /> Past Encounters ({historyCount})
               </button>
               <button
                 type="button"
                 onClick={() => setLeftTab('labs')}
-                className={`flex items-center gap-1.5 rounded-md px-3 py-1 font-medium transition-all ${
+                className={`flex items-center gap-2 rounded-lg px-4 py-2 font-semibold transition-all ${
                   leftTab === 'labs'
-                    ? 'bg-white text-emerald-800 shadow-xs'
-                    : 'text-neutral-600 hover:text-neutral-900'
+                    ? 'bg-white text-teal-800 shadow-xs'
+                    : 'text-slate-600 hover:text-slate-900'
                 }`}
               >
-                <FlaskConical className="h-3.5 w-3.5" /> Lab Reports &amp; Trends ({labCount})
+                <FlaskConical className="h-4 w-4 text-teal-600" /> Lab Reports &amp; Trends ({labCount})
               </button>
             </div>
 
             <Button
               type="button"
               variant="outline"
-              size="sm"
               onClick={() => setCopilotOpen(true)}
-              className="text-xs h-7 gap-1 border-emerald-300 text-emerald-800 bg-emerald-50 hover:bg-emerald-100"
+              className="h-10 gap-2 border-indigo-200 text-indigo-700 bg-indigo-50/80 hover:bg-indigo-100 hover:border-indigo-300 font-semibold text-sm rounded-xl px-4 shadow-xs"
             >
-              <Sparkles className="h-3.5 w-3.5 text-emerald-600" />
+              <Sparkles className="h-4 w-4 text-indigo-600" />
               AI Co-Pilot
             </Button>
           </div>
@@ -116,7 +115,7 @@ export function ConsultationClient({ patientId }: { patientId: string }) {
         </div>
 
         {/* Right column: Today's consultation encounter pad */}
-        <div className="min-w-0 border-l border-neutral-200 pl-6 max-lg:border-l-0 max-lg:pl-0">
+        <div className="min-w-0 border-l border-slate-200/80 pl-8 max-lg:border-l-0 max-lg:pl-0">
           <EncounterPad patient={patient} />
         </div>
       </div>

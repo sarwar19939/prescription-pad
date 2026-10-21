@@ -6,11 +6,12 @@
  */
 import Link from 'next/link';
 import { useLiveQuery } from 'dexie-react-hooks';
-import { ArrowRight } from 'lucide-react';
+import { ArrowRight, Users, ClipboardList } from 'lucide-react';
 
 import { db } from '@/db/localDb';
 import { getCurrentTenantId } from '@/services/auth';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { FadeInView } from '@/components/ui/motion';
 
 function useTenantCount(table: 'patients' | 'encounters') {
   const tenantId = getCurrentTenantId();
@@ -26,26 +27,45 @@ export default function DashboardPage() {
   const encounterCount = useTenantCount('encounters');
 
   const stats = [
-    { title: 'Total Patients', value: patientCount },
-    { title: 'Total Visits', value: encounterCount },
+    { title: 'Registered Patients', value: patientCount, icon: Users, desc: 'Active records in local database' },
+    { title: 'Completed Visits', value: encounterCount, icon: ClipboardList, desc: 'Prescriptions & clinical consultations' },
   ];
 
   return (
-    <div className="flex flex-col gap-6">
-      <h1 className="text-xl font-semibold">Queue / Dashboard</h1>
-      <div className="grid gap-4 sm:grid-cols-2">
-        {stats.map((s) => (
-          <Card key={s.title}>
-            <CardHeader>
-              <CardTitle className="text-sm font-medium text-neutral-500">{s.title}</CardTitle>
-            </CardHeader>
-            <CardContent className="text-3xl font-semibold">{s.value}</CardContent>
-          </Card>
-        ))}
+    <FadeInView className="flex flex-col gap-8 max-w-5xl">
+      <div>
+        <h1 className="text-2xl font-bold tracking-tight text-slate-900">Clinic Overview</h1>
+        <p className="text-sm text-slate-500 font-medium">Real-time local statistics and patient consultation queue</p>
       </div>
-      <Link href="/patients" className="inline-flex items-center gap-1 text-sm font-medium text-emerald-700 hover:underline">
-        Open Patients Directory <ArrowRight className="h-4 w-4" aria-hidden />
-      </Link>
-    </div>
+
+      <div className="grid gap-6 sm:grid-cols-2">
+        {stats.map((s) => {
+          const Icon = s.icon;
+          return (
+            <Card key={s.title} className="rounded-2xl border-slate-200/80 bg-white p-6 shadow-xs hover:border-slate-300 transition-all">
+              <div className="flex items-center justify-between pb-3">
+                <CardTitle className="text-sm font-semibold uppercase tracking-wider text-slate-500">{s.title}</CardTitle>
+                <div className="h-10 w-10 rounded-xl bg-teal-50 border border-teal-100 flex items-center justify-center text-teal-700">
+                  <Icon className="h-5 w-5" />
+                </div>
+              </div>
+              <CardContent className="p-0">
+                <div className="text-4xl font-bold text-slate-950 tracking-tight font-mono">{s.value}</div>
+                <p className="text-xs text-slate-400 font-medium mt-1.5">{s.desc}</p>
+              </CardContent>
+            </Card>
+          );
+        })}
+      </div>
+
+      <div className="pt-2">
+        <Link
+          href="/patients"
+          className="inline-flex items-center gap-2 h-11 px-5 rounded-xl bg-teal-600 hover:bg-teal-700 text-white font-semibold text-sm shadow-xs transition-all"
+        >
+          Open Patients Directory <ArrowRight className="h-4 w-4" aria-hidden />
+        </Link>
+      </div>
+    </FadeInView>
   );
 }

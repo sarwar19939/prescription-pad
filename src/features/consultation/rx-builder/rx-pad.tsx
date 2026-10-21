@@ -1,17 +1,17 @@
 'use client';
 
 /**
- * RxPad: the numbered list of prescription lines for the active draft
- * encounter. Medicine search hits the local Dexie catalog instantly; a row
- * is created in Dexie the moment a medicine is picked (offline-first).
+ * RxPad: the numbered list of prescription lines for the active draft encounter.
+ * Enhanced with AnimatedList and AnimatedListItem for smooth layout transitions.
  */
 import { useState } from 'react';
 import { useLiveQuery } from 'dexie-react-hooks';
-import { Loader2, Plus, Trash2 } from 'lucide-react';
+import { Loader2, Plus, Sparkles, Trash2 } from 'lucide-react';
 
 import { db } from '@/db/localDb';
 import { MedicineSearch } from './medicine-search';
 import { RxRow } from './rx-row';
+import { AnimatedList, AnimatedListItem } from '@/components/ui/motion';
 import type { MedicineCatalog, Patient, PrescriptionItem } from '@/types/schema';
 
 export function RxPad({ patient, encounterId }: { patient: Patient; encounterId: string }) {
@@ -38,9 +38,9 @@ export function RxPad({ patient, encounterId }: { patient: Patient; encounterId:
       generic_name: 'freeText' in med ? '' : med.generic_name,
       dosage_form: 'freeText' in med ? 'Tab' : med.dosage_form,
       strength: 'freeText' in med ? '' : med.strength,
-      schedule: '',
-      meal_timing: 'Anytime',
-      duration: '',
+      schedule: '1+0+1',
+      meal_timing: 'After Meal',
+      duration: '7 Days',
       special_instructions: '',
       created_at: ts,
       updated_at: ts,
@@ -55,13 +55,14 @@ export function RxPad({ patient, encounterId }: { patient: Patient; encounterId:
   };
 
   return (
-    <section className="flex flex-col gap-2">
-      <div className="flex items-center gap-2">
-        <h3 className="text-sm font-semibold">
-          <span className="mr-1 font-serif text-lg text-emerald-800">℞</span> Prescription
-        </h3>
-        <span className="text-[10px] uppercase tracking-wide text-neutral-400">
-          local-first · autosave
+    <section className="flex flex-col gap-3">
+      <div className="flex items-center justify-between border-b border-slate-200/80 pb-2">
+        <div className="flex items-center gap-2">
+          <span className="font-serif text-2xl font-bold text-teal-700">℞</span>
+          <h3 className="text-base font-bold text-slate-900 tracking-tight">Prescription Pad</h3>
+        </div>
+        <span className="rounded-full bg-slate-100 px-2.5 py-0.5 text-xs font-semibold text-slate-500 uppercase tracking-wider">
+          {items?.length || 0} {items?.length === 1 ? 'Medication' : 'Medications'}
         </span>
       </div>
 
@@ -69,29 +70,31 @@ export function RxPad({ patient, encounterId }: { patient: Patient; encounterId:
         value={search}
         onChange={setSearch}
         onPick={(med) => void addItem(med as MedicineCatalog | { freeText: true })}
-        placeholder="Search catalog to add, or type brand + Enter"
+        placeholder="Type brand name (Napa, Seclo, Maxpro...) or generic to add..."
       />
 
-      {items === undefined && <Loader2 className="mx-auto h-5 w-5 animate-spin text-neutral-400" aria-hidden />}
-      {items !== undefined && items.length === 0 && (
-        <p className="rounded-md border border-dashed border-neutral-300 p-3 text-xs text-neutral-500">
-          No medicines on today&apos;s pad yet. Search above to add — or expand a past visit
-          and use “Copy Rx to Today”.
-        </p>
-      )}
-      <ol className="flex flex-col gap-2">
-        {(items ?? []).map((item, i) => (
-          <li key={item.id}>
-            <RxRow item={item} patient={patient} index={i} onRemove={(id) => void removeItem(id)} />
-          </li>
-        ))}
-      </ol>
-      {items !== undefined && items.length > 0 && (
-        <div className="flex items-center gap-1 text-[10px] text-neutral-400">
-          <Trash2 className="h-3 w-3" aria-hidden /> Remove a line with the trash icon.
-          <Plus className="ml-2 h-3 w-3" aria-hidden /> Add more with the search box.
+      {items === undefined && (
+        <div className="flex h-24 items-center justify-center">
+          <Loader2 className="h-6 w-6 animate-spin text-slate-400" aria-hidden />
         </div>
       )}
+
+      {items !== undefined && items.length === 0 && (
+        <div className="rounded-2xl border border-dashed border-slate-300 bg-white p-6 text-center text-sm text-slate-500 space-y-1">
+          <p className="font-semibold text-slate-700">No medications prescribed yet.</p>
+          <p className="text-xs text-slate-400">
+            Search from 21,000+ MedEx drugs above, use AI Co-Pilot suggestions, or copy from a past visit.
+          </p>
+        </div>
+      )}
+
+      <AnimatedList className="flex flex-col gap-3">
+        {(items ?? []).map((item, i) => (
+          <AnimatedListItem key={item.id}>
+            <RxRow item={item} patient={patient} index={i} onRemove={(id) => void removeItem(id)} />
+          </AnimatedListItem>
+        ))}
+      </AnimatedList>
     </section>
   );
 }

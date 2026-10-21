@@ -44,17 +44,17 @@ export function AdviceSection({ encounter }: { encounter: Encounter }) {
   };
 
   return (
-    <section className="flex flex-col gap-3">
+    <section className="flex flex-col gap-4">
       <div>
-        <span className="mb-1 block text-[10px] font-semibold uppercase tracking-wide text-neutral-500">
+        <span className="mb-2 block text-xs font-bold uppercase tracking-wider text-slate-600">
           General Advice
         </span>
-        <div className="grid grid-cols-1 gap-1 sm:grid-cols-2">
+        <div className="grid grid-cols-1 gap-2.5 sm:grid-cols-2 mb-3">
           {QUICK_ADVICE.map((advice) => (
-            <label key={advice} className="flex cursor-pointer items-center gap-2 text-xs text-neutral-700">
+            <label key={advice} className="flex cursor-pointer items-center gap-2.5 text-sm font-medium text-slate-700 hover:text-slate-900 transition-colors">
               <input
                 type="checkbox"
-                className="h-3.5 w-3.5 accent-emerald-700"
+                className="h-4 w-4 rounded border-slate-300 accent-teal-600 cursor-pointer"
                 checked={encounter.advice.includes(advice)}
                 onChange={() => toggleAdvice(advice)}
               />
@@ -62,7 +62,7 @@ export function AdviceSection({ encounter }: { encounter: Encounter }) {
             </label>
           ))}
         </div>
-        <div className="mt-1.5">
+        <div>
           <TagInput
             value={encounter.advice.filter((a) => !QUICK_ADVICE.includes(a))}
             onChange={(custom) =>
@@ -78,12 +78,12 @@ export function AdviceSection({ encounter }: { encounter: Encounter }) {
         </div>
       </div>
 
-      <div className="flex items-end gap-4">
-        <label className="grid gap-1 text-[10px] font-semibold uppercase tracking-wide text-neutral-500">
-          Next Follow-up
+      <div className="flex items-end gap-4 pt-1">
+        <label className="grid gap-1.5 text-xs font-bold uppercase tracking-wider text-slate-600">
+          Next Follow-up Date
           <input
             type="date"
-            className="w-44 rounded-md border border-neutral-300 px-2 py-1.5 text-xs font-normal normal-case text-neutral-800 outline-none focus:border-emerald-600"
+            className="h-11 w-52 rounded-xl border border-slate-300 px-3 py-2 text-sm font-semibold text-slate-800 outline-none focus:border-teal-600 focus:ring-2 focus:ring-teal-500/30 transition-all"
             value={encounter.follow_up_date ?? ''}
             onChange={(e) =>
               write(

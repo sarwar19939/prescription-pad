@@ -99,58 +99,58 @@ export function MetricsTrendTable({ reports }: MetricsTrendTableProps) {
   return (
     <div className="flex flex-col gap-3">
       <div className="flex items-center justify-between">
-        <span className="text-xs font-semibold uppercase tracking-wider text-neutral-500">
+        <span className="text-xs font-bold uppercase tracking-wider text-slate-600">
           Longitudinal Parameter Comparison
         </span>
-        <span className="flex items-center gap-1 text-[11px] text-red-600 font-medium">
-          <AlertCircle className="h-3 w-3" /> Red indicates out-of-range abnormal value
+        <span className="flex items-center gap-1.5 text-xs text-rose-600 font-semibold bg-rose-50 px-2.5 py-1 rounded-lg border border-rose-200">
+          <AlertCircle className="h-3.5 w-3.5 text-rose-600" /> Rose highlight indicates out-of-range value
         </span>
       </div>
 
-      <div className="overflow-x-auto rounded-md border border-neutral-200 bg-white shadow-sm">
-        <table className="w-full border-collapse text-left text-xs">
+      <div className="overflow-x-auto rounded-xl border border-slate-200/80 bg-white shadow-xs">
+        <table className="w-full border-collapse text-left text-sm">
           <thead>
-            <tr className="border-b border-neutral-200 bg-neutral-50">
-              <th className="sticky left-0 z-10 border-r border-neutral-200 bg-neutral-50 px-3 py-2 font-semibold text-neutral-700">
+            <tr className="border-b border-slate-200 bg-slate-50">
+              <th className="sticky left-0 z-10 border-r border-slate-200 bg-slate-50 px-4 py-3 font-semibold text-slate-700">
                 Test Parameter
               </th>
-              {sortedReports.map((r, i) => (
-                <th key={r.id} className="min-w-[120px] px-3 py-2 font-medium text-neutral-600">
-                  <div className="font-semibold text-neutral-900">
+              {sortedReports.map((r) => (
+                <th key={r.id} className="min-w-[140px] px-4 py-3 font-medium text-slate-600">
+                  <div className="font-bold text-slate-900 text-sm">
                     {format(new Date(r.report_date + 'T00:00:00'), 'dd MMM yyyy')}
                   </div>
-                  <div className="truncate text-[10px] text-neutral-400">
+                  <div className="truncate text-xs text-slate-500 font-medium mt-0.5">
                     {r.test_name}
                   </div>
                 </th>
               ))}
             </tr>
           </thead>
-          <tbody className="divide-y divide-neutral-100">
+          <tbody className="divide-y divide-slate-100">
             {allMetrics.map((metric) => {
               const rowData = metricMap.get(metric) || {};
               return (
-                <tr key={metric} className="hover:bg-neutral-50/50">
-                  <td className="sticky left-0 z-10 border-r border-neutral-200 bg-white px-3 py-2 font-medium text-neutral-800">
+                <tr key={metric} className="hover:bg-slate-50/50 transition-colors">
+                  <td className="sticky left-0 z-10 border-r border-slate-200 bg-white px-4 py-3 font-semibold text-slate-800">
                     {metric}
                   </td>
                   {sortedReports.map((r) => {
                     const cell = rowData[r.id];
                     if (!cell) {
                       return (
-                        <td key={r.id} className="px-3 py-2 text-neutral-300">
+                        <td key={r.id} className="px-4 py-3 text-slate-300 font-mono">
                           —
                         </td>
                       );
                     }
                     return (
-                      <td key={r.id} className="px-3 py-2">
+                      <td key={r.id} className="px-4 py-3">
                         {cell.isAbnormal ? (
-                          <Badge variant="destructive" className="font-semibold text-[11px] px-1.5 py-0.5">
+                          <Badge variant="destructive" className="font-mono text-sm font-bold bg-rose-50 border border-rose-300 text-rose-700 px-2.5 py-1 rounded-lg">
                             {String(cell.value)}
                           </Badge>
                         ) : (
-                          <span className="font-medium text-neutral-700">
+                          <span className="font-mono text-sm font-bold text-slate-800">
                             {String(cell.value)}
                           </span>
                         )}
