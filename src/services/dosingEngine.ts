@@ -191,7 +191,80 @@ export function calculateSmartDose(
     };
   }
 
-  // 7. General Pediatric Fallback
+  // 7. Cefixime (Cef-3, Triocim, Denavir)
+  if (name.includes('cefixime') || name.includes('cef-3') || name.includes('triocim')) {
+    if (isPediatric && weight !== null) {
+      const cefMg = Math.round(weight * 8);
+      const ml = Math.round((cefMg / 100) * 5 * 10) / 10;
+      return {
+        hasAdjustment: true,
+        dosage_form: 'Syr',
+        strength: '100mg/5ml',
+        schedule: '1+0+1',
+        meal_timing: 'After Meal',
+        duration: '7 Days',
+        special_instructions: `Pediatric 8mg/kg (${cefMg}mg/day): ~${Math.round((ml / 2) * 10) / 10} ml BD`,
+        reason: `Pediatric Cefixime 8mg/kg for weight ${weight}kg.`,
+        badge: `8mg/kg (~${ml}ml/day)`,
+      };
+    }
+    return {
+      hasAdjustment: true,
+      dosage_form: 'Cap',
+      strength: med.strength || '200mg',
+      schedule: '1+0+1',
+      meal_timing: 'After Meal',
+      duration: '7 Days',
+      special_instructions: 'Complete the full 7-day course',
+      reason: 'Standard 3rd-generation cephalosporin regimen.',
+      badge: 'Cefixime 7-Day',
+    };
+  }
+
+  // 8. Antiemetic / Domperidone (Omidon, Motigut)
+  if (name.includes('domperidone') || name.includes('omidon') || name.includes('motigut')) {
+    if (isPediatric) {
+      return {
+        hasAdjustment: true,
+        dosage_form: 'Drop',
+        strength: '5mg/ml',
+        schedule: '1+0+1',
+        meal_timing: 'Before Meal',
+        duration: '3-5 Days',
+        special_instructions: 'Take 15-30 minutes before meal for nausea/vomiting',
+        reason: 'Pediatric liquid prokinetic 15 mins before feed.',
+        badge: 'Pediatric Drop',
+      };
+    }
+    return {
+      hasAdjustment: true,
+      dosage_form: 'Tab',
+      strength: '10mg',
+      schedule: '1+0+1',
+      meal_timing: 'Before Meal',
+      duration: '7 Days',
+      special_instructions: 'Take 15-30 minutes before meal',
+      reason: 'Upper GI prokinetic motility agent.',
+      badge: 'Before Meal',
+    };
+  }
+
+  // 9. Metformin (Comet)
+  if (name.includes('metformin') || name.includes('comet')) {
+    return {
+      hasAdjustment: true,
+      dosage_form: 'Tab',
+      strength: med.strength || '500mg',
+      schedule: '1+0+1',
+      meal_timing: 'With Meal',
+      duration: '30 Days',
+      special_instructions: 'Take in the middle of principal meals to prevent GI upset',
+      reason: 'First-line biguanide insulin sensitizer.',
+      badge: 'With Meal',
+    };
+  }
+
+  // 10. General Pediatric Fallback
   if (isPediatric) {
     return {
       hasAdjustment: true,

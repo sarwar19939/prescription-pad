@@ -12,6 +12,8 @@ import { db } from '@/db/localDb';
 import { calculateSmartDose } from '@/services/dosingEngine';
 import { getDrugGuideline } from '@/services/drugGuidelinesService';
 import { MedicineSearch } from './medicine-search';
+import { ProtocolTemplatesDialog } from './protocol-templates-dialog';
+import { SuggestedProtocolBanner } from './suggested-protocol-banner';
 import { RxRow } from './rx-row';
 import { AnimatedList, AnimatedListItem } from '@/components/ui/motion';
 import type { MedicineCatalog, Patient, PrescriptionItem } from '@/types/schema';
@@ -92,12 +94,15 @@ export function RxPad({ patient, encounterId }: { patient: Patient; encounterId:
 
   return (
     <section className="flex flex-col gap-3">
-      <div className="flex items-center justify-between border-b border-slate-200/80 pb-2">
+      <div className="flex flex-wrap items-center justify-between gap-2 border-b border-slate-200/80 pb-2">
         <div className="flex items-center gap-2">
           <span className="font-serif text-2xl font-bold text-teal-700">℞</span>
           <h3 className="text-base font-bold text-slate-900 tracking-tight">Prescription Pad</h3>
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex flex-wrap items-center gap-2">
+          {encounter && (
+            <ProtocolTemplatesDialog encounter={encounter} patient={patient} />
+          )}
           {encounter?.vitals && (encounter.vitals.bp || encounter.vitals.temp || encounter.vitals.weight) && (
             <span className="hidden sm:inline-flex items-center gap-1 rounded-full bg-teal-50 border border-teal-200 px-2.5 py-0.5 text-xs font-semibold text-teal-800">
               <Sparkles className="h-3.5 w-3.5 text-teal-600" />
@@ -109,6 +114,11 @@ export function RxPad({ patient, encounterId }: { patient: Patient; encounterId:
           </span>
         </div>
       </div>
+
+      {/* Suggested Protocol Banner matching active diagnosis */}
+      {encounter && (
+        <SuggestedProtocolBanner encounter={encounter} patient={patient} />
+      )}
 
       <MedicineSearch
         value={search}
