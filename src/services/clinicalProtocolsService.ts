@@ -30,9 +30,10 @@ export function matchProtocolsForDiagnosis(diagnoses: string[]): DiseaseProtocol
   for (const diag of cleanDiagnoses) {
     for (const proto of DISEASE_PROTOCOL_TEMPLATES) {
       if (seenIds.has(proto.id)) continue;
-      const hasMatch = proto.diagnosisMatch.some(
-        (key) => diag.includes(key) || key.includes(diag),
-      );
+      const hasMatch = proto.diagnosisMatch.some((key) => {
+        const k = key.toLowerCase();
+        return diag.includes(k) || (diag.length >= 3 && k.includes(diag));
+      });
       if (hasMatch) {
         matched.push(proto);
         seenIds.add(proto.id);

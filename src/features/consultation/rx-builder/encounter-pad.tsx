@@ -102,7 +102,7 @@ export function EncounterPad({ patient }: { patient: Patient }) {
       </div>
 
       <div className="rounded-2xl border border-slate-200/80 bg-white p-6 shadow-xs print:hidden">
-        <NotesVitals encounter={encounter} />
+        <NotesVitals encounter={encounter} patient={patient} />
       </div>
 
       <div className="rounded-2xl border border-slate-200/80 bg-white p-6 shadow-xs print:hidden">

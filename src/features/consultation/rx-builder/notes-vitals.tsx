@@ -12,11 +12,17 @@ import { db } from '@/db/localDb';
 import { TagInput } from '@/components/tag-input';
 import { Badge } from '@/components/ui/badge';
 import { analyzeVitals } from '@/services/vitalsService';
-import type { Encounter, Vitals as VitalsT } from '@/types/schema';
+import { SuggestedProtocolBanner } from './suggested-protocol-banner';
+import type { Encounter, Patient, Vitals as VitalsT } from '@/types/schema';
 
 const COMPLAINT_SUGGESTIONS = [
   'Fever', 'Cough', 'Cold', 'Headache', 'Body ache', 'Vomiting',
   'Diarrhea', 'Abdominal pain', 'Chest pain', 'Breathlessness', 'Dizziness', 'Weakness',
+];
+
+const COMMON_DIAGNOSIS_PRESETS = [
+  'Dengue', 'Scabies', 'Diarrhea / GE', 'PUD / GERD',
+  'Hypertension', 'Type 2 Diabetes', 'UTI', 'Tinea (Fungal)',
 ];
 
 const VITAL_FIELDS: Array<{ key: keyof VitalsT; label: string; unit: string; placeholder: string }> = [
@@ -27,7 +33,7 @@ const VITAL_FIELDS: Array<{ key: keyof VitalsT; label: string; unit: string; pla
   { key: 'spo2', label: 'SpO₂', unit: '%', placeholder: '98' },
 ];
 
-export function NotesVitals({ encounter }: { encounter: Encounter }) {
+export function NotesVitals({ encounter, patient }: { encounter: Encounter; patient?: Patient }) {
   // Fluid 0ms local state prevents cursor freezing, character drops & stale race conditions
   const [localVitals, setLocalVitals] = useState<VitalsT>({
     bp: encounter.vitals?.bp || '',
@@ -193,10 +199,45 @@ export function NotesVitals({ encounter }: { encounter: Encounter }) {
           <TagInput
             value={encounter.diagnosis}
             onChange={(tags) => writeEncounterField({ diagnosis: tags })}
-            placeholder="e.g. Acute Bronchitis + Enter"
+            placeholder="e.g. Dengue, Scabies (Press Enter)"
           />
+          <div className="flex flex-wrap items-center gap-1.5 mt-2.5">
+            <span className="text-[11px] font-bold text-slate-400 uppercase tracking-wider">Quick:</span>
+            {COMMON_DIAGNOSIS_PRESETS.map((diag) => {
+              const has = encounter.diagnosis.some(
+                (d) => d.toLowerCase() === diag.toLowerCase() || diag.toLowerCase().includes(d.toLowerCase()),
+              );
+              return (
+                <button
+                  key={diag}
+                  type="button"
+                  onClick={() => {
+                    const next = has
+                      ? encounter.diagnosis.filter(
+                          (d) => d.toLowerCase() !== diag.toLowerCase() && !diag.toLowerCase().includes(d.toLowerCase()),
+                        )
+                      : [...encounter.diagnosis, diag];
+                    writeEncounterField({ diagnosis: next });
+                  }}
+                  className={`rounded-lg px-2.5 py-1 text-xs font-semibold border transition-all ${
+                    has
+                      ? 'bg-teal-600 text-white border-teal-600 shadow-2xs'
+                      : 'bg-slate-50 text-slate-600 border-slate-200 hover:border-teal-400 hover:text-teal-700'
+                  }`}
+                >
+                  {has ? '✓ ' : '+ '}{diag}
+                </button>
+              );
+            })}
+          </div>
         </div>
       </div>
+
+      {patient && (
+        <div className="mt-1">
+          <SuggestedProtocolBanner encounter={encounter} patient={patient} />
+        </div>
+      )}
     </section>
   );
 }

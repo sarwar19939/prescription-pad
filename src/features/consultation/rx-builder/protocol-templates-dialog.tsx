@@ -87,7 +87,7 @@ export function ProtocolTemplatesDialog({
         </Button>
       </DialogTrigger>
 
-      <DialogContent className="max-w-4xl max-h-[85vh] overflow-hidden flex flex-col p-6 rounded-2xl">
+      <DialogContent className="sm:max-w-4xl max-w-4xl max-h-[85vh] overflow-hidden flex flex-col p-6 rounded-2xl bg-white border border-slate-200 shadow-2xl">
         <DialogHeader className="border-b border-slate-100 pb-3">
           <div className="flex items-center gap-2.5">
             <div className="h-9 w-9 rounded-xl bg-indigo-600 text-white flex items-center justify-center shrink-0">
