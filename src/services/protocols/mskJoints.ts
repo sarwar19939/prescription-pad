@@ -144,6 +144,11 @@ export const MSK_JOINTS_PROTOCOLS: DiseaseProtocolTemplate[] = [
         adult: { dosage_form: 'Tab', strength: '500 mg', schedule: '1+0+1', meal_timing: 'After Meal', duration: '5 Days', special_instructions: 'ভরা পেটে সেব্য।' },
       },
       {
+        brand_name: 'Sergel',
+        generic_name: 'Esomeprazole',
+        adult: { dosage_form: 'Cap', strength: '20 mg', schedule: '1+0+1', meal_timing: 'Before Meal', duration: '5 Days', special_instructions: 'ব্যথানাশক চলাকালীন গ্যাস্ট্রিকের সুরক্ষায় খালি পেটে সেব্য।' },
+      },
+      {
         brand_name: 'Fast',
         generic_name: 'Paracetamol',
         adult: { dosage_form: 'Tab', strength: '500 mg', schedule: '1+1+1', meal_timing: 'After Meal', duration: '3 Days', special_instructions: 'ব্যথায় সেব্য।' },
@@ -172,6 +177,11 @@ export const MSK_JOINTS_PROTOCOLS: DiseaseProtocolTemplate[] = [
         brand_name: 'Napryn',
         generic_name: 'Naproxen',
         adult: { dosage_form: 'Tab', strength: '500 mg', schedule: '1+0+1', meal_timing: 'After Meal', duration: '14 Days', special_instructions: 'ভরা পেটে সেব্য।' },
+      },
+      {
+        brand_name: 'Sergel',
+        generic_name: 'Esomeprazole',
+        adult: { dosage_form: 'Cap', strength: '20 mg', schedule: '1+0+1', meal_timing: 'Before Meal', duration: '14 Days', special_instructions: 'খালি পেটে নিয়মিত গ্যাস্ট্রিক প্রতিরোধে।' },
       },
     ],
     adviceBn: [

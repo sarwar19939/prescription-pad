@@ -14,6 +14,7 @@
  */
 import { format } from 'date-fns';
 
+import { formatSubcontinentRxLine, toBengaliNumerals } from '@/lib/prescriptionFormatters';
 import type { Encounter, InvestigationReport, Patient, PrescriptionItem, Tenant } from '@/types/schema';
 
 interface PrintableRxProps {
@@ -103,27 +104,32 @@ export function PrintableRx({
 
         <div>
           <div className="mb-1 font-serif text-2xl leading-none">℞</div>
-          <ol className="mb-3 flex flex-col gap-1.5">
-            {items.map((item, i) => (
-              <li key={item.id} className="break-words">
-                <span className="font-semibold">
-                  {i + 1}. {item.dosage_form}. {item.brand_name} {item.strength}
-                </span>
-                {item.generic_name && (
-                  <span className="ml-1 text-[9px] italic text-neutral-600">({item.generic_name})</span>
-                )}
-                <span className="text-[10px] text-neutral-700">
-                  {item.schedule || item.meal_timing || item.duration
-                    ? ` — ${item.schedule}${item.meal_timing ? ` (${item.meal_timing})` : ''}${item.duration ? ` × ${item.duration}` : ''}`
-                    : ''}
-                </span>
-                {item.special_instructions && (
-                  <div className="ml-3 mt-0.5 text-[10px] text-neutral-800 font-medium">
-                    ↳ নির্দেশিকা: {item.special_instructions}
+          <ol className="mb-3 flex flex-col gap-2">
+            {items.map((item, i) => {
+              const { title, dosageDetails } = formatSubcontinentRxLine(item);
+              return (
+                <li key={item.id} className="break-words">
+                  <div className="flex flex-wrap items-baseline gap-1">
+                    <span className="font-semibold text-[11.5px]">
+                      {toBengaliNumerals(i + 1)}. {title}
+                    </span>
+                    {item.generic_name && (
+                      <span className="text-[9.5px] italic text-neutral-600">({item.generic_name})</span>
+                    )}
                   </div>
-                )}
-              </li>
-            ))}
+                  {dosageDetails && (
+                    <div className="ml-3 text-[10.5px] font-medium text-neutral-800">
+                      ↳ {dosageDetails}
+                    </div>
+                  )}
+                  {item.special_instructions && (
+                    <div className="ml-3 text-[9.5px] text-neutral-600 font-normal">
+                      নির্দেশিকা: {item.special_instructions}
+                    </div>
+                  )}
+                </li>
+              );
+            })}
             {items.length === 0 && <li className="text-neutral-500">(no medicines recorded)</li>}
           </ol>
 

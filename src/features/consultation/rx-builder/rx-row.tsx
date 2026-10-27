@@ -20,14 +20,18 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 
 const MEAL_OPTIONS: MealTiming[] = ['After Meal', 'Before Meal', 'With Meal', 'Anytime'];
+const MEAL_LABELS: Record<MealTiming, string> = {
+  'After Meal': 'After Meal (ভরা পেটে)',
+  'Before Meal': 'Before Meal (খালি পেটে)',
+  'With Meal': 'With Meal (খাবারের সাথে)',
+  'Anytime': 'Anytime (যেকোনো সময়)',
+};
 const FORM_OPTIONS = ['Tab', 'Cap', 'Syr', 'Inj', 'Oint', 'Drop'] as const;
 
 function useDebouncedField(item: PrescriptionItem, field: 'strength' | 'special_instructions', delay = 400) {
   const [value, setValue] = useState(item[field]);
   const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
-  useEffect(() => {
-    setValue(item[field]);
-  }, [item[field]]);
+  useEffect(() => { setValue(item[field]); }, [item[field]]);
   useEffect(() => () => { if (timer.current) clearTimeout(timer.current); }, []);
   const onChange = (next: string) => {
     setValue(next);
@@ -85,10 +89,7 @@ export function RxRow({
     if (!smartDose.hasAdjustment) return;
     const patch: Partial<PrescriptionItem> = {};
     if (smartDose.dosage_form) patch.dosage_form = smartDose.dosage_form;
-    if (smartDose.strength) {
-      patch.strength = smartDose.strength;
-      setStrength(smartDose.strength);
-    }
+    if (smartDose.strength) { patch.strength = smartDose.strength; setStrength(smartDose.strength); }
     if (smartDose.schedule) patch.schedule = smartDose.schedule;
     if (smartDose.meal_timing) patch.meal_timing = smartDose.meal_timing;
     if (smartDose.duration) patch.duration = smartDose.duration;
@@ -219,7 +220,7 @@ export function RxRow({
             onChange={(e) => write({ meal_timing: e.target.value as MealTiming })}
           >
             {MEAL_OPTIONS.map((m) => (
-              <option key={m} value={m}>{m}</option>
+              <option key={m} value={m}>{MEAL_LABELS[m] || m}</option>
             ))}
           </select>
         </label>
@@ -256,10 +257,7 @@ export function RxRow({
           value={cmd}
           onChange={(e) => setCmd(e.target.value)}
           onKeyDown={(e) => {
-            if (e.key === 'Enter') {
-              e.preventDefault();
-              void applyCommand();
-            }
+            if (e.key === 'Enter') { e.preventDefault(); void applyCommand(); }
           }}
         />
         {smartDose.hasAdjustment && (

@@ -63,22 +63,17 @@ export function AICopilotDrawer({
   const [packageLoading, setPackageLoading] = useState(false);
 
   const pastEncounters = useLiveQuery(
-    async () =>
-      (await db.encounters.where('patient_id').equals(patient.id).toArray()).filter(
-        (e) => e.id !== activeEncounter?.id,
-      ),
+    async () => (await db.encounters.where('patient_id').equals(patient.id).toArray())
+      .filter((e) => e.id !== activeEncounter?.id),
     [patient.id, activeEncounter?.id],
     [],
   );
-
   const labReports = useLiveQuery(
     () => db.investigation_reports.where('patient_id').equals(patient.id).toArray(),
     [patient.id],
     [],
   );
-
   const tenant = useLiveQuery(() => db.tenants.get(patient.tenant_id), [patient.tenant_id]);
-
   const confirmedDiagnoses = activeEncounter?.diagnosis || [];
 
   // Auto-generate full package if confirmed diagnoses exist and none loaded yet

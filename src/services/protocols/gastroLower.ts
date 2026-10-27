@@ -23,6 +23,12 @@ export const GASTRO_LOWER_PROTOCOLS: DiseaseProtocolTemplate[] = [
         pediatric: { dosage_form: 'Syr', strength: '20 mg/5 ml', schedule: '1+0+0', meal_timing: 'After Meal', duration: '14 Days', special_instructions: 'ডায়রিয়া ভালো হয়ে গেলেও টানা ১৪ দিন সম্পূর্ণ কোর্স শেষ করুন।' },
       },
       {
+        brand_name: 'Motigut',
+        generic_name: 'Domperidone',
+        adult: { dosage_form: 'Tab', strength: '10 mg', schedule: '1+1+1', meal_timing: 'Before Meal', duration: '5 Days', special_instructions: 'খাবারের ১৫ মিনিট পূর্বে বমি ভাব ও অস্থিরতা উপশমে।' },
+        pediatric: { dosage_form: 'Drop', strength: '5 mg/ml', schedule: '0.3 mg/kg TDS', meal_timing: 'Before Meal', duration: '3 Days', special_instructions: 'বমি কমাতে খাবারের ১৫ মিনিট পূর্বে।' },
+      },
+      {
         brand_name: 'Enterogermina',
         generic_name: 'Bacillus clausii spores',
         adult: { dosage_form: 'Syr', strength: '2 billion/5 ml', schedule: '1+0+1', meal_timing: 'Anytime', duration: '5 Days', special_instructions: 'অন্ত্রের উপকারী ব্যাকটেরিয়া ফিরিয়ে আনার জন্য মিনি অ্যাম্পুল সরাসরি পান করুন।' },
@@ -221,6 +227,11 @@ export const GASTRO_LOWER_PROTOCOLS: DiseaseProtocolTemplate[] = [
         brand_name: 'Emistat',
         generic_name: 'Ondansetron',
         adult: { dosage_form: 'Tab', strength: '8 mg', schedule: '1+0+1', meal_timing: 'Before Meal', duration: '3 Days', special_instructions: 'বমি কমাতে খাবারের ৩০ মিনিট আগে।' },
+      },
+      {
+        brand_name: 'Sergel',
+        generic_name: 'Esomeprazole',
+        adult: { dosage_form: 'Cap', strength: '20 mg', schedule: '1+0+1', meal_timing: 'Before Meal', duration: '5 Days', special_instructions: 'খাবারের ২০ মিনিট পূর্বে খালি পেটে।' },
       },
       {
         brand_name: 'ORS Saline',

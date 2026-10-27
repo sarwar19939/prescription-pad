@@ -47,6 +47,11 @@ export const MSK_SPINE_PROTOCOLS: DiseaseProtocolTemplate[] = [
         adult: { dosage_form: 'Cap', strength: '200 mg', schedule: '1+0+0', meal_timing: 'After Meal', duration: '10 Days', special_instructions: 'ভরা পেটে সেব্য।' },
       },
       {
+        brand_name: 'Sergel',
+        generic_name: 'Esomeprazole',
+        adult: { dosage_form: 'Cap', strength: '20 mg', schedule: '1+0+1', meal_timing: 'Before Meal', duration: '10 Days', special_instructions: 'খাবারের ২০ মিনিট পূর্বে খালি পেটে।' },
+      },
+      {
         brand_name: 'Recon',
         generic_name: 'Pregabalin',
         adult: { dosage_form: 'Cap', strength: '50 mg', schedule: '0+0+1', meal_timing: 'After Meal', duration: '14-30 Days', special_instructions: 'হাতে অবশ ভাব বা ঝিনঝিনে রাতে ১টি।' },
@@ -76,6 +81,11 @@ export const MSK_SPINE_PROTOCOLS: DiseaseProtocolTemplate[] = [
         brand_name: 'Napryn',
         generic_name: 'Naproxen',
         adult: { dosage_form: 'Tab', strength: '500 mg', schedule: '1+0+1', meal_timing: 'After Meal', duration: '7 Days', special_instructions: 'ভরা পেটে সেব্য।' },
+      },
+      {
+        brand_name: 'Sergel',
+        generic_name: 'Esomeprazole',
+        adult: { dosage_form: 'Cap', strength: '20 mg', schedule: '1+0+1', meal_timing: 'Before Meal', duration: '7 Days', special_instructions: 'ব্যথানাশকজনিত অ্যাসিডিটি প্রতিরোধে খালি পেটে।' },
       },
     ],
     adviceBn: [

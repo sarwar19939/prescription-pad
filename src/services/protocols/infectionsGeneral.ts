@@ -17,6 +17,16 @@ export const INFECTIONS_GENERAL: DiseaseProtocolTemplate[] = [
         pediatric: { dosage_form: 'Syr', strength: '120 mg/5 ml', schedule: '1+1+1 (SOS)', meal_timing: 'After Meal', duration: '3 Days', special_instructions: 'জ্বরে প্রতি ৬-৮ ঘণ্টা পরপর মাপমতো সেব্য।', perKgDoseMg: 15, concentrationMgPerMl: 24 },
       },
       {
+        brand_name: 'Maxpro',
+        generic_name: 'Esomeprazole',
+        adult: { dosage_form: 'Cap', strength: '20 mg', schedule: '1+0+1', meal_timing: 'Before Meal', duration: '7 Days', special_instructions: 'খাবারের ২০ মিনিট পূর্বে খালি পেটে।' },
+      },
+      {
+        brand_name: 'Ceevit',
+        generic_name: 'Ascorbic Acid (Vitamin C)',
+        adult: { dosage_form: 'Tab', strength: '250 mg', schedule: '1+0+1', meal_timing: 'After Meal', duration: '7 Days', special_instructions: 'রোগ প্রতিরোধ ক্ষমতা ও কৈশিকনালী সুরক্ষায় চুষে সেব্য।' },
+      },
+      {
         brand_name: 'ORS Saline',
         generic_name: 'Oral Rehydration Salts',
         adult: { dosage_form: 'Syr', strength: '500 ml', schedule: '1+1+1', meal_timing: 'Anytime', duration: '5 Days', special_instructions: 'প্রতিদিন অন্তত ২.৫ থেকে ৩ লিটার স্যালাইন ও তরল খাবার পান করুন।' },
@@ -158,6 +168,11 @@ export const INFECTIONS_GENERAL: DiseaseProtocolTemplate[] = [
         generic_name: 'Amoxicillin + Clavulanic Acid',
         adult: { dosage_form: 'Tab', strength: '625 mg', schedule: '1+0+1', meal_timing: 'With Meal', duration: '7-10 Days', special_instructions: 'খাবারের শুরুতে সেবন করলে পেটের অস্বস্তি কম হয়।' },
         pediatric: { dosage_form: 'Syr', strength: '156.25 mg/5 ml', schedule: '1+0+1', meal_timing: 'With Meal', duration: '7 Days', special_instructions: 'পরিমাপ অনুযায়ী দিনে দুইবার।' },
+      },
+      {
+        brand_name: 'Sergel',
+        generic_name: 'Esomeprazole',
+        adult: { dosage_form: 'Cap', strength: '20 mg', schedule: '1+0+1', meal_timing: 'Before Meal', duration: '10 Days', special_instructions: 'খালি পেটে সেব্য অ্যান্টিবায়োটিকজনিত গ্যাস্ট্রিক প্রতিরোধে।' },
       },
       {
         brand_name: 'Povidone Iodine Gargle',

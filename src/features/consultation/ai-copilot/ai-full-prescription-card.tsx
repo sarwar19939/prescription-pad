@@ -19,6 +19,11 @@ import {
   Utensils,
   Wand2,
 } from 'lucide-react';
+import {
+  formatSubcontinentDuration,
+  formatSubcontinentMealTiming,
+  formatSubcontinentSchedule,
+} from '@/lib/prescriptionFormatters';
 import type { FullPrescriptionPackage } from '@/services/aiPrescriptionService';
 import type { Patient } from '@/types/schema';
 import { Button } from '@/components/ui/button';
@@ -105,18 +110,18 @@ export function AIFullPrescriptionCard({
                 </div>
 
                 <span className="shrink-0 font-mono text-xs font-bold text-teal-800 bg-teal-50 px-2 py-0.5 rounded border border-teal-200">
-                  {m.schedule}
+                  {formatSubcontinentSchedule(m.schedule)}
                 </span>
               </div>
 
               <div className="flex flex-wrap items-center gap-3 text-xs text-slate-600 mt-2 pt-2 border-t border-slate-100">
-                <span className="flex items-center gap-1">
-                  <Utensils className="h-3 w-3 text-slate-400" />
-                  {m.meal_timing}
+                <span className="flex items-center gap-1 font-medium text-slate-700">
+                  <Utensils className="h-3 w-3 text-teal-600" />
+                  {formatSubcontinentMealTiming(m.meal_timing)}
                 </span>
-                <span className="flex items-center gap-1">
-                  <Clock className="h-3 w-3 text-slate-400" />
-                  {m.duration}
+                <span className="flex items-center gap-1 font-medium text-slate-700">
+                  <Clock className="h-3 w-3 text-indigo-600" />
+                  {formatSubcontinentDuration(m.duration)}
                 </span>
                 {m.special_instructions && (
                   <span className="text-[11px] text-amber-800 bg-amber-50 px-2 py-0.5 rounded border border-amber-200 font-medium">
