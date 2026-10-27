@@ -8,13 +8,15 @@
  */
 import { useEffect, useState } from 'react';
 import { useLiveQuery } from 'dexie-react-hooks';
-import { CheckCircle2, Loader2, Printer, Save } from 'lucide-react';
+import { CheckCircle2, FileText, Loader2, Printer, Save, Sparkles } from 'lucide-react';
 
 import { db } from '@/db/localDb';
 import { ensureTodayEncounter, findTodayEncounter } from '../copy-rx';
+import { PrescriplyPadHeader } from './prescriply-pad-header';
+import { PrescriplyClinicalSidebar } from './prescriply-clinical-sidebar';
 import { AdviceSection } from './advice-section';
-import { NotesVitals } from './notes-vitals';
 import { RxPad } from './rx-pad';
+import { PrescriplySignatureBlock } from './prescriply-signature-block';
 import { PrintableRx } from '@/components/prescription/PrintableRx';
 import type { Patient } from '@/types/schema';
 import { Button } from '@/components/ui/button';
@@ -88,49 +90,66 @@ export function EncounterPad({ patient }: { patient: Patient }) {
   }
 
   return (
-    <div className="flex flex-col gap-6">
-      <div className="flex flex-wrap items-center gap-3 print:hidden">
-        <h2 className="text-xl font-bold tracking-tight text-slate-900">Consultation Pad</h2>
-        <span className="rounded-full bg-slate-100 px-3 py-1 text-xs font-semibold uppercase tracking-wider text-slate-600 border border-slate-200/80">
-          active draft · autosaved locally
-        </span>
-        {finalized && (
-          <span className="ml-auto flex items-center gap-1.5 text-sm font-semibold text-teal-700 bg-teal-50 border border-teal-200 px-3 py-1 rounded-xl">
-            <CheckCircle2 className="h-4 w-4 text-teal-600" aria-hidden /> Visit saved &amp; finalized
+    <div className="flex flex-col gap-4">
+      {/* Top Pad Action Bar */}
+      <div className="flex flex-wrap items-center justify-between gap-3 print:hidden">
+        <div className="flex items-center gap-2">
+          <FileText className="h-5 w-5 text-teal-700" />
+          <h2 className="text-lg font-bold tracking-tight text-slate-900">ডিজিটাল প্রেসক্রিপশন প্যাড</h2>
+          <span className="rounded-full bg-teal-50 text-teal-800 border border-teal-200 px-2.5 py-0.5 text-xs font-semibold">
+            Prescriply Studio Layout
           </span>
-        )}
+        </div>
+
+        <div className="flex items-center gap-2">
+          {finalized && (
+            <span className="flex items-center gap-1.5 text-xs font-semibold text-teal-700 bg-teal-50 border border-teal-200 px-3 py-1 rounded-xl">
+              <CheckCircle2 className="h-4 w-4 text-teal-600" aria-hidden /> সংরক্ষিত
+            </span>
+          )}
+          <Button
+            size="sm"
+            onClick={() => void finalize()}
+            className="h-9 px-4 rounded-xl font-semibold text-xs bg-teal-600 hover:bg-teal-700 text-white shadow-xs"
+          >
+            <Save className="h-4 w-4 mr-1.5" /> সংরক্ষণ করুন
+          </Button>
+          <Button
+            size="sm"
+            variant="outline"
+            onClick={() => window.print()}
+            className="h-9 px-4 rounded-xl font-semibold text-xs border-slate-300 text-slate-700 hover:text-teal-700 hover:border-teal-500"
+          >
+            <Printer className="h-4 w-4 mr-1.5" /> প্রিন্ট প্রেসক্রিপশন
+          </Button>
+        </div>
       </div>
 
-      <div className="rounded-2xl border border-slate-200/80 bg-white p-6 shadow-xs print:hidden">
-        <NotesVitals encounter={encounter} patient={patient} />
-      </div>
+      {/* Unified Digital Prescription Pad Sheet (A4 Style Canvas) */}
+      <div className="rounded-2xl border border-slate-200/90 bg-white p-5 sm:p-7 shadow-sm max-w-5xl mx-auto w-full space-y-6 print:hidden">
+        {/* 1. Letterhead & Patient Bar */}
+        <PrescriplyPadHeader tenant={tenant} patient={patient} encounter={encounter} />
 
-      <div className="rounded-2xl border border-slate-200/80 bg-white p-6 shadow-xs print:hidden">
-        <RxPad patient={patient} encounterId={encounter.id} />
-      </div>
+        {/* 2. Authentic Two-Column Clinical Pad Layout */}
+        <div className="grid grid-cols-1 lg:grid-cols-[33%_67%] gap-6 text-slate-900">
+          {/* Left Column (33%): Clinical Assessment (C/C, O/E, Vitals, History, Dx, Ix) */}
+          <div className="lg:border-r lg:border-dashed lg:border-slate-300 lg:pr-5">
+            <PrescriplyClinicalSidebar
+              encounter={encounter}
+              patient={patient}
+              reports={reports}
+            />
+          </div>
 
-      <div className="rounded-2xl border border-slate-200/80 bg-white p-6 shadow-xs print:hidden">
-        <AdviceSection encounter={encounter} />
-      </div>
-
-      <div className="flex flex-wrap items-center gap-3 pt-2 print:hidden">
-        <Button
-          onClick={() => void finalize()}
-          className="h-12 px-6 rounded-xl font-semibold text-base bg-teal-600 hover:bg-teal-700 text-white shadow-sm transition-all"
-        >
-          {finalized ? <CheckCircle2 className="h-5 w-5 mr-2" aria-hidden /> : <Save className="h-5 w-5 mr-2" aria-hidden />}
-          Save &amp; Finalize Visit
-        </Button>
-        <Button
-          variant="outline"
-          onClick={() => window.print()}
-          className="h-12 px-6 rounded-xl font-semibold text-base border-slate-300 text-slate-700 hover:text-teal-700 hover:border-teal-500 transition-all"
-        >
-          <Printer className="h-5 w-5 mr-2" aria-hidden /> Print Prescription
-        </Button>
-        <span className="text-xs text-slate-400 font-medium">
-          Zero-delay local storage (Dexie.js), synced when online
-        </span>
+          {/* Right Column (67%): ℞ Prescription Canvas, Medicines, Advice, Follow-up */}
+          <div className="lg:pl-2 space-y-6">
+            <RxPad patient={patient} encounterId={encounter.id} />
+            <div className="pt-4 border-t border-slate-100">
+              <AdviceSection encounter={encounter} />
+            </div>
+            <PrescriplySignatureBlock tenant={tenant} />
+          </div>
+        </div>
       </div>
 
       {/* Print-only prescription sheet; invisible on screen. */}
