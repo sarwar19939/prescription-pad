@@ -1,8 +1,8 @@
 import { NextResponse } from 'next/server';
-import { mockClinicalTrack, mockLabAnalysis } from './mockData';
+import { mockClinicalTrack, mockFullPrescription, mockLabAnalysis } from './mockData';
 
 interface RequestBody {
-  action: 'analyze_lab' | 'suggest_track';
+  action: 'analyze_lab' | 'suggest_track' | 'full_prescription';
   payload: any;
 }
 
@@ -12,11 +12,11 @@ const DEFAULT_NVIDIA_MODEL = process.env.NVIDIA_MODEL || 'meta/llama-3.3-70b-ins
 
 const BD_CLINICAL_SYSTEM_INSTRUCTION = `You are an expert AI Clinical Decision Support co-pilot for BMDC registered doctors in Bangladesh.
 Guidelines & Regional Protocol (DGHS / icddr,b / BIRDEM):
-1. Dengue Protocol: If fever, retro-orbital pain, myalgia, or rash is present, highlight Dengue suspicion. Strictly warn NO NSAIDs (Ibuprofen, Ketorolac, Naproxen, Aspirin) or Steroids due to hemorrhage risk; recommend Paracetamol only + ORS fluids.
-2. Enteric Fever / Antimicrobial Stewardship: High fluoroquinolone (Ciprofloxacin) resistance in Bangladesh. Prioritize Azithromycin or Cefixime for OPD.
+1. Dengue Protocol: If fever, retro-orbital pain, myalgia, or rash is present, highlight Dengue suspicion. Strictly warn NO NSAIDs (Ibuprofen, Ketorolac, Naproxen, Aspirin) or Steroids; recommend Paracetamol only + ORS fluids.
+2. Enteric Fever: Prioritize Azithromycin or Cefixime due to ciprofloxacin resistance.
 3. Diarrhea Protocol: icddr,b rehydration Plan A/B/C + Zinc (10-20mg for 14 days).
 4. Prescribing Notation: Use Bangladesh prescription schedules (1+0+1, 1+1+1, 0+0+1, 1+0+0) with top BD brands (Square, Incepta, Beximco, Renata, Healthcare).
-Return STRICT JSON ONLY conforming to the requested schema. Do not add markdown or extra conversational text.`;
+Return STRICT JSON ONLY conforming to the requested schema.`;
 
 export async function POST(req: Request) {
   try {
@@ -42,9 +42,12 @@ export async function POST(req: Request) {
         } else if (action === 'suggest_track') {
           const result = await callGeminiSuggestTrack(geminiApiKey, payload);
           return NextResponse.json({ ...result, ai_provider: 'gemini' });
+        } else if (action === 'full_prescription') {
+          const result = await callGeminiFullPrescription(geminiApiKey, payload);
+          return NextResponse.json({ ...result, ai_provider: 'gemini' });
         }
       } catch (geminiError) {
-        console.warn('Gemini high-demand/rate limit encountered; seamlessly failing over to NVIDIA NIM:', geminiError instanceof Error ? geminiError.message : geminiError);
+        console.warn('Gemini error, failing over to NVIDIA NIM:', geminiError instanceof Error ? geminiError.message : geminiError);
       }
     }
 
@@ -57,9 +60,12 @@ export async function POST(req: Request) {
         } else if (action === 'suggest_track') {
           const result = await callNvidiaSuggestTrack(nvidiaApiKey, payload);
           return NextResponse.json({ ...result, ai_provider: 'nvidia_nim' });
+        } else if (action === 'full_prescription') {
+          const result = await callNvidiaFullPrescription(nvidiaApiKey, payload);
+          return NextResponse.json({ ...result, ai_provider: 'nvidia_nim' });
         }
       } catch (nvidiaError) {
-        console.warn('NVIDIA NIM request failed, falling back to local clinical rules:', nvidiaError instanceof Error ? nvidiaError.message : nvidiaError);
+        console.warn('NVIDIA NIM error, falling back to local clinical rules:', nvidiaError instanceof Error ? nvidiaError.message : nvidiaError);
       }
     }
 
@@ -68,6 +74,8 @@ export async function POST(req: Request) {
       return NextResponse.json(mockLabAnalysis(payload));
     } else if (action === 'suggest_track') {
       return NextResponse.json(mockClinicalTrack(payload));
+    } else if (action === 'full_prescription') {
+      return NextResponse.json(mockFullPrescription(payload.diagnosis || ''));
     }
 
     return NextResponse.json({ error: 'Unsupported action' }, { status: 400 });
@@ -140,28 +148,22 @@ async function callNvidiaChat(apiKey: string, prompt: string, systemInstruction:
 }
 
 async function callNvidiaSuggestTrack(apiKey: string, context: any) {
-  const prompt = `Analyze this anonymized patient clinical summary and suggest an evidence-based clinical track according to Bangladesh DGHS/BMDC guidelines:
+  const prompt = `Analyze this anonymized patient clinical summary and suggest an evidence-based clinical track:
 ${JSON.stringify(context, null, 2)}
-Return STRICT JSON schema:
-{
-  "differential_diagnoses": string[],
-  "suggested_medications": Array<{ generic_name, suggested_brand, strength, schedule, duration, rationale }>,
-  "recommended_investigations": string[],
-  "safety_warnings": string[]
-}`;
+Return STRICT JSON: { "differential_diagnoses": string[], "suggested_medications": Array<{ generic_name, suggested_brand, strength, schedule, duration, rationale }>, "recommended_investigations": string[], "safety_warnings": string[] }`;
+  return callNvidiaChat(apiKey, prompt, BD_CLINICAL_SYSTEM_INSTRUCTION);
+}
+
+async function callNvidiaFullPrescription(apiKey: string, payload: any) {
+  const prompt = `Confirmed Diagnosis: "${payload.diagnosis}". Patient: ${payload.age}yo ${payload.gender}, weight: ${payload.vitals?.weight || 'normal'}, allergies: ${payload.allergies?.join(', ') || 'none'}.
+Generate a complete, comprehensive Bangladesh prescription package with all necessary medications and clinical advice in Bengali.
+Return STRICT JSON: { "diagnosis": string, "medicines": Array<{ brand_name, generic_name, dosage_form, strength, schedule, meal_timing, duration, special_instructions }>, "advice": string[] }`;
   return callNvidiaChat(apiKey, prompt, BD_CLINICAL_SYSTEM_INSTRUCTION);
 }
 
 async function callNvidiaLabAnalysis(apiKey: string, payload: { content: string }) {
-  const prompt = `Analyze this laboratory report data and identify all biomarkers and abnormalities:
-${payload.content}
-Return STRICT JSON:
-{
-  "test_name": string,
-  "extracted_metrics": Record<string, string | number>,
-  "abnormality_flags": string[],
-  "ai_summary": string
-}`;
+  const prompt = `Analyze this lab report and identify biomarkers: ${payload.content}
+Return STRICT JSON: { "test_name": string, "extracted_metrics": Record<string, string | number>, "abnormality_flags": string[], "ai_summary": string }`;
   return callNvidiaChat(apiKey, prompt, BD_CLINICAL_SYSTEM_INSTRUCTION);
 }
 
@@ -201,4 +203,11 @@ async function callGeminiSuggestTrack(apiKey: string, context: any) {
     [{ role: 'user', parts: [{ text: `Patient Clinical Summary:\n${JSON.stringify(context, null, 2)}` }] }],
     BD_CLINICAL_SYSTEM_INSTRUCTION,
   );
+}
+
+async function callGeminiFullPrescription(apiKey: string, payload: any) {
+  const prompt = `Confirmed Diagnosis: "${payload.diagnosis}". Patient: ${payload.age}yo ${payload.gender}, weight: ${payload.vitals?.weight || 'normal'}, allergies: ${payload.allergies?.join(', ') || 'none'}.
+Generate a complete, comprehensive Bangladesh OPD prescription with all necessary medications and clinical advice in Bengali.
+Return STRICT JSON: { "diagnosis": string, "medicines": Array<{ brand_name, generic_name, dosage_form, strength, schedule, meal_timing, duration, special_instructions }>, "advice": string[] }`;
+  return callGemini(apiKey, [{ role: 'user', parts: [{ text: prompt }] }], BD_CLINICAL_SYSTEM_INSTRUCTION);
 }

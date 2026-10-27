@@ -24,9 +24,8 @@ interface SuggestedProtocolBannerProps {
 export function SuggestedProtocolBanner({
   encounter,
   patient,
-  onOpenTemplatesModal,
 }: SuggestedProtocolBannerProps) {
-  const [appliedInfo, setAppliedInfo] = useState<{ id: string; count: number } | null>(null);
+  const [appliedInfo, setAppliedInfo] = useState<{ id: string; msg: string } | null>(null);
   const [loading, setLoading] = useState(false);
 
   const matched = matchProtocolsForDiagnosis(encounter?.diagnosis || []);
@@ -36,7 +35,11 @@ export function SuggestedProtocolBanner({
     setLoading(true);
     try {
       const res = await applyProtocolToEncounter(encounter.id, proto, patient, encounter.vitals);
-      setAppliedInfo({ id: proto.id, count: res.medicinesCount });
+      const msg =
+        res.medicinesCount > 0
+          ? `${res.medicinesCount}টি নতুন ওষুধ যুক্ত হয়েছে!`
+          : 'ওষুধগুলো ইতিমধ্যেই প্রেসক্রিপশনে বিদ্যমান রয়েছে';
+      setAppliedInfo({ id: proto.id, msg });
       setTimeout(() => setAppliedInfo(null), 3500);
     } finally {
       setLoading(false);
@@ -80,9 +83,7 @@ export function SuggestedProtocolBanner({
               {appliedInfo?.id === proto.id ? (
                 <>
                   <Check className="h-4 w-4 mr-1.5 text-emerald-300" />
-                  {appliedInfo.count > 0
-                    ? `${appliedInfo.count}টি ওষুধ প্রেসক্রিপশনে যুক্ত হয়েছে!`
-                    : 'প্রেসক্রিপশনে যুক্ত হয়েছে!'}
+                  {appliedInfo.msg}
                 </>
               ) : (
                 <>

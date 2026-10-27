@@ -114,3 +114,33 @@ export function mockClinicalTrack(context: any) {
     safety_warnings: warnings.length > 0 ? warnings : ['Verify baseline renal and hepatic parameters before long-term therapy.'],
   };
 }
+
+export function mockFullPrescription(diagnosis: string) {
+  const d = diagnosis.toLowerCase();
+  if (d.includes('dengue') || d.includes('fever')) {
+    return {
+      diagnosis,
+      medicines: [
+        { brand_name: 'Napa', generic_name: 'Paracetamol', dosage_form: 'Tab', strength: '500 mg', schedule: '1+1+1+1', meal_timing: 'After Meal', duration: '3-5 Days', special_instructions: 'জ্বর বা শরীর ব্যথায় সেব্য। দিনে ৪ গ্রামের বেশি খাবেন না।' },
+        { brand_name: 'ORS Saline', generic_name: 'Oral Rehydration Salts', dosage_form: 'Syr', strength: '500 ml', schedule: '1+1+1', meal_timing: 'Anytime', duration: '5 Days', special_instructions: 'প্রচুর স্যালাইন ও তরল খাবার পান করুন।' },
+      ],
+      advice: [
+        'প্রচুর পরিমাণে পানি, খাবার স্যালাইন ও ফলের রস পান করুন।',
+        'কোনো অবস্থাতেই ব্যথানাশক (NSAID) সেবন করবেন না।',
+        'তীব্র পেটব্যথা বা রক্তক্ষরণ হলে অবিলম্বে হাসপাতালে যান।',
+      ],
+    };
+  }
+
+  return {
+    diagnosis,
+    medicines: [
+      { brand_name: 'Maxpro', generic_name: 'Esomeprazole', dosage_form: 'Cap', strength: '20 mg', schedule: '1+0+1', meal_timing: 'Before Meal', duration: '14 Days', special_instructions: 'খালি পেটে সেব্য।' },
+      { brand_name: 'Napa', generic_name: 'Paracetamol', dosage_form: 'Tab', strength: '500 mg', schedule: '1+1+1', meal_timing: 'After Meal', duration: '5 Days', special_instructions: 'প্রয়োজনে সেব্য।' },
+    ],
+    advice: [
+      'সময়মতো পুষ্টিকর খাবার গ্রহণ করুন ও পর্যাপ্ত বিশ্রাম নিন।',
+      'সমস্যা না কমলে নিয়মিত চিকিৎসকের ফলোআপ নিন।',
+    ],
+  };
+}

@@ -23,7 +23,9 @@ const COMPLAINT_SUGGESTIONS = [
 
 const COMMON_DIAGNOSIS_PRESETS = [
   'Dengue', 'Scabies', 'Diarrhea / GE', 'PUD / GERD',
-  'Hypertension', 'Type 2 Diabetes', 'UTI', 'Tinea (Fungal)',
+  'Hypertension', 'Type 2 Diabetes', 'Asthma', 'COPD',
+  'UTI', 'Tinea (দাদ)', 'Typhoid', 'Common Cold',
+  'Back Pain', 'Knee Osteoarthritis', 'Anxiety', 'Tonsillitis',
 ];
 
 const VITAL_FIELDS: Array<{ key: keyof VitalsT; label: string; unit: string; placeholder: string }> = [
@@ -207,7 +209,7 @@ export function NotesVitals({ encounter, patient }: { encounter: Encounter; pati
                 encounter={encounter}
                 patient={patient}
                 compact
-                triggerLabel="টেমপ্লেট লাইব্রেরি"
+                triggerLabel="📚 টেমপ্লেট লাইব্রেরি (১৬৮+ রোগ)"
               />
             )}
           </div>
