@@ -9,6 +9,7 @@ import { useRouter } from 'next/navigation';
 import { Loader2 } from 'lucide-react';
 
 import { db } from '@/db/localDb';
+import { generateUUID } from '@/lib/uuid';
 import { getCurrentTenantId } from '@/services/auth';
 import type { Gender, Patient } from '@/types/schema';
 import { TagInput } from '@/components/tag-input';
@@ -86,7 +87,7 @@ export function RegisterPatientDialog({ open, onOpenChange, onRegistered }: Regi
       const ts = stamp();
       const tenantId = getCurrentTenantId();
       const patient: Patient = {
-        id: crypto.randomUUID(),
+        id: generateUUID(),
         tenant_id: tenantId,
         patient_code: await nextPatientCode(tenantId),
         full_name: form.full_name.trim(),

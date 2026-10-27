@@ -12,6 +12,7 @@ import { db } from '@/db/localDb';
 import { TagInput } from '@/components/tag-input';
 import { Badge } from '@/components/ui/badge';
 import { analyzeVitals } from '@/services/vitalsService';
+import { ProtocolTemplatesDialog } from './protocol-templates-dialog';
 import { SuggestedProtocolBanner } from './suggested-protocol-banner';
 import type { Encounter, Patient, Vitals as VitalsT } from '@/types/schema';
 
@@ -101,22 +102,26 @@ export function NotesVitals({ encounter, patient }: { encounter: Encounter; pati
           <span className="font-normal normal-case text-slate-400">click quick-add or type + Enter</span>
         </label>
         <div className="mb-2.5 flex flex-wrap gap-1.5">
-          {COMPLAINT_SUGGESTIONS.filter((s) => !encounter.chief_complaints.includes(s)).map((s) => (
+          {COMPLAINT_SUGGESTIONS.filter((s) => !(encounter.chief_complaints || []).includes(s)).map((s) => (
             <button
               key={s}
               type="button"
-              onClick={() => writeEncounterField({ chief_complaints: [...encounter.chief_complaints, s] })}
+              onClick={() =>
+                writeEncounterField({
+                  chief_complaints: [...(encounter.chief_complaints || []), s],
+                })
+              }
               className="rounded-full border border-slate-200 bg-white px-3 py-1 text-xs font-semibold text-slate-700 shadow-xs hover:border-teal-600 hover:bg-teal-50/50 hover:text-teal-700 transition-all"
             >
               + {s}
             </button>
           ))}
-          {COMPLAINT_SUGGESTIONS.every((s) => encounter.chief_complaints.includes(s)) && (
+          {COMPLAINT_SUGGESTIONS.every((s) => (encounter.chief_complaints || []).includes(s)) && (
             <span className="text-xs text-slate-400">all suggestions added</span>
           )}
         </div>
         <TagInput
-          value={encounter.chief_complaints}
+          value={encounter.chief_complaints || []}
           onChange={(tags) => writeEncounterField({ chief_complaints: tags })}
           placeholder="Free-text complaint + Enter…"
         />
@@ -193,30 +198,42 @@ export function NotesVitals({ encounter, patient }: { encounter: Encounter; pati
           />
         </div>
         <div>
-          <span className="mb-2 block text-xs font-bold uppercase tracking-wider text-slate-600">
-            Diagnosis
-          </span>
+          <div className="flex items-center justify-between mb-2">
+            <span className="text-xs font-bold uppercase tracking-wider text-slate-600">
+              Diagnosis
+            </span>
+            {patient && (
+              <ProtocolTemplatesDialog
+                encounter={encounter}
+                patient={patient}
+                compact
+                triggerLabel="টেমপ্লেট লাইব্রেরি"
+              />
+            )}
+          </div>
           <TagInput
-            value={encounter.diagnosis}
+            value={encounter.diagnosis || []}
             onChange={(tags) => writeEncounterField({ diagnosis: tags })}
             placeholder="e.g. Dengue, Scabies (Press Enter)"
           />
           <div className="flex flex-wrap items-center gap-1.5 mt-2.5">
             <span className="text-[11px] font-bold text-slate-400 uppercase tracking-wider">Quick:</span>
             {COMMON_DIAGNOSIS_PRESETS.map((diag) => {
-              const has = encounter.diagnosis.some(
-                (d) => d.toLowerCase() === diag.toLowerCase() || diag.toLowerCase().includes(d.toLowerCase()),
-              );
+              const currentDiags = encounter.diagnosis || [];
+              const matchDiag = (d: string, p: string) => {
+                const cd = d.trim().toLowerCase();
+                const cp = p.trim().toLowerCase();
+                return cd === cp || (cp.includes('/') && cp.split('/').some((part) => part.trim() === cd));
+              };
+              const has = currentDiags.some((d) => matchDiag(d, diag));
               return (
                 <button
                   key={diag}
                   type="button"
                   onClick={() => {
                     const next = has
-                      ? encounter.diagnosis.filter(
-                          (d) => d.toLowerCase() !== diag.toLowerCase() && !diag.toLowerCase().includes(d.toLowerCase()),
-                        )
-                      : [...encounter.diagnosis, diag];
+                      ? currentDiags.filter((d) => !matchDiag(d, diag))
+                      : [...currentDiags, diag];
                     writeEncounterField({ diagnosis: next });
                   }}
                   className={`rounded-lg px-2.5 py-1 text-xs font-semibold border transition-all ${

@@ -12,8 +12,9 @@ export interface SafetyWarning {
 
 const WORD_RE = /[a-z0-9]+/g;
 
-function words(text: string): Set<string> {
+function words(text?: string | null): Set<string> {
   const out = new Set<string>();
+  if (!text || typeof text !== 'string') return out;
   for (const w of text.toLowerCase().match(WORD_RE) ?? []) {
     out.add(w);
     // singularize cheap trailing 's' so "steroids" matches "steroid"
@@ -37,7 +38,7 @@ export function checkMedicine(
 ): SafetyWarning[] {
   const warnings: SafetyWarning[] = [];
 
-  for (const allergy of patient.allergies) {
+  for (const allergy of patient?.allergies ?? []) {
     if (overlaps(allergy, item.generic_name) || overlaps(allergy, item.brand_name)) {
       warnings.push({
         severity: 'red',
@@ -46,7 +47,7 @@ export function checkMedicine(
     }
   }
 
-  const conditions = patient.chronic_conditions;
+  const conditions = patient?.chronic_conditions ?? [];
   for (const contra of item.contraindications ?? []) {
     for (const condition of conditions) {
       if (overlaps(contra, condition)) {

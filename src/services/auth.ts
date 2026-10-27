@@ -7,6 +7,7 @@
  */
 import { getSupabaseClient } from '@/db/supabase';
 import { db } from '@/db/localDb';
+import { generateUUID } from '@/lib/uuid';
 import { DEFAULT_TENANT_ID } from '@/db/seedData';
 import type { Tenant } from '@/types/schema';
 
@@ -113,7 +114,7 @@ export async function signUpDoctor(
   specialty: string = 'General Physician',
 ): Promise<AuthSession> {
   const client = getSupabaseClient();
-  const newTenantId = crypto.randomUUID();
+  const newTenantId = generateUUID();
   const ts = new Date().toISOString();
 
   // Create local tenant immediately in Dexie (offline-first)

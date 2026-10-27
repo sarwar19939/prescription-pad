@@ -6,9 +6,9 @@ interface RequestBody {
   payload: any;
 }
 
-const GEMINI_MODEL = process.env.GEMINI_MODEL || 'gemini-3.8-flash';
+const GEMINI_MODEL = process.env.GEMINI_MODEL || 'gemini-2.5-flash';
 const NVIDIA_BASE_URL = 'https://integrate.api.nvidia.com/v1/chat/completions';
-const DEFAULT_NVIDIA_MODEL = process.env.NVIDIA_MODEL || 'nvidia/nemotron-3.5-lightning-30b-a3b';
+const DEFAULT_NVIDIA_MODEL = process.env.NVIDIA_MODEL || 'meta/llama-3.3-70b-instruct';
 
 const BD_CLINICAL_SYSTEM_INSTRUCTION = `You are an expert AI Clinical Decision Support co-pilot for BMDC registered doctors in Bangladesh.
 Guidelines & Regional Protocol (DGHS / icddr,b / BIRDEM):
@@ -106,30 +106,37 @@ function safeParseNvidiaJson(json: any) {
 
 async function callNvidiaChat(apiKey: string, prompt: string, systemInstruction: string) {
   const model = DEFAULT_NVIDIA_MODEL;
-  const res = await fetch(NVIDIA_BASE_URL, {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      Authorization: `Bearer ${apiKey}`,
-    },
-    body: JSON.stringify({
-      model,
-      messages: [
-        { role: 'system', content: systemInstruction },
-        { role: 'user', content: prompt },
-      ],
-      temperature: 0.2,
-      max_tokens: 1800,
-    }),
-  });
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), 9000);
+  try {
+    const res = await fetch(NVIDIA_BASE_URL, {
+      method: 'POST',
+      signal: controller.signal,
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${apiKey}`,
+      },
+      body: JSON.stringify({
+        model,
+        messages: [
+          { role: 'system', content: systemInstruction },
+          { role: 'user', content: prompt },
+        ],
+        temperature: 0.2,
+        max_tokens: 1800,
+      }),
+    });
 
-  if (!res.ok) {
-    const errorBody = await res.text();
-    throw new Error(`NVIDIA NIM returned ${res.status}: ${errorBody}`);
+    if (!res.ok) {
+      const errorBody = await res.text();
+      throw new Error(`NVIDIA NIM returned ${res.status}: ${errorBody}`);
+    }
+
+    const json = await res.json();
+    return safeParseNvidiaJson(json);
+  } finally {
+    clearTimeout(timer);
   }
-
-  const json = await res.json();
-  return safeParseNvidiaJson(json);
 }
 
 async function callNvidiaSuggestTrack(apiKey: string, context: any) {
@@ -160,20 +167,27 @@ Return STRICT JSON:
 
 async function callGemini(apiKey: string, contents: any[], systemInstruction: string) {
   const url = `https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_MODEL}:generateContent?key=${apiKey}`;
-  const res = await fetch(url, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({
-      contents,
-      systemInstruction: { parts: [{ text: systemInstruction }] },
-      generationConfig: { responseMimeType: 'application/json', temperature: 0.2 },
-    }),
-  });
-  if (!res.ok) throw new Error(`Gemini API returned ${res.status}: ${await res.text()}`);
-  const json = await res.json();
-  const text = json.candidates?.[0]?.content?.parts?.[0]?.text;
-  if (!text) throw new Error('Empty response from Gemini API');
-  return JSON.parse(text);
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), 9000);
+  try {
+    const res = await fetch(url, {
+      method: 'POST',
+      signal: controller.signal,
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        contents,
+        systemInstruction: { parts: [{ text: systemInstruction }] },
+        generationConfig: { responseMimeType: 'application/json', temperature: 0.2 },
+      }),
+    });
+    if (!res.ok) throw new Error(`Gemini API returned ${res.status}: ${await res.text()}`);
+    const json = await res.json();
+    const text = json.candidates?.[0]?.content?.parts?.[0]?.text;
+    if (!text) throw new Error('Empty response from Gemini API');
+    return JSON.parse(text);
+  } finally {
+    clearTimeout(timer);
+  }
 }
 
 async function callGeminiLabAnalysis(apiKey: string, payload: { content: string }) {

@@ -26,18 +26,18 @@ export function SuggestedProtocolBanner({
   patient,
   onOpenTemplatesModal,
 }: SuggestedProtocolBannerProps) {
-  const [appliedId, setAppliedId] = useState<string | null>(null);
+  const [appliedInfo, setAppliedInfo] = useState<{ id: string; count: number } | null>(null);
   const [loading, setLoading] = useState(false);
 
-  const matched = matchProtocolsForDiagnosis(encounter.diagnosis || []);
+  const matched = matchProtocolsForDiagnosis(encounter?.diagnosis || []);
   if (matched.length === 0) return null;
 
   const handleApply = async (proto: DiseaseProtocolTemplate) => {
     setLoading(true);
     try {
-      await applyProtocolToEncounter(encounter.id, proto, patient, encounter.vitals);
-      setAppliedId(proto.id);
-      setTimeout(() => setAppliedId(null), 3000);
+      const res = await applyProtocolToEncounter(encounter.id, proto, patient, encounter.vitals);
+      setAppliedInfo({ id: proto.id, count: res.medicinesCount });
+      setTimeout(() => setAppliedInfo(null), 3500);
     } finally {
       setLoading(false);
     }
@@ -77,10 +77,12 @@ export function SuggestedProtocolBanner({
               onClick={() => handleApply(proto)}
               className="h-9 px-3.5 rounded-xl text-xs font-bold bg-indigo-600 hover:bg-indigo-700 text-white shadow-2xs transition-all"
             >
-              {appliedId === proto.id ? (
+              {appliedInfo?.id === proto.id ? (
                 <>
                   <Check className="h-4 w-4 mr-1.5 text-emerald-300" />
-                  প্রেসক্রিপশনে যুক্ত হয়েছে
+                  {appliedInfo.count > 0
+                    ? `${appliedInfo.count}টি ওষুধ প্রেসক্রিপশনে যুক্ত হয়েছে!`
+                    : 'প্রেসক্রিপশনে যুক্ত হয়েছে!'}
                 </>
               ) : (
                 <>

@@ -8,6 +8,7 @@ import { useState } from 'react';
 import { Loader2, Plus, Sparkles, Trash2, Upload } from 'lucide-react';
 
 import { db } from '@/db/localDb';
+import { generateUUID } from '@/lib/uuid';
 import { analyzeLabReport } from '@/services/aiClinicalCopilot';
 import type { Patient } from '@/types/schema';
 import { Button } from '@/components/ui/button';
@@ -105,7 +106,7 @@ export function AddReportDialog({
       const flags = abnormalityFlags.split(',').map((f) => f.trim()).filter(Boolean);
       const ts = new Date().toISOString();
       await db.investigation_reports.add({
-        id: crypto.randomUUID(),
+        id: generateUUID(),
         tenant_id: patient.tenant_id,
         patient_id: patient.id,
         encounter_id: encounterId ?? null,

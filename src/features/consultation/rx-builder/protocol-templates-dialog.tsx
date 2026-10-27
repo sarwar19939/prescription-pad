@@ -33,9 +33,13 @@ const CATEGORIES = [
 export function ProtocolTemplatesDialog({
   encounter,
   patient,
+  triggerLabel = 'রোগভিত্তিক প্রেসক্রিপশন টেমপ্লেট',
+  compact = false,
 }: {
   encounter: Encounter;
   patient: Patient;
+  triggerLabel?: string;
+  compact?: boolean;
 }) {
   const [open, setOpen] = useState(false);
   const [category, setCategory] = useState<string>('All');
@@ -43,6 +47,7 @@ export function ProtocolTemplatesDialog({
     DISEASE_PROTOCOL_TEMPLATES[0],
   );
   const [applied, setApplied] = useState(false);
+  const [appliedCount, setAppliedCount] = useState(0);
   const [loading, setLoading] = useState(false);
 
   const filtered =
@@ -51,23 +56,24 @@ export function ProtocolTemplatesDialog({
       : DISEASE_PROTOCOL_TEMPLATES.filter((p) => p.category === category);
 
   const isPediatric =
-    patient.age < 12 ||
+    (patient?.age ?? 30) < 12 ||
     (encounter.vitals?.weight && parseFloat(encounter.vitals.weight) <= 35);
 
   const handleApply = async () => {
     setLoading(true);
     try {
-      await applyProtocolToEncounter(
+      const res = await applyProtocolToEncounter(
         encounter.id,
         selected,
         patient,
         encounter.vitals,
       );
+      setAppliedCount(res.medicinesCount);
       setApplied(true);
       setTimeout(() => {
         setApplied(false);
         setOpen(false);
-      }, 1500);
+      }, 1200);
     } finally {
       setLoading(false);
     }
@@ -78,12 +84,17 @@ export function ProtocolTemplatesDialog({
       <DialogTrigger asChild>
         <Button
           type="button"
+          onClick={() => setOpen(true)}
           variant="outline"
           size="sm"
-          className="h-9 gap-1.5 rounded-xl border-indigo-200 bg-indigo-50/70 text-indigo-900 hover:bg-indigo-100/80 font-bold text-xs shadow-2xs"
+          className={
+            compact
+              ? 'h-8 px-2.5 gap-1 rounded-lg border-indigo-200 bg-indigo-50/80 text-indigo-900 hover:bg-indigo-100 font-bold text-xs shadow-2xs'
+              : 'h-9 gap-1.5 rounded-xl border-indigo-200 bg-indigo-50/70 text-indigo-900 hover:bg-indigo-100/80 font-bold text-xs shadow-2xs'
+          }
         >
           <Wand2 className="h-3.5 w-3.5 text-indigo-600" />
-          <span>রোগভিত্তিক প্রেসক্রিপশন টেমপ্লেট</span>
+          <span>{triggerLabel}</span>
         </Button>
       </DialogTrigger>
 
@@ -213,7 +224,7 @@ export function ProtocolTemplatesDialog({
                 {applied ? (
                   <>
                     <Check className="h-4 w-4 mr-1.5 text-emerald-300" />
-                    প্রেসক্রিপশনে যুক্ত হয়েছে!
+                    {appliedCount > 0 ? `${appliedCount}টি ওষুধ প্রেসক্রিপশনে যুক্ত হয়েছে!` : 'যুক্ত হয়েছে!'}
                   </>
                 ) : (
                   <>

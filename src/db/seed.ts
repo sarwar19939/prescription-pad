@@ -11,6 +11,7 @@ import {
   type EncounterSeed,
 } from './seedData';
 import { db } from './localDb';
+import { generateUUID } from '@/lib/uuid';
 import type {
   Encounter,
   MedicineCatalog,
@@ -72,7 +73,7 @@ export async function seedInitialData(): Promise<SeedSummary> {
 
   const medicines: MedicineCatalog[] = MEDICINE_SEEDS.map((m) => ({
     ...m,
-    id: crypto.randomUUID(),
+    id: generateUUID(),
     tenant_id: DEFAULT_TENANT_ID,
     created_at: ts,
     updated_at: ts,
@@ -96,7 +97,7 @@ export async function seedInitialData(): Promise<SeedSummary> {
     } else {
       patient = {
         ...p,
-        id: crypto.randomUUID(),
+        id: generateUUID(),
         tenant_id: DEFAULT_TENANT_ID,
         created_at: ts,
         updated_at: ts,
@@ -144,7 +145,7 @@ export async function seedInitialData(): Promise<SeedSummary> {
 
 function buildEncounter(e: EncounterSeed, patientId: string, ts: string): Encounter {
   return {
-    id: crypto.randomUUID(),
+    id: generateUUID(),
     tenant_id: DEFAULT_TENANT_ID,
     patient_id: patientId,
     visit_date: e.visit_date,
@@ -169,7 +170,7 @@ function buildPrescription(
 ): PrescriptionItem {
   return {
     ...seed,
-    id: crypto.randomUUID(),
+    id: generateUUID(),
     tenant_id: DEFAULT_TENANT_ID,
     encounter_id: encounter.id,
     patient_id: patientId,

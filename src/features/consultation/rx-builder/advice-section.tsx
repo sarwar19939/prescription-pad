@@ -37,12 +37,14 @@ export function AdviceSection({ encounter }: { encounter: Encounter }) {
     }
   };
 
+  const currentAdvice = encounter.advice || [];
+
   const toggleAdvice = (advice: string) => {
-    const has = encounter.advice.includes(advice);
+    const has = currentAdvice.includes(advice);
     write({
       advice: has
-        ? encounter.advice.filter((a) => a !== advice)
-        : [...encounter.advice, advice],
+        ? currentAdvice.filter((a) => a !== advice)
+        : [...currentAdvice, advice],
     });
   };
 
@@ -61,7 +63,7 @@ export function AdviceSection({ encounter }: { encounter: Encounter }) {
               <input
                 type="checkbox"
                 className="mt-0.5 h-4 w-4 shrink-0 rounded border-slate-300 accent-teal-600 cursor-pointer"
-                checked={encounter.advice.includes(advice)}
+                checked={currentAdvice.includes(advice)}
                 onChange={() => toggleAdvice(advice)}
               />
               <span>{advice}</span>
@@ -70,11 +72,11 @@ export function AdviceSection({ encounter }: { encounter: Encounter }) {
         </div>
         <div>
           <TagInput
-            value={encounter.advice.filter((a) => !QUICK_ADVICE.includes(a))}
+            value={currentAdvice.filter((a) => !QUICK_ADVICE.includes(a))}
             onChange={(custom) =>
               write({
                 advice: [
-                  ...encounter.advice.filter((a) => QUICK_ADVICE.includes(a)),
+                  ...currentAdvice.filter((a) => QUICK_ADVICE.includes(a)),
                   ...custom,
                 ],
               })

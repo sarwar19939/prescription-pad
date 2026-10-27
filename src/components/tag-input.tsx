@@ -16,14 +16,15 @@ interface TagInputProps {
   danger?: boolean;
 }
 
-export function TagInput({ value, onChange, placeholder, danger }: TagInputProps) {
+export function TagInput({ value = [], onChange, placeholder, danger }: TagInputProps) {
   const [draft, setDraft] = useState('');
+  const safeValue = Array.isArray(value) ? value : [];
 
   const commit = () => {
     const tag = draft.trim();
     if (!tag) return;
-    if (!value.some((t) => t.toLowerCase() === tag.toLowerCase())) {
-      onChange([...value, tag]);
+    if (!safeValue.some((t) => t.toLowerCase() === tag.toLowerCase())) {
+      onChange([...safeValue, tag]);
     }
     setDraft('');
   };
@@ -32,8 +33,8 @@ export function TagInput({ value, onChange, placeholder, danger }: TagInputProps
     if (e.key === 'Enter' || e.key === ',') {
       e.preventDefault();
       commit();
-    } else if (e.key === 'Backspace' && draft === '' && value.length > 0) {
-      onChange(value.slice(0, -1));
+    } else if (e.key === 'Backspace' && draft === '' && safeValue.length > 0) {
+      onChange(safeValue.slice(0, -1));
     }
   };
 
@@ -42,7 +43,7 @@ export function TagInput({ value, onChange, placeholder, danger }: TagInputProps
       className="flex min-h-[44px] flex-wrap items-center gap-2 rounded-xl border border-slate-300 bg-white px-3 py-1.5 focus-within:border-teal-600 focus-within:ring-2 focus-within:ring-teal-500/30 transition-all"
       onClick={(e) => (e.currentTarget.querySelector('input') as HTMLInputElement)?.focus()}
     >
-      {value.map((tag) => (
+      {safeValue.map((tag) => (
         <Badge
           key={tag}
           variant={danger ? 'destructive' : 'secondary'}
@@ -55,7 +56,7 @@ export function TagInput({ value, onChange, placeholder, danger }: TagInputProps
             className="rounded-sm hover:opacity-75 transition-opacity"
             onClick={(e) => {
               e.stopPropagation();
-              onChange(value.filter((t) => t !== tag));
+              onChange(safeValue.filter((t) => t !== tag));
             }}
           >
             <X className="h-3.5 w-3.5" aria-hidden />
@@ -64,7 +65,7 @@ export function TagInput({ value, onChange, placeholder, danger }: TagInputProps
       ))}
       <input
         className="h-8 min-w-28 flex-1 border-0 bg-transparent text-sm font-medium outline-none placeholder:text-slate-400"
-        placeholder={value.length === 0 ? placeholder : 'Add more…'}
+        placeholder={safeValue.length === 0 ? placeholder : 'Add more…'}
         aria-label={placeholder}
         value={draft}
         onChange={(e) => setDraft(e.target.value)}

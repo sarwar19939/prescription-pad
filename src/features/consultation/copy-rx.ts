@@ -6,6 +6,7 @@
 import { format } from 'date-fns';
 
 import { db } from '@/db/localDb';
+import { generateUUID } from '@/lib/uuid';
 import type { Encounter, Patient, PrescriptionItem } from '@/types/schema';
 
 export function todayKey(): string {
@@ -25,7 +26,7 @@ export function buildDraftEncounter(patient: Patient): Encounter {
   const ts = new Date().toISOString();
   const today = todayKey();
   return {
-    id: crypto.randomUUID(),
+    id: generateUUID(),
     tenant_id: patient.tenant_id,
     patient_id: patient.id,
     visit_date: today,
@@ -87,7 +88,7 @@ export async function copyRxToToday(
     const ts = new Date().toISOString();
     clones.push({
       ...item,
-      id: crypto.randomUUID(),
+      id: generateUUID(),
       encounter_id: todayEncounter.id,
       created_at: ts,
       updated_at: ts,

@@ -6,6 +6,7 @@
  * from /data/medex-medicines.json into local Dexie.js IndexedDB with 0ms offline speed.
  */
 import { db } from '@/db/localDb';
+import { generateUUID } from '@/lib/uuid';
 import type { DosageForm, MedicineCatalog } from '@/types/schema';
 
 export interface RawMedexItem {
@@ -51,7 +52,7 @@ export async function importMedexIntoDexie(
   for (let i = 0; i < total; i += BATCH_SIZE) {
     const batch = items.slice(i, i + BATCH_SIZE);
     const records: MedicineCatalog[] = batch.map((item) => ({
-      id: crypto.randomUUID(),
+      id: generateUUID(),
       tenant_id: tenantId,
       brand_name: item.brand_name,
       generic_name: item.generic_name,

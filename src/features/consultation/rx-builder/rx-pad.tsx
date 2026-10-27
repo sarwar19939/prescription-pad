@@ -9,11 +9,11 @@ import { useLiveQuery } from 'dexie-react-hooks';
 import { Loader2, Plus, Sparkles, Trash2 } from 'lucide-react';
 
 import { db } from '@/db/localDb';
+import { generateUUID } from '@/lib/uuid';
 import { calculateSmartDose } from '@/services/dosingEngine';
 import { getDrugGuideline } from '@/services/drugGuidelinesService';
 import { MedicineSearch } from './medicine-search';
 import { ProtocolTemplatesDialog } from './protocol-templates-dialog';
-import { SuggestedProtocolBanner } from './suggested-protocol-banner';
 import { RxRow } from './rx-row';
 import { AnimatedList, AnimatedListItem } from '@/components/ui/motion';
 import type { MedicineCatalog, Patient, PrescriptionItem } from '@/types/schema';
@@ -67,7 +67,7 @@ export function RxPad({ patient, encounterId }: { patient: Patient; encounterId:
       : (guide ? `${guide.whenToTake}` : '');
 
     const row: PrescriptionItem = {
-      id: crypto.randomUUID(),
+      id: generateUUID(),
       tenant_id: patient.tenant_id,
       encounter_id: encounterId,
       patient_id: patient.id,
@@ -114,11 +114,6 @@ export function RxPad({ patient, encounterId }: { patient: Patient; encounterId:
           </span>
         </div>
       </div>
-
-      {/* Suggested Protocol Banner matching active diagnosis */}
-      {encounter && (
-        <SuggestedProtocolBanner encounter={encounter} patient={patient} />
-      )}
 
       <MedicineSearch
         value={search}

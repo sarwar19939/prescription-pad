@@ -17,6 +17,7 @@ import {
 } from 'lucide-react';
 
 import { db } from '@/db/localDb';
+import { generateUUID } from '@/lib/uuid';
 import { ensureTodayEncounter } from '../copy-rx';
 import {
   suggestClinicalTrack,
@@ -87,7 +88,7 @@ export function AICopilotDrawer({
       const encounter = activeEncounter || (await ensureTodayEncounter(patient));
       const ts = new Date().toISOString();
       await db.prescription_items.add({
-        id: crypto.randomUUID(),
+        id: generateUUID(),
         tenant_id: patient.tenant_id,
         patient_id: patient.id,
         encounter_id: encounter.id,

@@ -4,6 +4,7 @@
  * automatically adapts dosing by age and weight, and inserts them into Dexie.
  */
 import { db } from '@/db/localDb';
+import { generateUUID } from '@/lib/uuid';
 import type { Patient, PrescriptionItem, Vitals } from '@/types/schema';
 import {
   DISEASE_PROTOCOL_TEMPLATES,
@@ -19,10 +20,11 @@ function parseWeight(vitals?: Partial<Vitals> | null): number | null {
 
 /**
  * Searches for protocols matching any diagnosis string entered by the doctor.
+ * Safe against casing, leading/trailing whitespace, and multi-word phrases.
  */
-export function matchProtocolsForDiagnosis(diagnoses: string[]): DiseaseProtocolTemplate[] {
-  if (!diagnoses || diagnoses.length === 0) return [];
-  const cleanDiagnoses = diagnoses.map((d) => d.toLowerCase().trim()).filter(Boolean);
+export function matchProtocolsForDiagnosis(diagnoses?: string[] | null): DiseaseProtocolTemplate[] {
+  if (!diagnoses || !Array.isArray(diagnoses) || diagnoses.length === 0) return [];
+  const cleanDiagnoses = diagnoses.map((d) => String(d).toLowerCase().trim()).filter((d) => d.length > 0);
 
   const matched: DiseaseProtocolTemplate[] = [];
   const seenIds = new Set<string>();
@@ -32,7 +34,7 @@ export function matchProtocolsForDiagnosis(diagnoses: string[]): DiseaseProtocol
       if (seenIds.has(proto.id)) continue;
       const hasMatch = proto.diagnosisMatch.some((key) => {
         const k = key.toLowerCase();
-        return diag.includes(k) || (diag.length >= 3 && k.includes(diag));
+        return diag === k || diag.includes(k) || (diag.length >= 4 && k.includes(diag));
       });
       if (hasMatch) {
         matched.push(proto);
@@ -53,7 +55,7 @@ export function adaptMedicineForPatient(
   encounterId: string,
   weightKg: number | null,
 ): PrescriptionItem {
-  const isPediatric = patient.age < 12 || (weightKg !== null && weightKg <= 35);
+  const isPediatric = (patient?.age ?? 30) < 12 || (weightKg !== null && weightKg <= 35);
   const usePed = isPediatric && med.pediatric ? med.pediatric : med.adult;
 
   let finalStrength = usePed.strength;
@@ -71,7 +73,7 @@ export function adaptMedicineForPatient(
   const ts = new Date().toISOString();
 
   return {
-    id: crypto.randomUUID(),
+    id: generateUUID(),
     tenant_id: patient.tenant_id,
     encounter_id: encounterId,
     patient_id: patient.id,
@@ -89,29 +91,58 @@ export function adaptMedicineForPatient(
   };
 }
 
+export interface ApplyProtocolResult {
+  medicinesCount: number;
+  adviceCount: number;
+  alreadyPrescribed: number;
+}
+
 /**
  * Applies a protocol template to the encounter:
- * 1. Bulk adds age/weight adapted medicines into prescription_items.
- * 2. Merges protocol clinical advice into the encounter advice array.
+ * 1. Safely checks for duplicate medications already prescribed.
+ * 2. Bulk adds age/weight adapted medicines into prescription_items.
+ * 3. Merges protocol clinical advice into the encounter advice array.
  */
 export async function applyProtocolToEncounter(
   encounterId: string,
   template: DiseaseProtocolTemplate,
   patient: Patient,
   vitals?: Partial<Vitals> | null,
-): Promise<{ medicinesCount: number; adviceCount: number }> {
+): Promise<ApplyProtocolResult> {
   const weightKg = parseWeight(vitals);
 
-  const items: PrescriptionItem[] = template.medicines.map((med) =>
-    adaptMedicineForPatient(med, patient, encounterId, weightKg),
+  // Avoid duplicate lines for the same brand in this encounter
+  const existingItems = await db.prescription_items
+    .where('encounter_id')
+    .equals(encounterId)
+    .toArray();
+
+  const existingKeys = new Set(
+    existingItems.map((i) => `${i.brand_name.toLowerCase().trim()}|${i.dosage_form.toLowerCase().trim()}`),
   );
 
-  // 1. Insert medicines into Dexie
-  if (items.length > 0) {
-    await db.prescription_items.bulkPut(items);
+  const itemsToAdd: PrescriptionItem[] = [];
+  let skipped = 0;
+
+  for (const med of template.medicines) {
+    const isPediatric = (patient?.age ?? 30) < 12 || (weightKg !== null && weightKg <= 35);
+    const usePed = isPediatric && med.pediatric ? med.pediatric : med.adult;
+    const key = `${med.brand_name.toLowerCase().trim()}|${usePed.dosage_form.toLowerCase().trim()}`;
+    if (existingKeys.has(key)) {
+      skipped++;
+      continue;
+    }
+    const item = adaptMedicineForPatient(med, patient, encounterId, weightKg);
+    itemsToAdd.push(item);
+    existingKeys.add(key);
   }
 
-  // 2. Merge advice into encounter
+  // 1. Insert newly adapted medicines into Dexie
+  if (itemsToAdd.length > 0) {
+    await db.prescription_items.bulkPut(itemsToAdd);
+  }
+
+  // 2. Merge clinical advice into encounter
   const encounter = await db.encounters.get(encounterId);
   if (encounter) {
     const existingAdvice = new Set(encounter.advice || []);
@@ -125,7 +156,11 @@ export async function applyProtocolToEncounter(
     });
   }
 
-  return { medicinesCount: items.length, adviceCount: template.adviceBn.length };
+  return {
+    medicinesCount: itemsToAdd.length,
+    adviceCount: template.adviceBn.length,
+    alreadyPrescribed: skipped,
+  };
 }
 
 export { DISEASE_PROTOCOL_TEMPLATES };
