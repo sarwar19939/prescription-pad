@@ -27,125 +27,7 @@ export function mockLabAnalysis(payload: { content: string }) {
   };
 }
 
-export function mockClinicalTrack(context: any) {
-  const complaints: string[] = context?.current_complaints || [];
-  const allergies: string[] = context?.allergies || [];
-  const conditions: string[] = context?.chronic_conditions || [];
-
-  const text = `${complaints.join(' ')} ${conditions.join(' ')}`.toLowerCase();
-
-  const isFever = text.includes('fever') || text.includes('cough') || text.includes('cold');
-  const isHTN = text.includes('hypertension') || text.includes('bp') || text.includes('chest pain');
-  const isDiabetic = text.includes('diabetes') || text.includes('sugar');
-
-  const warnings: string[] = [];
-  allergies.forEach((a) => warnings.push(`Patient has known allergy to: ${a}. Avoid related cross-reactive drug classes.`));
-  if (conditions.includes('Hypertension') || isHTN) {
-    warnings.push('Avoid NSAIDs if possible to prevent BP elevation or nephrotoxicity.');
-  }
-
-  const medications = [];
-
-  if (isFever) {
-    medications.push({
-      generic_name: 'Paracetamol',
-      suggested_brand: 'Napa',
-      strength: '500 mg',
-      schedule: '1+1+1',
-      duration: '5 Days',
-      rationale: 'Antipyretic and analgesic for fever and cold symptoms (avoid NSAIDs if dengue is endemic).',
-    });
-    medications.push({
-      generic_name: 'Fexofenadine',
-      suggested_brand: 'Fexo',
-      strength: '120 mg',
-      schedule: '0+0+1',
-      duration: '5 Days',
-      rationale: 'Second-generation non-sedating antihistamine for allergic rhinitis and sneezing.',
-    });
-  } else if (isDiabetic) {
-    medications.push({
-      generic_name: 'Metformin',
-      suggested_brand: 'Comet',
-      strength: '500 mg',
-      schedule: '1+0+1',
-      duration: '30 Days',
-      rationale: 'First-line biguanide for glycemic management.',
-    });
-  } else {
-    medications.push({
-      generic_name: 'Esomeprazole',
-      suggested_brand: 'Maxpro',
-      strength: '20 mg',
-      schedule: '1+0+1',
-      duration: '14 Days',
-      rationale: 'Proton-pump inhibitor for gastroprotection and acid reflux.',
-    });
-  }
-
-  const questions = [];
-  if (isFever) {
-    questions.push({
-      id: 'fever_chills',
-      question: 'জ্বরের সাথে কাঁপুনি (Chills/Rigor) বা রাতে অতিরিক্ত ঘাম দেওয়ার তীব্রতা কেমন?',
-      options: ['স্বাভাবিক জ্বর (কাঁপুনি নেই)', 'তীব্র কাঁপুনি হয় (Chills/Rigor)', 'রাতে বেশি ঘাম হয়'],
-      hint: 'ইনফেকশাস বনাম ভাইরাল এটিওলজি মূল্যায়নের জন্য।',
-    });
-    questions.push({
-      id: 'dengue_warning',
-      question: 'চোখের পেছনে ব্যথা, গায়ে ফুসকুড়ি বা দাঁতের মাড়ি দিয়ে রক্তপাত আছে কি?',
-      options: ['না, কোনো রক্তপাত নেই', 'চোখের পেছনে তীব্র ব্যথা আছে', 'গায়ে লাল ফুসকুড়ি আছে'],
-      hint: 'ডেঙ্গু ওয়ার্নিং সাইন মূল্যায়নের জন্য।',
-    });
-    questions.push({
-      id: 'cough_type',
-      question: 'কাশির ধরন কেমন? কফ কি হলুদ/সবুজাভ নাকি শুকনো?',
-      options: ['শুকনো খুকখুকে কাশি', 'হলুদ/সবুজ কফ বের হয়', 'কাশি নেই'],
-      hint: 'অ্যান্টিবায়োটিকের প্রয়োজনীয়তা যাচাই করতে।',
-    });
-  } else if (isDiabetic) {
-    questions.push({
-      id: 'hypo_symptoms',
-      question: 'বুক ধড়ফড়, অতিরিক্ত ক্ষুধা বা ঘাম দিয়ে হাইপোগ্লাইসেমিয়ার অনুভূতি হয় কি?',
-      options: ['না, স্বাভাবিক', 'মাঝে মাঝে হাইপো ভাব হয়', 'ঘন ঘন প্রস্রাব ও পিপাসা লাগে'],
-      hint: 'গ্লাইসেমিক নিয়ন্ত্রণ ও ড্রাগ টাইট্রেশনের জন্য।',
-    });
-  } else {
-    questions.push({
-      id: 'gastric_relation',
-      question: 'বুক জ্বালাপোড়া বা পেটব্যথা কি খাওয়ার পর বেশি হয় নাকি খালি পেটে?',
-      options: ['খাওয়ার পর বুক জ্বালা করে', 'খালি পেটে কামড়ায়', 'রাতে ঘুমানোর সময় বাড়ে'],
-      hint: 'GERD বনাম গ্যাস্ট্রিক আলসার চিহ্নিত করতে।',
-    });
-    questions.push({
-      id: 'prior_allergy',
-      question: 'পূর্বে কোনো অ্যান্টিবায়োটিক বা ব্যথানাশক ওষুধ খেয়ে অ্যালার্জি হয়েছিল কি?',
-      options: ['না, কোনো অ্যালার্জি নেই', 'পেনিসিলিন অ্যালার্জি আছে', 'সালফা ড্রাগে সমস্যা'],
-      hint: 'রোগীর ড্রাগ সেফটি নিশ্চিত করতে।',
-    });
-  }
-
-  const answers = context?.doctor_answers;
-  const hasAnswers = answers && Object.keys(answers).length > 0;
-  const summary = hasAnswers
-    ? `ডাক্তারের ইনপুট (${Object.values(answers).join(', ')}) বিশ্লেষণ করে নিখুঁত ক্লিনিক্যাল ট্র্যাক তৈরি করা হয়েছে।`
-    : 'রোগীর উপসর্গ, হিস্ট্রি ও ডেটাবেজ প্রোফাইল পর্যালোচনা করে এআই কো-পাইলট প্রস্তাবনা।';
-
-  return {
-    differential_diagnoses: isFever
-      ? ['Acute Viral Upper Respiratory Tract Infection', 'Dengue Fever (Early Stage)', 'Enteric Fever']
-      : isDiabetic
-        ? ['Type 2 Diabetes Mellitus with Metabolic Syndrome', 'Impaired Fasting Glucose']
-        : ['General Malaise / Tension Syndrome', 'Gastroesophageal Reflux Disease (GERD)'],
-    suggested_medications: medications,
-    recommended_investigations: isFever
-      ? ['Complete Blood Count (CBC) with Platelets', 'NS1 Ag (if fever within 3 days)', 'Urine R/M/E']
-      : ['HbA1c & Fasting Blood Sugar', 'Lipid Profile', 'Serum Creatinine & Electrolytes'],
-    safety_warnings: warnings.length > 0 ? warnings : ['Verify baseline renal and hepatic parameters before long-term therapy.'],
-    clinical_questions: questions,
-    clinical_summary: summary,
-  };
-}
+export { mockClinicalTrack } from './mockClinicalTrack';
 
 export function mockFullPrescription(diagnosis: string) {
   const d = diagnosis.toLowerCase();
@@ -169,7 +51,18 @@ export function mockFullPrescription(diagnosis: string) {
   }
 
   // 2. Diarrhea / Gastroenteritis Protocol (icddr,b & Master The Chamber)
-  if (d.includes('diarrhea') || d.includes('diarrhoea') || d.includes('ডায়রিয়া') || d.includes('পাতলা পায়খানা') || d.includes('gastroenteritis')) {
+  if (
+    d.includes('diarrhea') ||
+    d.includes('diarrhoea') ||
+    d.includes('ডায়রিয়া') ||
+    d.includes('পাতলা পায়খানা') ||
+    d.includes('gastroenteritis') ||
+    d.includes('vomit') ||
+    d.includes('বমি') ||
+    d.includes('watery') ||
+    d.includes('cholera') ||
+    d.includes('loose motion')
+  ) {
     return {
       diagnosis,
       medicines: [

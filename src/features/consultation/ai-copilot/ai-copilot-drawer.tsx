@@ -73,6 +73,12 @@ export function AICopilotDrawer({
   const confirmedDiagnoses = activeEncounter?.diagnosis || [];
 
   useEffect(() => {
+    setDoctorAnswers({});
+    setResults(null);
+    setFullPackage(null);
+  }, [activeEncounter?.id]);
+
+  useEffect(() => {
     if (open && confirmedDiagnoses.length > 0 && !fullPackage && !packageLoading) {
       void handleGenerateFullPackage(confirmedDiagnoses[0]);
     }
