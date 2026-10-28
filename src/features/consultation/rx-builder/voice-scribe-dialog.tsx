@@ -1,17 +1,19 @@
 'use client';
 
 /**
- * VoiceScribeDialog — Ambient AI Voice Consultation & Dialogue Scribe.
- * Listens to doctor-patient conversation in Bengali or English,
- * and extracts Chief Complaints, Differential Diagnoses, and Advice.
+ * VoiceScribeDialog — Ambient AI Voice Clinical Scribe.
+ * Listens to doctor-patient consultation dialogue in Bengali or English,
+ * and extracts Chief Complaints (C/C), Vitals, History Notes (H/O),
+ * Examination findings (O/E), and Advice into the prescription pad.
+ * Does NOT auto-diagnose or auto-prescribe medicines, leaving clinical decision
+ * to the doctor and specialized tools (AI Co-Pilot, Clinical Photo Vision).
  */
 import { useEffect, useRef, useState } from 'react';
 import { Loader2, Mic, MicOff, Radio, Sparkles } from 'lucide-react';
 
 import { db } from '@/db/localDb';
-import { generateUUID } from '@/lib/uuid';
 import { processVoiceConsultation, type ScribeExtractionResult } from '@/services/aiScribeService';
-import type { Encounter, Patient, PrescriptionItem, Vitals } from '@/types/schema';
+import type { Encounter, Patient, Vitals } from '@/types/schema';
 import { Button } from '@/components/ui/button';
 import {
   Dialog,
@@ -26,11 +28,11 @@ import { VoiceScribeResults } from './voice-scribe-results';
 const SAMPLE_DIALOGUES = [
   {
     label: 'সর্দি-কাশি ও জ্বর ডায়ালগ',
-    text: 'ডাক্তার: আপনার কী সমস্যা?\nরোগী: ডাক্তার সাহেব, ৩ দিন ধরে খুব জ্বর আর শুকনো কাশি। গা-হাত-পা খুব ব্যথা করছে।\nডাক্তার: বমি ভাব বা ডায়রিয়া আছে?\nরোগী: না, তবে রাতে কাশির জন্য ঘুমাতে পারি না আর গলা খুসখুস করে।',
+    text: 'ডাক্তার: আপনার কী সমস্যা?\nরোগী: ডাক্তার সাহেব, ৩ দিন ধরে খুব জ্বর আর শুকনো কাশি। গা-হাত-পা খুব ব্যথা করছে।\nডাক্তার: বমি ভাব বা ডায়রিয়া আছে? প্রেসার মেপে দেখলাম ১২০ বাই ৮০, টেম্পারেচার ১০১ ডিগ্রি।\nরোগী: না, তবে রাতে কাশির জন্য ঘুমাতে পারি না আর গলা খুব খুসখুস করে।',
   },
   {
     label: 'গ্যাস্ট্রিক ও বুকজ্বালা ডায়ালগ',
-    text: 'ডাক্তার: কেমন আছেন? কী সমস্যা হচ্ছে?\nরোগী: স্যার, খাওয়ার পরপরই বুকে তীব্র জ্বালাপোড়া করে আর টক ঢেঁকুর আসে। পেট খুব ফাঁপা লাগে।\nডাক্তার: কোনো বাইরের ভাজাপোড়া খেয়েছিলেন?\nরোগী: হ্যাঁ, গতকাল রাতে হোটেলের বিরিয়ানি আর পরাটা খেয়েছিলাম।',
+    text: 'ডাক্তার: কেমন আছেন? কী সমস্যা হচ্ছে?\nরোগী: স্যার, খাওয়ার পরপরই বুকে তীব্র জ্বালাপোড়া করে আর টক ঢেঁকুর আসে। পেট খুব ফাঁপা লাগে।\nডাক্তার: কোনো বাইরের ভাজাপোড়া খেয়েছিলেন? পালস দেখলাম ৭৬, ওজন ৬৫ কেজি। পেট নরম কিন্তু পেটের উপরিভাগে সামান্য অস্বস্তি আছে।\nরোগী: হ্যাঁ, গতকাল রাতে হোটেলের বিরিয়ানি আর পরাটা খেয়েছিলাম।',
   },
 ];
 
@@ -47,7 +49,6 @@ export function VoiceScribeDialog({
   const [transcript, setTranscript] = useState('');
   const [processing, setProcessing] = useState(false);
   const [result, setResult] = useState<ScribeExtractionResult | null>(null);
-  const [selectedDiagnosis, setSelectedDiagnosis] = useState('');
   const [applied, setApplied] = useState(false);
 
   const recognitionRef = useRef<any>(null);
@@ -112,7 +113,6 @@ export function VoiceScribeDialog({
         allergies: patient.allergies,
       });
       setResult(data);
-      setSelectedDiagnosis(data.primary_diagnosis);
     } catch (err) {
       alert(`AI Scribe Error: ${err instanceof Error ? err.message : String(err)}`);
     } finally {
@@ -120,15 +120,13 @@ export function VoiceScribeDialog({
     }
   };
 
-  const handleApplyDiagnosisOnly = async () => {
+  const handleApplyDocumentation = async () => {
     if (!result) return;
     const ts = new Date().toISOString();
     const existingComplaints = encounter.chief_complaints || [];
-    const mergedComplaints = Array.from(new Set([...existingComplaints, ...result.chief_complaints]));
-    const diffs = result.differential_diagnoses.filter((d) => d !== selectedDiagnosis);
-    const newDiags = Array.from(new Set([selectedDiagnosis, ...diffs])).filter(Boolean);
+    const mergedComplaints = Array.from(new Set([...existingComplaints, ...(result.chief_complaints || [])]));
     const existingAdvice = encounter.advice || [];
-    const mergedAdvice = Array.from(new Set([...existingAdvice, ...result.advice]));
+    const mergedAdvice = Array.from(new Set([...existingAdvice, ...(result.advice || [])]));
 
     const updatedVitals: Vitals = {
       bp: result.vitals_mentioned?.bp || encounter.vitals?.bp || '',
@@ -146,7 +144,6 @@ export function VoiceScribeDialog({
       chief_complaints: mergedComplaints,
       vitals: updatedVitals,
       clinical_findings: updatedFindings,
-      diagnosis: newDiags.slice(0, 3),
       advice: mergedAdvice,
       updated_at: ts,
       sync_status: 'pending',
@@ -158,32 +155,7 @@ export function VoiceScribeDialog({
       setApplied(false);
       setResult(null);
       setTranscript('');
-    }, 1500);
-  };
-
-  const handleAddMedicinesAlso = async () => {
-    if (!result) return;
-    const ts = new Date().toISOString();
-    for (const m of result.suggested_medicines) {
-      await db.prescription_items.add({
-        id: generateUUID(),
-        tenant_id: patient.tenant_id,
-        encounter_id: encounter.id,
-        patient_id: patient.id,
-        brand_name: m.brand_name || 'Medicine',
-        generic_name: m.generic_name || '',
-        dosage_form: m.dosage_form || 'Tab',
-        strength: m.strength || 'Standard',
-        schedule: m.schedule || '1+0+1',
-        meal_timing: m.meal_timing || 'After Meal',
-        duration: m.duration || '7 Days',
-        special_instructions: m.special_instructions || '',
-        created_at: ts,
-        updated_at: ts,
-        sync_status: 'pending',
-      } as PrescriptionItem);
-    }
-    await handleApplyDiagnosisOnly();
+    }, 1200);
   };
 
   return (
@@ -194,7 +166,7 @@ export function VoiceScribeDialog({
           className="flex items-center gap-1.5 rounded-lg border border-teal-200 bg-teal-50 hover:bg-teal-100/90 px-2.5 py-1 text-xs font-bold text-teal-800 shadow-2xs transition-all"
         >
           <Mic className="h-3.5 w-3.5 text-teal-600 animate-pulse" />
-          <span>🎙️ ভয়েস স্ক্রাইব (কথা শুনে রোগ নির্ণয়)</span>
+          <span>🎙️ ভয়েস হিস্ট্রি ও O/E স্ক্রাইব</span>
         </button>
       </DialogTrigger>
 
@@ -202,10 +174,10 @@ export function VoiceScribeDialog({
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2 text-base text-slate-900">
             <Radio className="h-5 w-5 text-teal-600 animate-pulse" />
-            অ্যাম্বিয়েন্ট এআই ভয়েস স্ক্রাইব (রোগ ও উপসর্গ নির্ণয়)
+            অ্যাম্বিয়েন্ট এআই ভয়েস স্ক্রাইব (হিস্ট্রি ও এক্সামিনেশন)
           </DialogTitle>
           <DialogDescription className="text-xs text-slate-500">
-            রোগী ও ডাক্তারের কথোপকথন শুনে AI উপসর্গ (C/C) ও সম্ভাব্য রোগসমূহ সাজেস্ট করবে।
+            রোগী ও ডাক্তারের কথোপকথন শুনে AI স্বয়ংক্রিয়ভাবে উপসর্গ (C/C), ভাইটালস, হিস্ট্রি ও O/E প্রেসক্রিপশনে প্রস্তুত করে দিবে।
           </DialogDescription>
         </DialogHeader>
 
@@ -272,12 +244,12 @@ export function VoiceScribeDialog({
             {processing ? (
               <>
                 <Loader2 className="h-4 w-4 animate-spin" />
-                AI উপসর্গ ও রোগ নির্ণয় বিশ্লেষণ করছে…
+                AI উপসর্গ, ভাইটালস ও এক্সামিনেশন বিশ্লেষণ করছে…
               </>
             ) : (
               <>
                 <Sparkles className="h-4 w-4" />
-                🔍 রোগ ও উপসর্গ নির্ণয় করুন (Extract Diagnoses)
+                📋 হিস্ট্রি ও উপসর্গ বিশ্লেষণ করুন (Extract History &amp; Exam)
               </>
             )}
           </Button>
@@ -285,10 +257,7 @@ export function VoiceScribeDialog({
           {result && (
             <VoiceScribeResults
               result={result}
-              selectedDiagnosis={selectedDiagnosis}
-              onSelectDiagnosis={setSelectedDiagnosis}
-              onApplyDiagnosisOnly={handleApplyDiagnosisOnly}
-              onAddMedicinesAlso={handleAddMedicinesAlso}
+              onApply={handleApplyDocumentation}
               applied={applied}
             />
           )}

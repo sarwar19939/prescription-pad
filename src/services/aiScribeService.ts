@@ -12,11 +12,11 @@ export interface ScribeExtractionResult {
   vitals_mentioned: Record<string, string>;
   history_notes: string[];
   examination_findings?: string;
-  differential_diagnoses: string[];
-  primary_diagnosis: string;
-  suggested_medicines: Array<Partial<PrescriptionItem>>;
   advice: string[];
   summary: string;
+  differential_diagnoses?: string[];
+  primary_diagnosis?: string;
+  suggested_medicines?: Array<Partial<PrescriptionItem>>;
 }
 
 function bnToEnDigits(str: string): string {

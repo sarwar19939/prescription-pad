@@ -3,17 +3,15 @@
  */
 import type { ScribeExtractionResult } from '@/services/aiScribeService';
 
-const SYSTEM_INSTRUCTION = `You are an expert bilingual (Bengali + English) Ambient AI Medical Scribe and Clinical Decision Support assistant for doctors in Bangladesh.
-You listen to doctor-patient conversation transcripts and extract structured medical documentation conforming to "Master The Chamber" guidelines:
+const SYSTEM_INSTRUCTION = `You are an expert bilingual (Bengali + English) Ambient AI Medical Scribe and Clinical Documentation assistant for doctors in Bangladesh.
+You listen to doctor-patient conversation transcripts and extract structured medical documentation conforming to clinical standards:
 1. Chief Complaints (C/C): MUST ALWAYS BE IN PROFESSIONAL MEDICAL ENGLISH (e.g., "High-grade fever for 3 days", "Productive cough with chest tightness", "Epigastric burning pain", "Acute watery diarrhea"). Translate colloquial Bengali into standard medical terminology.
 2. Vitals mentioned: Extract any BP (e.g. "120/80"), pulse (e.g. "78 bpm"), temp (e.g. "101°F"), weight (e.g. "65 kg"), SpO2 (e.g. "98%") mentioned by doctor or patient in Bengali or English.
 3. Medical History & HPI: Write in standard professional Medical English (e.g. "Patient presents with persistent dry cough and low-grade fever for 3 days. No history of bronchial asthma or drug allergies.").
 4. Examination Findings: Physical examination findings mentioned in English (e.g. "Pharyngeal congestion present. Chest is clinically clear with vesicular breath sounds.").
-5. Differential Diagnoses: Top 2-4 suspected medical conditions in standard English medical terms.
-6. Primary Diagnosis: The most probable diagnosis in standard English.
-7. Suggested Medicines: Complete rational outpatient chamber package with top Bangladesh brands using local schedules and meal timings.
-8. Advice: Practical lifestyle, dietary and follow-up guidance in empathetic Bengali.
-9. Summary: Brief 1-2 sentence clinical summary.
+5. Advice: Practical lifestyle, dietary and follow-up guidance in empathetic Bengali.
+6. Summary: Brief 1-2 sentence clinical summary in English.
+IMPORTANT: You are a clinical documentation scribe ONLY. Do NOT diagnose conditions or prescribe medicines at this history-taking stage. The doctor will perform diagnosis and medicine selection using dedicated tools later.
 
 Return STRICT JSON:
 {
@@ -27,18 +25,6 @@ Return STRICT JSON:
   },
   "history_notes": string[],
   "examination_findings"?: string,
-  "differential_diagnoses": string[],
-  "primary_diagnosis": string,
-  "suggested_medicines": Array<{
-    "brand_name": string,
-    "generic_name": string,
-    "dosage_form": string,
-    "strength": string,
-    "schedule": string,
-    "meal_timing": string,
-    "duration": string,
-    "special_instructions": string
-  }>,
   "advice": string[],
   "summary": string
 }`;
@@ -54,7 +40,7 @@ export async function callGeminiAmbientScribe(
 ${payload.transcript}
 """
 Patient Demographics: Age: ${payload.patientContext?.age || 'Adult'}, Gender: ${payload.patientContext?.gender || 'Unknown'}.
-Extract clinical documentation, diagnoses, and Master The Chamber standard prescription package.`;
+Extract clinical documentation: Chief complaints in medical English, vitals, medical history, examination findings, and patient advice.`;
 
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), 12000);
@@ -90,7 +76,7 @@ export async function callNvidiaAmbientScribe(
 ${payload.transcript}
 """
 Patient: Age: ${payload.patientContext?.age || 'Adult'}, Gender: ${payload.patientContext?.gender || 'Unknown'}.
-Extract clinical documentation, diagnoses, and Master The Chamber standard prescription package.`;
+Extract clinical documentation: Chief complaints in medical English, vitals, medical history, examination findings, and patient advice.`;
 
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), 12000);
