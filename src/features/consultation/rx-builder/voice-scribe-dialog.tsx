@@ -2,17 +2,32 @@
 
 /**
  * VoiceScribeDialog — Ambient AI Voice Clinical Scribe.
- * Listens to doctor-patient consultation dialogue in Bengali or English,
- * and extracts Chief Complaints (C/C), Vitals, History Notes (H/O),
- * Examination findings (O/E), and Advice into the prescription pad.
- * Does NOT auto-diagnose or auto-prescribe medicines, leaving clinical decision
- * to the doctor and specialized tools (AI Co-Pilot, Clinical Photo Vision).
+ * Listens continuously to doctor-patient consultation dialogue in Bengali or English,
+ * automatically restarting across speech pauses so neither doctor nor patient speech is dropped.
+ * Real-time heuristic parsing shows live detected complaints & vitals,
+ * and 1-click Auto-Apply directly writes C/C, Vitals, and O/E into the prescription pad.
  */
-import { useEffect, useRef, useState } from 'react';
-import { Loader2, Mic, MicOff, Radio, Sparkles } from 'lucide-react';
+import { useEffect, useMemo, useRef, useState } from 'react';
+import {
+  Activity,
+  CheckCircle2,
+  HeartPulse,
+  Loader2,
+  Mic,
+  MicOff,
+  Radio,
+  Sparkles,
+  Stethoscope,
+  Zap,
+} from 'lucide-react';
 
 import { db } from '@/db/localDb';
-import { processVoiceConsultation, type ScribeExtractionResult } from '@/services/aiScribeService';
+import {
+  extractComplaintsFromSpokenText,
+  extractVitalsFromSpokenText,
+  processVoiceConsultation,
+  type ScribeExtractionResult,
+} from '@/services/aiScribeService';
 import type { Encounter, Patient, Vitals } from '@/types/schema';
 import { Button } from '@/components/ui/button';
 import {
@@ -51,93 +66,136 @@ export function VoiceScribeDialog({
   const [result, setResult] = useState<ScribeExtractionResult | null>(null);
   const [applied, setApplied] = useState(false);
 
-  const recognitionRef = useRef<any>(null);
+  const isListeningRef = useRef<boolean>(false);
+  const transcriptRef = useRef<string>('');
   const savedPrefixRef = useRef<string>('');
+  const recognitionRef = useRef<any>(null);
+  const restartTimerRef = useRef<any>(null);
 
-  useEffect(() => {
-    if (typeof window !== 'undefined') {
-      const SpeechRecognition =
-        (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
-      if (SpeechRecognition) {
-        const recognition = new SpeechRecognition();
-        recognition.continuous = true;
-        recognition.interimResults = true;
-        recognition.lang = lang;
-        recognition.onresult = (event: any) => {
-          let sessionText = '';
-          for (let i = 0; i < event.results.length; i++) {
-            sessionText += event.results[i][0].transcript;
-            if (event.results[i].isFinal) {
-              sessionText += ' ';
-            }
-          }
-          const full = (savedPrefixRef.current + sessionText).trim();
-          setTranscript(full);
-        };
-        recognition.onerror = () => setListening(false);
-        recognition.onend = () => setListening(false);
-        recognitionRef.current = recognition;
-      }
-    }
-  }, [lang]);
+  // Live real-time heuristic detections as they speak
+  const liveComplaints = useMemo(() => extractComplaintsFromSpokenText(transcript), [transcript]);
+  const liveVitals = useMemo(() => extractVitalsFromSpokenText(transcript), [transcript]);
+  const hasLiveVitals = Object.values(liveVitals).some(Boolean);
 
-  const toggleListening = () => {
-    if (!recognitionRef.current) {
-      alert('আপনার ব্রাউজারে স্পিচ রিকগনিশন সাপোর্ট নেই। টেক্সটবক্সে কথা পেস্ট বা টাইপ করতে পারেন।');
+  const startListeningSession = () => {
+    if (typeof window === 'undefined') return;
+    const SpeechRecognition =
+      (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
+    if (!SpeechRecognition) {
+      alert('আপনার ব্রাউজারে স্পিচ রিকগনিশন সাপোর্ট নেই। Chrome বা Edge ব্রাউজার ব্যবহার করুন।');
       return;
     }
-    if (listening) {
-      recognitionRef.current.stop();
-      setListening(false);
-      savedPrefixRef.current = '';
-    } else {
+
+    if (recognitionRef.current) {
       try {
-        savedPrefixRef.current = transcript.trim() ? transcript.trim() + ' ' : '';
-        recognitionRef.current.lang = lang;
-        recognitionRef.current.start();
-        setListening(true);
-      } catch (err) {
-        console.error('Speech recognition error:', err);
+        recognitionRef.current.abort();
+      } catch (_) {}
+      recognitionRef.current = null;
+    }
+
+    const recognition = new SpeechRecognition();
+    recognition.continuous = true;
+    recognition.interimResults = true;
+    recognition.lang = lang;
+    recognition.maxAlternatives = 1;
+
+    recognition.onresult = (event: any) => {
+      let sessionText = '';
+      for (let i = 0; i < event.results.length; i++) {
+        sessionText += event.results[i][0].transcript;
+        if (event.results[i].isFinal) {
+          sessionText += ' ';
+        }
       }
-    }
-  };
-
-  const handleProcess = async () => {
-    if (!transcript.trim()) return;
-    setProcessing(true);
-    try {
-      const data = await processVoiceConsultation(transcript, {
-        age: patient.age,
-        gender: patient.gender,
-        chronic_conditions: patient.chronic_conditions,
-        allergies: patient.allergies,
-      });
-      setResult(data);
-    } catch (err) {
-      alert(`AI Scribe Error: ${err instanceof Error ? err.message : String(err)}`);
-    } finally {
-      setProcessing(false);
-    }
-  };
-
-  const handleApplyDocumentation = async () => {
-    if (!result) return;
-    const ts = new Date().toISOString();
-    const existingComplaints = encounter.chief_complaints || [];
-    const mergedComplaints = Array.from(new Set([...existingComplaints, ...(result.chief_complaints || [])]));
-    const existingAdvice = encounter.advice || [];
-    const mergedAdvice = Array.from(new Set([...existingAdvice, ...(result.advice || [])]));
-
-    const updatedVitals: Vitals = {
-      bp: result.vitals_mentioned?.bp || encounter.vitals?.bp || '',
-      pulse: result.vitals_mentioned?.pulse || encounter.vitals?.pulse || '',
-      temp: result.vitals_mentioned?.temp || encounter.vitals?.temp || '',
-      weight: result.vitals_mentioned?.weight || encounter.vitals?.weight || '',
-      spo2: result.vitals_mentioned?.spo2 || encounter.vitals?.spo2 || '',
+      const full = (savedPrefixRef.current + sessionText).trim();
+      transcriptRef.current = full;
+      setTranscript(full);
     };
 
-    const newHistory = result.history_notes?.length ? `H/O: ${result.history_notes.join('; ')}` : '';
-    const newExam = result.examination_findings ? `O/E: ${result.examination_findings}` : '';
+    recognition.onerror = (event: any) => {
+      // 'no-speech' is natural pause between doctor and patient talking
+      if (event.error === 'no-speech') {
+        return;
+      }
+      if (event.error === 'not-allowed') {
+        isListeningRef.current = false;
+        setListening(false);
+        alert('মাইক্রোফোন পারমিশন এলাও করুন।');
+        return;
+      }
+    };
+
+    recognition.onend = () => {
+      // Auto-restart across pauses so neither doctor nor patient speech is cut off
+      if (isListeningRef.current) {
+        if (transcriptRef.current.trim()) {
+          savedPrefixRef.current = transcriptRef.current.trim() + ' ';
+        }
+        if (restartTimerRef.current) clearTimeout(restartTimerRef.current);
+        restartTimerRef.current = setTimeout(() => {
+          if (isListeningRef.current) {
+            startListeningSession();
+          }
+        }, 80);
+      } else {
+        setListening(false);
+      }
+    };
+
+    try {
+      recognition.start();
+      setListening(true);
+      recognitionRef.current = recognition;
+    } catch (_) {}
+  };
+
+  const stopListeningSession = () => {
+    isListeningRef.current = false;
+    setListening(false);
+    if (restartTimerRef.current) clearTimeout(restartTimerRef.current);
+    if (recognitionRef.current) {
+      try {
+        recognitionRef.current.stop();
+      } catch (_) {}
+      recognitionRef.current = null;
+    }
+  };
+
+  const toggleListening = () => {
+    if (listening || isListeningRef.current) {
+      stopListeningSession();
+    } else {
+      isListeningRef.current = true;
+      savedPrefixRef.current = transcript.trim() ? transcript.trim() + ' ' : '';
+      transcriptRef.current = transcript;
+      startListeningSession();
+    }
+  };
+
+  const handleOpenChange = (newOpen: boolean) => {
+    if (!newOpen) {
+      stopListeningSession();
+    }
+    setOpen(newOpen);
+  };
+
+  const applyDataToEncounter = async (data: ScribeExtractionResult) => {
+    const ts = new Date().toISOString();
+    const existingComplaints = encounter.chief_complaints || [];
+    const mergedComplaints = Array.from(new Set([...existingComplaints, ...(data.chief_complaints || [])]));
+    const existingAdvice = encounter.advice || [];
+    const mergedAdvice = Array.from(new Set([...existingAdvice, ...(data.advice || [])]));
+
+    const updatedVitals: Vitals = {
+      bp: data.vitals_mentioned?.bp || encounter.vitals?.bp || '',
+      pulse: data.vitals_mentioned?.pulse || encounter.vitals?.pulse || '',
+      temp: data.vitals_mentioned?.temp || encounter.vitals?.temp || '',
+      weight: data.vitals_mentioned?.weight || encounter.vitals?.weight || '',
+      spo2: data.vitals_mentioned?.spo2 || encounter.vitals?.spo2 || '',
+    };
+
+    const newHistory = data.history_notes?.length ? `H/O: ${data.history_notes.join('; ')}` : '';
+    const newExam = data.examination_findings ? `O/E: ${data.examination_findings}` : '';
     const updatedFindings = [encounter.clinical_findings, newHistory, newExam].filter(Boolean).join('\n');
 
     await db.encounters.update(encounter.id, {
@@ -155,11 +213,54 @@ export function VoiceScribeDialog({
       setApplied(false);
       setResult(null);
       setTranscript('');
-    }, 1200);
+      transcriptRef.current = '';
+    }, 1100);
+  };
+
+  const handleStopAndAutoApply = async () => {
+    stopListeningSession();
+    const textToProcess = transcriptRef.current || transcript;
+    if (!textToProcess.trim()) return;
+
+    setProcessing(true);
+    try {
+      const data = await processVoiceConsultation(textToProcess, {
+        age: patient.age,
+        gender: patient.gender,
+        chronic_conditions: patient.chronic_conditions,
+        allergies: patient.allergies,
+      });
+      await applyDataToEncounter(data);
+    } catch (err) {
+      alert(`AI Scribe Error: ${err instanceof Error ? err.message : String(err)}`);
+    } finally {
+      setProcessing(false);
+    }
+  };
+
+  const handleProcessPreview = async () => {
+    stopListeningSession();
+    const textToProcess = transcriptRef.current || transcript;
+    if (!textToProcess.trim()) return;
+
+    setProcessing(true);
+    try {
+      const data = await processVoiceConsultation(textToProcess, {
+        age: patient.age,
+        gender: patient.gender,
+        chronic_conditions: patient.chronic_conditions,
+        allergies: patient.allergies,
+      });
+      setResult(data);
+    } catch (err) {
+      alert(`AI Scribe Error: ${err instanceof Error ? err.message : String(err)}`);
+    } finally {
+      setProcessing(false);
+    }
   };
 
   return (
-    <Dialog open={open} onOpenChange={setOpen}>
+    <Dialog open={open} onOpenChange={handleOpenChange}>
       <DialogTrigger asChild>
         <button
           type="button"
@@ -177,21 +278,24 @@ export function VoiceScribeDialog({
             অ্যাম্বিয়েন্ট এআই ভয়েস স্ক্রাইব (হিস্ট্রি ও এক্সামিনেশন)
           </DialogTitle>
           <DialogDescription className="text-xs text-slate-500">
-            রোগী ও ডাক্তারের কথোপকথন শুনে AI স্বয়ংক্রিয়ভাবে উপসর্গ (C/C), ভাইটালস, হিস্ট্রি ও O/E প্রেসক্রিপশনে প্রস্তুত করে দিবে।
+            বিরতিহীন লাইভ মাইক্রোফোন: রোগী ও ডাক্তার উভয়ের কথোপকথন শুনে AI উপসর্গ (C/C), ভাইটালস ও O/E প্রেসক্রিপশনে প্রস্তুত করে দিবে।
           </DialogDescription>
         </DialogHeader>
 
         <div className="space-y-4 pt-1">
+          {/* Controls Bar */}
           <div className="flex flex-wrap items-center justify-between gap-2 border-b border-slate-100 pb-2">
             <Button
               type="button"
               onClick={toggleListening}
               className={`h-10 px-4 rounded-xl text-xs font-bold gap-2 transition-all ${
-                listening ? 'bg-rose-600 hover:bg-rose-700 text-white animate-pulse' : 'bg-teal-600 hover:bg-teal-700 text-white shadow-xs'
+                listening
+                  ? 'bg-rose-600 hover:bg-rose-700 text-white animate-pulse'
+                  : 'bg-teal-600 hover:bg-teal-700 text-white shadow-xs'
               }`}
             >
               {listening ? <MicOff className="h-4 w-4" /> : <Mic className="h-4 w-4" />}
-              {listening ? 'কথা শোনা বন্ধ করুন' : 'কথা বলা শুরু করুন (Start Recording)'}
+              {listening ? 'কথা সাময়িক বিরতি দিন' : 'কথা বলা শুরু করুন (Start Recording)'}
             </Button>
 
             <div className="flex items-center gap-1.5 text-xs">
@@ -213,13 +317,60 @@ export function VoiceScribeDialog({
             </div>
           </div>
 
+          {/* Active Listening Indicator */}
+          {listening && (
+            <div className="flex items-center justify-between rounded-xl bg-teal-50 border border-teal-200 px-3 py-2 text-xs text-teal-900 animate-fade-in">
+              <span className="flex items-center gap-2 font-bold">
+                <span className="relative flex h-3 w-3">
+                  <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-teal-400 opacity-75"></span>
+                  <span className="relative inline-flex rounded-full h-3 w-3 bg-teal-600"></span>
+                </span>
+                মাইক্রোফোন চালু আছে — রোগী ও ডাক্তার উভয়ের কথা শোনা হচ্ছে…
+              </span>
+              <span className="text-[11px] font-semibold text-teal-700">বিরতিতে স্বয়ংক্রিয়ভাবে রিস্টার্ট হবে</span>
+            </div>
+          )}
+
+          {/* Live Detected Symptoms & Vitals Chips */}
+          {(liveComplaints.length > 0 || hasLiveVitals) && (
+            <div className="space-y-1 rounded-xl bg-slate-50 border border-slate-200 p-2.5 text-xs">
+              {liveComplaints.length > 0 && (
+                <div className="flex flex-wrap items-center gap-1.5">
+                  <span className="text-[11px] font-bold text-slate-700 flex items-center gap-1">
+                    <HeartPulse className="h-3 w-3 text-rose-500" /> লাইভ শনাক্ত উপসর্গ:
+                  </span>
+                  {liveComplaints.map((c, i) => (
+                    <span key={i} className="rounded-md bg-white border border-slate-300 px-2 py-0.5 text-[11px] font-semibold text-teal-800">
+                      ✓ {c}
+                    </span>
+                  ))}
+                </div>
+              )}
+              {hasLiveVitals && (
+                <div className="flex flex-wrap items-center gap-1.5 pt-1">
+                  <span className="text-[11px] font-bold text-slate-700 flex items-center gap-1">
+                    <Activity className="h-3 w-3 text-teal-600" /> লাইভ ভাইটালস:
+                  </span>
+                  {liveVitals.bp && <span className="bg-white border border-teal-300 px-2 py-0.5 rounded text-[11px] font-mono font-bold text-teal-900">BP: {liveVitals.bp}</span>}
+                  {liveVitals.pulse && <span className="bg-white border border-teal-300 px-2 py-0.5 rounded text-[11px] font-mono font-bold text-teal-900">Pulse: {liveVitals.pulse}</span>}
+                  {liveVitals.temp && <span className="bg-white border border-teal-300 px-2 py-0.5 rounded text-[11px] font-mono font-bold text-teal-900">Temp: {liveVitals.temp}</span>}
+                  {liveVitals.weight && <span className="bg-white border border-teal-300 px-2 py-0.5 rounded text-[11px] font-mono font-bold text-teal-900">Weight: {liveVitals.weight}</span>}
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* Sample Dialogues */}
           <div className="flex flex-wrap items-center gap-1.5">
             <span className="text-[11px] font-bold text-slate-500">স্যাম্পল:</span>
             {SAMPLE_DIALOGUES.map((d, i) => (
               <button
                 key={i}
                 type="button"
-                onClick={() => setTranscript(d.text)}
+                onClick={() => {
+                  setTranscript(d.text);
+                  transcriptRef.current = d.text;
+                }}
                 className="rounded-md border border-slate-200 bg-slate-50 hover:bg-teal-50 hover:border-teal-300 px-2 py-0.5 text-[11px] font-semibold text-slate-700"
               >
                 + {d.label}
@@ -230,34 +381,51 @@ export function VoiceScribeDialog({
           <textarea
             rows={4}
             value={transcript}
-            onChange={(e) => setTranscript(e.target.value)}
+            onChange={(e) => {
+              setTranscript(e.target.value);
+              transcriptRef.current = e.target.value;
+            }}
             placeholder="এখানে কথা বললে লাইভ লেখা উঠবে। প্রয়োজনে নিজে পেস্ট বা সম্পাদন করুন।"
             className="w-full rounded-xl border border-slate-300 p-3 text-xs leading-relaxed text-slate-900 outline-none focus:border-teal-600 focus:ring-1 focus:ring-teal-500/30 font-medium"
           />
 
-          <Button
-            type="button"
-            onClick={handleProcess}
-            disabled={processing || !transcript.trim()}
-            className="w-full h-11 bg-gradient-to-r from-teal-600 via-teal-700 to-indigo-700 hover:from-teal-700 hover:to-indigo-800 text-white font-bold text-xs rounded-xl shadow-xs flex items-center justify-center gap-2"
-          >
-            {processing ? (
-              <>
-                <Loader2 className="h-4 w-4 animate-spin" />
-                AI উপসর্গ, ভাইটালস ও এক্সামিনেশন বিশ্লেষণ করছে…
-              </>
-            ) : (
-              <>
-                <Sparkles className="h-4 w-4" />
-                📋 হিস্ট্রি ও উপসর্গ বিশ্লেষণ করুন (Extract History &amp; Exam)
-              </>
-            )}
-          </Button>
+          {/* Action Buttons */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+            <Button
+              type="button"
+              onClick={handleStopAndAutoApply}
+              disabled={processing || !transcript.trim()}
+              className="h-11 bg-gradient-to-r from-emerald-600 to-teal-700 hover:from-emerald-700 hover:to-teal-800 text-white font-bold text-xs rounded-xl shadow-xs flex items-center justify-center gap-2"
+            >
+              {processing ? (
+                <>
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                  অটো-প্রেসক্রিপশনে যুক্ত হচ্ছে…
+                </>
+              ) : (
+                <>
+                  <Zap className="h-4 w-4 text-amber-300" />
+                  ⚡ কথা শেষ ও অটো-প্রেসক্রিপশনে ইনপুট নিন
+                </>
+              )}
+            </Button>
+
+            <Button
+              type="button"
+              variant="outline"
+              onClick={handleProcessPreview}
+              disabled={processing || !transcript.trim()}
+              className="h-11 border-slate-300 text-slate-800 hover:bg-slate-50 font-bold text-xs rounded-xl shadow-xs flex items-center justify-center gap-2"
+            >
+              <Sparkles className="h-4 w-4 text-indigo-600" />
+              📋 শুধু প্রিভিউ দেখে যুক্ত করুন
+            </Button>
+          </div>
 
           {result && (
             <VoiceScribeResults
               result={result}
-              onApply={handleApplyDocumentation}
+              onApply={() => applyDataToEncounter(result)}
               applied={applied}
             />
           )}

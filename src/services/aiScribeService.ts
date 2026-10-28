@@ -65,6 +65,64 @@ export function extractVitalsFromSpokenText(rawText: string): Partial<Vitals> {
   return vitals;
 }
 
+/**
+ * Instant local heuristic parser for common complaints spoken in Bengali or English.
+ */
+export function extractComplaintsFromSpokenText(rawText: string): string[] {
+  const text = rawText.toLowerCase();
+  const complaints: string[] = [];
+
+  if (text.includes('জ্বর') || text.includes('fever') || text.includes('গা গরম')) {
+    complaints.push('Fever');
+  }
+  if (text.includes('কাশি') || text.includes('cough') || text.includes('কফ')) {
+    complaints.push('Cough');
+  }
+  if (text.includes('সর্দি') || text.includes('cold') || text.includes('নাক দিয়ে পানি') || text.includes('নাক বন্ধ')) {
+    complaints.push('Runny nose / Coryza');
+  }
+  if (text.includes('গলা ব্যথা') || text.includes('গলা খুসখুস') || text.includes('sore throat') || text.includes('গলা জ্বল')) {
+    complaints.push('Sore throat');
+  }
+  if (text.includes('বুক জ্বালা') || text.includes('গ্যাস') || text.includes('অ্যাসিডিটি') || text.includes('ঢেকুর') || text.includes('heartburn') || text.includes('acidity')) {
+    complaints.push('Epigastric burning / Dyspepsia');
+  }
+  if (text.includes('পেট ব্যথা') || text.includes('পেটে ব্যথা') || text.includes('abdominal pain') || text.includes('তলপেটে ব্যথা')) {
+    complaints.push('Abdominal pain');
+  }
+  if (text.includes('বমি ভাব') || text.includes('বমি বমি') || text.includes('nausea')) {
+    complaints.push('Nausea');
+  } else if (text.includes('বমি') || text.includes('vomiting')) {
+    complaints.push('Vomiting');
+  }
+  if (text.includes('পাতলা পায়খানা') || text.includes('ডায়রিয়া') || text.includes('লুজ মোশন') || text.includes('diarrhea')) {
+    complaints.push('Loose watery stool (Diarrhea)');
+  }
+  if (text.includes('মাথা ব্যথা') || text.includes('headache') || text.includes('মাথা ধরে')) {
+    complaints.push('Headache');
+  }
+  if (text.includes('শ্বাসকষ্ট') || text.includes('দম বন্ধ') || text.includes('shortness of breath') || text.includes('হাঁপানী')) {
+    complaints.push('Shortness of breath (Dyspnea)');
+  }
+  if (text.includes('গা-হাত-পা ব্যথা') || text.includes('শরীর ব্যথা') || text.includes('গা ব্যথা') || text.includes('body ache') || text.includes('myalgia')) {
+    complaints.push('Generalized body ache / Myalgia');
+  }
+  if (text.includes('দুর্বলতা') || text.includes('ক্লান্তি') || text.includes('weakness') || text.includes('fatigue')) {
+    complaints.push('Generalized weakness');
+  }
+  if (text.includes('অরুচি') || text.includes('ক্ষুধামন্দা') || text.includes('খাবার খেতে ইচ্ছা করে না') || text.includes('appetite')) {
+    complaints.push('Loss of appetite (Anorexia)');
+  }
+  if (text.includes('কোমর ব্যথা') || text.includes('back pain')) {
+    complaints.push('Lower back pain');
+  }
+  if (text.includes('চুলকানি') || text.includes('rash') || text.includes('itching') || text.includes('এলার্জি')) {
+    complaints.push('Skin itching / Rash');
+  }
+
+  return complaints;
+}
+
 export function extractExaminationFromSpokenText(rawText: string): string[] {
   const text = rawText.toLowerCase();
   const findings: string[] = [];
@@ -112,6 +170,7 @@ export async function processVoiceConsultation(
 ): Promise<ScribeExtractionResult> {
   const localVitals = extractVitalsFromSpokenText(transcript);
   const localExam = extractExaminationFromSpokenText(transcript);
+  const localComplaints = extractComplaintsFromSpokenText(transcript);
 
   const res = await fetch('/api/ai/clinical-copilot', {
     method: 'POST',
@@ -142,6 +201,15 @@ export async function processVoiceConsultation(
   if (localExam.length > 0) {
     const existing = result.examination_findings ? [result.examination_findings] : [];
     result.examination_findings = Array.from(new Set([...existing, ...localExam])).join('. ');
+  }
+
+  // Ensure any immediate local complaints are preserved if AI missed them
+  if (localComplaints.length > 0) {
+    const existingC = result.chief_complaints || [];
+    // If AI complaints are empty, use local; otherwise merge
+    if (existingC.length === 0) {
+      result.chief_complaints = localComplaints;
+    }
   }
 
   return result;
