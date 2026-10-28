@@ -43,7 +43,7 @@ Patient Demographics: Age: ${payload.patientContext?.age || 'Adult'}, Gender: ${
 Extract clinical documentation: Chief complaints in medical English, vitals, medical history, examination findings, and patient advice.`;
 
   const controller = new AbortController();
-  const timer = setTimeout(() => controller.abort(), 12000);
+  const timer = setTimeout(() => controller.abort(), 4500);
   try {
     const res = await fetch(url, {
       method: 'POST',
@@ -79,7 +79,7 @@ Patient: Age: ${payload.patientContext?.age || 'Adult'}, Gender: ${payload.patie
 Extract clinical documentation: Chief complaints in medical English, vitals, medical history, examination findings, and patient advice.`;
 
   const controller = new AbortController();
-  const timer = setTimeout(() => controller.abort(), 12000);
+  const timer = setTimeout(() => controller.abort(), 4500);
   try {
     const res = await fetch(url, {
       method: 'POST',

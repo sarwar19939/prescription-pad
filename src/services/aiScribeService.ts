@@ -172,45 +172,52 @@ export async function processVoiceConsultation(
   const localExam = extractExaminationFromSpokenText(transcript);
   const localComplaints = extractComplaintsFromSpokenText(transcript);
 
-  const res = await fetch('/api/ai/clinical-copilot', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({
-      action: 'ambient_scribe',
-      payload: {
-        transcript,
-        patientContext,
-      },
-    }),
-  });
+  try {
+    const res = await fetch('/api/ai/clinical-copilot', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        action: 'ambient_scribe',
+        payload: {
+          transcript,
+          patientContext,
+        },
+      }),
+    });
 
-  if (!res.ok) {
-    const err = await res.text();
-    throw new Error(`AI Scribe processing failed: ${err}`);
-  }
+    if (res.ok) {
+      const result = (await res.json()) as ScribeExtractionResult;
 
-  const result = (await res.json()) as ScribeExtractionResult;
+      result.vitals_mentioned = {
+        ...localVitals,
+        ...(result.vitals_mentioned || {}),
+      };
 
-  // Merge locally parsed vitals with AI extracted vitals
-  result.vitals_mentioned = {
-    ...localVitals,
-    ...(result.vitals_mentioned || {}),
-  };
+      if (localExam.length > 0) {
+        const existing = result.examination_findings ? [result.examination_findings] : [];
+        result.examination_findings = Array.from(new Set([...existing, ...localExam])).join('. ');
+      }
 
-  // Merge locally parsed examination findings with AI extracted findings
-  if (localExam.length > 0) {
-    const existing = result.examination_findings ? [result.examination_findings] : [];
-    result.examination_findings = Array.from(new Set([...existing, ...localExam])).join('. ');
-  }
+      if (localComplaints.length > 0) {
+        const existingC = result.chief_complaints || [];
+        result.chief_complaints = existingC.length === 0
+          ? localComplaints
+          : Array.from(new Set([...existingC, ...localComplaints]));
+      }
 
-  // Ensure any immediate local complaints are preserved if AI missed them
-  if (localComplaints.length > 0) {
-    const existingC = result.chief_complaints || [];
-    // If AI complaints are empty, use local; otherwise merge
-    if (existingC.length === 0) {
-      result.chief_complaints = localComplaints;
+      return result;
     }
+  } catch (netErr) {
+    console.warn('AI fetch error, using instant local offline extractor:', netErr);
   }
 
-  return result;
+  // Instant 0ms offline fallback for chamber resilience
+  return {
+    chief_complaints: localComplaints,
+    vitals_mentioned: localVitals as Record<string, string>,
+    history_notes: [],
+    examination_findings: localExam.join('. '),
+    advice: localComplaints.length > 0 ? ['পর্যাপ্ত বিশ্রাম নিন এবং প্রচুর নিরাপদ পানি ও তরল খাবার গ্রহণ করুন।'] : [],
+    summary: localComplaints.length > 0 ? `Patient presents with ${localComplaints.join(', ')}.` : '',
+  };
 }

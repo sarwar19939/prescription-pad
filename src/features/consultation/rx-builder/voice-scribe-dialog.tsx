@@ -2,12 +2,11 @@
 
 /**
  * VoiceScribeDialog — Ambient AI Voice Clinical Scribe.
- * Listens continuously to doctor-patient consultation dialogue in Bengali or English,
- * automatically restarting across speech pauses so neither doctor nor patient speech is dropped.
- * Real-time heuristic parsing shows live detected complaints & vitals,
- * and 1-click Auto-Apply directly writes C/C, Vitals, and O/E into the prescription pad.
+ * Listens to doctor-patient conversation using standard W3C resultIndex accumulation.
+ * Safely recycles across speech pauses so neither speaker's words are lost.
+ * 1-click Auto-Apply directly writes authentic C/C, Vitals, and O/E into the prescription pad.
  */
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useMemo, useRef, useState } from 'react';
 import {
   Activity,
   CheckCircle2,
@@ -17,7 +16,6 @@ import {
   MicOff,
   Radio,
   Sparkles,
-  Stethoscope,
   Zap,
 } from 'lucide-react';
 
@@ -40,15 +38,11 @@ import {
 } from '@/components/ui/dialog';
 import { VoiceScribeResults } from './voice-scribe-results';
 
-const SAMPLE_DIALOGUES = [
-  {
-    label: 'সর্দি-কাশি ও জ্বর ডায়ালগ',
-    text: 'ডাক্তার: আপনার কী সমস্যা?\nরোগী: ডাক্তার সাহেব, ৩ দিন ধরে খুব জ্বর আর শুকনো কাশি। গা-হাত-পা খুব ব্যথা করছে।\nডাক্তার: বমি ভাব বা ডায়রিয়া আছে? প্রেসার মেপে দেখলাম ১২০ বাই ৮০, টেম্পারেচার ১০১ ডিগ্রি।\nরোগী: না, তবে রাতে কাশির জন্য ঘুমাতে পারি না আর গলা খুব খুসখুস করে।',
-  },
-  {
-    label: 'গ্যাস্ট্রিক ও বুকজ্বালা ডায়ালগ',
-    text: 'ডাক্তার: কেমন আছেন? কী সমস্যা হচ্ছে?\nরোগী: স্যার, খাওয়ার পরপরই বুকে তীব্র জ্বালাপোড়া করে আর টক ঢেঁকুর আসে। পেট খুব ফাঁপা লাগে।\nডাক্তার: কোনো বাইরের ভাজাপোড়া খেয়েছিলেন? পালস দেখলাম ৭৬, ওজন ৬৫ কেজি। পেট নরম কিন্তু পেটের উপরিভাগে সামান্য অস্বস্তি আছে।\nরোগী: হ্যাঁ, গতকাল রাতে হোটেলের বিরিয়ানি আর পরাটা খেয়েছিলাম।',
-  },
+const PRESET_CHIPS = [
+  { label: 'জ্বর ও কাশি', text: 'রোগীর ৩ দিন ধরে খুব তীব্র জ্বর ও শুকনো কাশি। গা-হাত-পা ব্যথা।' },
+  { label: 'গ্যাস্ট্রিক ও বুকজ্বালা', text: 'খাওয়ার পরপরই তীব্র বুকজ্বালা করে ও টক ঢেঁকুর আসে। পেট ফাঁপা।' },
+  { label: 'পেটব্যথা ও পাতলা পায়খানা', text: 'তীব্র পেটব্যথা ও বারবার পাতলা পায়খানা হচ্ছে। বমি ভাব আছে।' },
+  { label: 'ভাইটালস: BP 120/80', text: 'বিপি মেপে দেখলাম ১২০ বাই ৮০, পালস ৭৬।' },
 ];
 
 export function VoiceScribeDialog({
@@ -67,76 +61,71 @@ export function VoiceScribeDialog({
   const [applied, setApplied] = useState(false);
 
   const isListeningRef = useRef<boolean>(false);
-  const transcriptRef = useRef<string>('');
-  const savedPrefixRef = useRef<string>('');
+  const finalTranscriptRef = useRef<string>('');
   const recognitionRef = useRef<any>(null);
   const restartTimerRef = useRef<any>(null);
 
-  // Live real-time heuristic detections as they speak
   const liveComplaints = useMemo(() => extractComplaintsFromSpokenText(transcript), [transcript]);
   const liveVitals = useMemo(() => extractVitalsFromSpokenText(transcript), [transcript]);
   const hasLiveVitals = Object.values(liveVitals).some(Boolean);
 
-  const startListeningSession = () => {
+  const setupRecognition = () => {
     if (typeof window === 'undefined') return;
     const SpeechRecognition =
       (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
     if (!SpeechRecognition) {
-      alert('আপনার ব্রাউজারে স্পিচ রিকগনিশন সাপোর্ট নেই। Chrome বা Edge ব্রাউজার ব্যবহার করুন।');
+      alert('আপনার ব্রাউজারে স্পিচ রিকগনিশন সাপোর্ট নেই। Chrome ব্রাউজার ব্যবহার করুন।');
       return;
     }
 
-    if (recognitionRef.current) {
-      try {
-        recognitionRef.current.abort();
-      } catch (_) {}
-      recognitionRef.current = null;
-    }
+    try {
+      recognitionRef.current?.stop();
+    } catch (_) {}
 
     const recognition = new SpeechRecognition();
     recognition.continuous = true;
     recognition.interimResults = true;
     recognition.lang = lang;
-    recognition.maxAlternatives = 1;
 
     recognition.onresult = (event: any) => {
-      let sessionText = '';
-      for (let i = 0; i < event.results.length; i++) {
-        sessionText += event.results[i][0].transcript;
+      let finalPart = '';
+      let interimPart = '';
+      for (let i = event.resultIndex; i < event.results.length; ++i) {
+        const trans = event.results[i][0]?.transcript || '';
         if (event.results[i].isFinal) {
-          sessionText += ' ';
+          finalPart += trans + ' ';
+        } else {
+          interimPart += trans;
         }
       }
-      const full = (savedPrefixRef.current + sessionText).trim();
-      transcriptRef.current = full;
-      setTranscript(full);
+      if (finalPart) {
+        finalTranscriptRef.current += finalPart;
+      }
+      const combined = (finalTranscriptRef.current + interimPart).trim();
+      setTranscript(combined);
     };
 
     recognition.onerror = (event: any) => {
-      // 'no-speech' is natural pause between doctor and patient talking
-      if (event.error === 'no-speech') {
-        return;
-      }
+      if (event.error === 'no-speech') return;
       if (event.error === 'not-allowed') {
         isListeningRef.current = false;
         setListening(false);
         alert('মাইক্রোফোন পারমিশন এলাও করুন।');
-        return;
       }
     };
 
     recognition.onend = () => {
-      // Auto-restart across pauses so neither doctor nor patient speech is cut off
       if (isListeningRef.current) {
-        if (transcriptRef.current.trim()) {
-          savedPrefixRef.current = transcriptRef.current.trim() + ' ';
-        }
         if (restartTimerRef.current) clearTimeout(restartTimerRef.current);
         restartTimerRef.current = setTimeout(() => {
           if (isListeningRef.current) {
-            startListeningSession();
+            try {
+              recognition.start();
+            } catch (_) {
+              setupRecognition();
+            }
           }
-        }, 80);
+        }, 250);
       } else {
         setListening(false);
       }
@@ -149,33 +138,27 @@ export function VoiceScribeDialog({
     } catch (_) {}
   };
 
-  const stopListeningSession = () => {
+  const stopListening = () => {
     isListeningRef.current = false;
     setListening(false);
     if (restartTimerRef.current) clearTimeout(restartTimerRef.current);
-    if (recognitionRef.current) {
-      try {
-        recognitionRef.current.stop();
-      } catch (_) {}
-      recognitionRef.current = null;
-    }
+    try {
+      recognitionRef.current?.stop();
+    } catch (_) {}
   };
 
   const toggleListening = () => {
     if (listening || isListeningRef.current) {
-      stopListeningSession();
+      stopListening();
     } else {
       isListeningRef.current = true;
-      savedPrefixRef.current = transcript.trim() ? transcript.trim() + ' ' : '';
-      transcriptRef.current = transcript;
-      startListeningSession();
+      finalTranscriptRef.current = transcript.trim() ? transcript.trim() + ' ' : '';
+      setupRecognition();
     }
   };
 
   const handleOpenChange = (newOpen: boolean) => {
-    if (!newOpen) {
-      stopListeningSession();
-    }
+    if (!newOpen) stopListening();
     setOpen(newOpen);
   };
 
@@ -213,14 +196,17 @@ export function VoiceScribeDialog({
       setApplied(false);
       setResult(null);
       setTranscript('');
-      transcriptRef.current = '';
-    }, 1100);
+      finalTranscriptRef.current = '';
+    }, 1000);
   };
 
   const handleStopAndAutoApply = async () => {
-    stopListeningSession();
-    const textToProcess = transcriptRef.current || transcript;
-    if (!textToProcess.trim()) return;
+    stopListening();
+    const textToProcess = transcript.trim();
+    if (!textToProcess) {
+      alert('কথোপকথন খালি। কথা বলুন অথবা নিচের কুইক চিপসে ক্লিক করে লক্ষণ যোগ করুন।');
+      return;
+    }
 
     setProcessing(true);
     try {
@@ -230,6 +216,12 @@ export function VoiceScribeDialog({
         chronic_conditions: patient.chronic_conditions,
         allergies: patient.allergies,
       });
+
+      if (!data.chief_complaints?.length && !Object.keys(data.vitals_mentioned || {}).length) {
+        alert('কোনো সুনির্দিষ্ট উপসর্গ বা ভাইটালস পাওয়া যায়নি। অনুগ্রহ করে আরও স্পষ্ট করে বলুন বা লিখুন।');
+        return;
+      }
+
       await applyDataToEncounter(data);
     } catch (err) {
       alert(`AI Scribe Error: ${err instanceof Error ? err.message : String(err)}`);
@@ -238,25 +230,11 @@ export function VoiceScribeDialog({
     }
   };
 
-  const handleProcessPreview = async () => {
-    stopListeningSession();
-    const textToProcess = transcriptRef.current || transcript;
-    if (!textToProcess.trim()) return;
-
-    setProcessing(true);
-    try {
-      const data = await processVoiceConsultation(textToProcess, {
-        age: patient.age,
-        gender: patient.gender,
-        chronic_conditions: patient.chronic_conditions,
-        allergies: patient.allergies,
-      });
-      setResult(data);
-    } catch (err) {
-      alert(`AI Scribe Error: ${err instanceof Error ? err.message : String(err)}`);
-    } finally {
-      setProcessing(false);
-    }
+  const handleAppendChip = (text: string) => {
+    const current = transcript.trim();
+    const updated = current ? `${current} ${text}` : text;
+    setTranscript(updated);
+    finalTranscriptRef.current = updated + ' ';
   };
 
   return (
@@ -275,15 +253,14 @@ export function VoiceScribeDialog({
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2 text-base text-slate-900">
             <Radio className="h-5 w-5 text-teal-600 animate-pulse" />
-            অ্যাম্বিয়েন্ট এআই ভয়েস স্ক্রাইব (হিস্ট্রি ও এক্সামিনেশন)
+            অ্যাম্বিয়েন্ট ভয়েস স্ক্রাইব (হিস্ট্রি ও এক্সামিনেশন)
           </DialogTitle>
           <DialogDescription className="text-xs text-slate-500">
-            বিরতিহীন লাইভ মাইক্রোফোন: রোগী ও ডাক্তার উভয়ের কথোপকথন শুনে AI উপসর্গ (C/C), ভাইটালস ও O/E প্রেসক্রিপশনে প্রস্তুত করে দিবে।
+            রোগী ও ডাক্তারের কথোপকথন শুনে C/C উপসর্গ, ভাইটালস ও O/E প্রেসক্রিপশনে প্রস্তুত করে দিবে।
           </DialogDescription>
         </DialogHeader>
 
-        <div className="space-y-4 pt-1">
-          {/* Controls Bar */}
+        <div className="space-y-3.5 pt-1">
           <div className="flex flex-wrap items-center justify-between gap-2 border-b border-slate-100 pb-2">
             <Button
               type="button"
@@ -317,7 +294,6 @@ export function VoiceScribeDialog({
             </div>
           </div>
 
-          {/* Active Listening Indicator */}
           {listening && (
             <div className="flex items-center justify-between rounded-xl bg-teal-50 border border-teal-200 px-3 py-2 text-xs text-teal-900 animate-fade-in">
               <span className="flex items-center gap-2 font-bold">
@@ -325,19 +301,18 @@ export function VoiceScribeDialog({
                   <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-teal-400 opacity-75"></span>
                   <span className="relative inline-flex rounded-full h-3 w-3 bg-teal-600"></span>
                 </span>
-                মাইক্রোফোন চালু আছে — রোগী ও ডাক্তার উভয়ের কথা শোনা হচ্ছে…
+                মাইক্রোফোন সক্রিয় — কথা শুনছে…
               </span>
-              <span className="text-[11px] font-semibold text-teal-700">বিরতিতে স্বয়ংক্রিয়ভাবে রিস্টার্ট হবে</span>
+              <span className="text-[11px] font-semibold text-teal-700">বিরতিতে স্বয়ংক্রিয়ভাবে বজায় থাকবে</span>
             </div>
           )}
 
-          {/* Live Detected Symptoms & Vitals Chips */}
           {(liveComplaints.length > 0 || hasLiveVitals) && (
             <div className="space-y-1 rounded-xl bg-slate-50 border border-slate-200 p-2.5 text-xs">
               {liveComplaints.length > 0 && (
                 <div className="flex flex-wrap items-center gap-1.5">
                   <span className="text-[11px] font-bold text-slate-700 flex items-center gap-1">
-                    <HeartPulse className="h-3 w-3 text-rose-500" /> লাইভ শনাক্ত উপসর্গ:
+                    <HeartPulse className="h-3 w-3 text-rose-500" /> শনাক্ত উপসর্গ:
                   </span>
                   {liveComplaints.map((c, i) => (
                     <span key={i} className="rounded-md bg-white border border-slate-300 px-2 py-0.5 text-[11px] font-semibold text-teal-800">
@@ -349,7 +324,7 @@ export function VoiceScribeDialog({
               {hasLiveVitals && (
                 <div className="flex flex-wrap items-center gap-1.5 pt-1">
                   <span className="text-[11px] font-bold text-slate-700 flex items-center gap-1">
-                    <Activity className="h-3 w-3 text-teal-600" /> লাইভ ভাইটালস:
+                    <Activity className="h-3 w-3 text-teal-600" /> শনাক্ত ভাইটালস:
                   </span>
                   {liveVitals.bp && <span className="bg-white border border-teal-300 px-2 py-0.5 rounded text-[11px] font-mono font-bold text-teal-900">BP: {liveVitals.bp}</span>}
                   {liveVitals.pulse && <span className="bg-white border border-teal-300 px-2 py-0.5 rounded text-[11px] font-mono font-bold text-teal-900">Pulse: {liveVitals.pulse}</span>}
@@ -360,20 +335,16 @@ export function VoiceScribeDialog({
             </div>
           )}
 
-          {/* Sample Dialogues */}
           <div className="flex flex-wrap items-center gap-1.5">
-            <span className="text-[11px] font-bold text-slate-500">স্যাম্পল:</span>
-            {SAMPLE_DIALOGUES.map((d, i) => (
+            <span className="text-[11px] font-bold text-slate-500">কুইক প্রেসক্রাইব চিপস:</span>
+            {PRESET_CHIPS.map((chip, i) => (
               <button
                 key={i}
                 type="button"
-                onClick={() => {
-                  setTranscript(d.text);
-                  transcriptRef.current = d.text;
-                }}
-                className="rounded-md border border-slate-200 bg-slate-50 hover:bg-teal-50 hover:border-teal-300 px-2 py-0.5 text-[11px] font-semibold text-slate-700"
+                onClick={() => handleAppendChip(chip.text)}
+                className="rounded-md border border-slate-200 bg-slate-50 hover:bg-teal-50 hover:border-teal-300 px-2 py-0.5 text-[11px] font-semibold text-slate-700 transition-colors"
               >
-                + {d.label}
+                + {chip.label}
               </button>
             ))}
           </div>
@@ -383,44 +354,30 @@ export function VoiceScribeDialog({
             value={transcript}
             onChange={(e) => {
               setTranscript(e.target.value);
-              transcriptRef.current = e.target.value;
+              finalTranscriptRef.current = e.target.value + ' ';
             }}
-            placeholder="এখানে কথা বললে লাইভ লেখা উঠবে। প্রয়োজনে নিজে পেস্ট বা সম্পাদন করুন।"
+            placeholder="এখানে কথা বললে লেখা উঠবে অথবা কীবোর্ড দিয়ে টাইপ করতে পারেন…"
             className="w-full rounded-xl border border-slate-300 p-3 text-xs leading-relaxed text-slate-900 outline-none focus:border-teal-600 focus:ring-1 focus:ring-teal-500/30 font-medium"
           />
 
-          {/* Action Buttons */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-            <Button
-              type="button"
-              onClick={handleStopAndAutoApply}
-              disabled={processing || !transcript.trim()}
-              className="h-11 bg-gradient-to-r from-emerald-600 to-teal-700 hover:from-emerald-700 hover:to-teal-800 text-white font-bold text-xs rounded-xl shadow-xs flex items-center justify-center gap-2"
-            >
-              {processing ? (
-                <>
-                  <Loader2 className="h-4 w-4 animate-spin" />
-                  অটো-প্রেসক্রিপশনে যুক্ত হচ্ছে…
-                </>
-              ) : (
-                <>
-                  <Zap className="h-4 w-4 text-amber-300" />
-                  ⚡ কথা শেষ ও অটো-প্রেসক্রিপশনে ইনপুট নিন
-                </>
-              )}
-            </Button>
-
-            <Button
-              type="button"
-              variant="outline"
-              onClick={handleProcessPreview}
-              disabled={processing || !transcript.trim()}
-              className="h-11 border-slate-300 text-slate-800 hover:bg-slate-50 font-bold text-xs rounded-xl shadow-xs flex items-center justify-center gap-2"
-            >
-              <Sparkles className="h-4 w-4 text-indigo-600" />
-              📋 শুধু প্রিভিউ দেখে যুক্ত করুন
-            </Button>
-          </div>
+          <Button
+            type="button"
+            onClick={handleStopAndAutoApply}
+            disabled={processing}
+            className="w-full h-11 bg-gradient-to-r from-emerald-600 to-teal-700 hover:from-emerald-700 hover:to-teal-800 text-white font-bold text-xs rounded-xl shadow-xs flex items-center justify-center gap-2"
+          >
+            {processing ? (
+              <>
+                <Loader2 className="h-4 w-4 animate-spin" />
+                অটো-প্রেসক্রিপশনে যুক্ত হচ্ছে…
+              </>
+            ) : (
+              <>
+                <Zap className="h-4 w-4 text-amber-300" />
+                ⚡ কথা শেষ ও সরাসরি প্রেসক্রিপশনে যুক্ত করুন
+              </>
+            )}
+          </Button>
 
           {result && (
             <VoiceScribeResults
