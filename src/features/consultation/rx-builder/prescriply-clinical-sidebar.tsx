@@ -15,6 +15,7 @@ import { analyzeVitals } from '@/services/vitalsService';
 import { ProtocolTemplatesDialog } from './protocol-templates-dialog';
 import { SuggestedProtocolBanner } from './suggested-protocol-banner';
 import { ClinicalPhotoDialog } from './clinical-photo-dialog';
+import { VoiceScribeDialog } from './voice-scribe-dialog';
 import { AddReportDialog } from '../lab-trends/add-report-dialog';
 import type { Encounter, InvestigationReport, Patient, Vitals as VitalsT } from '@/types/schema';
 
@@ -99,13 +100,13 @@ export function PrescriplyClinicalSidebar({
 
   return (
     <div className="flex flex-col gap-4 text-xs">
-      {/* 1. Chief Complaints (C/C) */}
+      {/* 1. Chief Complaints (C/C) & Voice Scribe */}
       <div className="space-y-1.5">
-        <div className="flex items-center justify-between">
+        <div className="flex items-center justify-between flex-wrap gap-1">
           <span className="font-bold uppercase tracking-wider text-slate-800 flex items-center gap-1">
             <HeartPulse className="h-3.5 w-3.5 text-teal-600" /> C/C (উপসর্গ)
           </span>
-          <span className="text-[10px] text-slate-400">click quick-add</span>
+          <VoiceScribeDialog encounter={encounter} patient={patient} />
         </div>
         <div className="flex flex-wrap gap-1">
           {COMPLAINT_SUGGESTIONS.filter((s) => !(encounter.chief_complaints || []).includes(s)).slice(0, 6).map((s) => (

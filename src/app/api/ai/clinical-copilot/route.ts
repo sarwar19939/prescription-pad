@@ -1,9 +1,11 @@
 import { NextResponse } from 'next/server';
 import { mockClinicalTrack, mockFullPrescription, mockImageAnalysis, mockLabAnalysis } from './mockData';
+import { mockAmbientScribe } from './mockScribe';
 import { callGeminiImageAnalysis, callNvidiaImageAnalysis } from './visionHelper';
+import { callGeminiAmbientScribe, callNvidiaAmbientScribe } from './scribeHelper';
 
 interface RequestBody {
-  action: 'analyze_lab' | 'suggest_track' | 'full_prescription' | 'analyze_image';
+  action: 'analyze_lab' | 'suggest_track' | 'full_prescription' | 'analyze_image' | 'ambient_scribe';
   payload: any;
 }
 
@@ -52,6 +54,9 @@ export async function POST(req: Request) {
         } else if (action === 'analyze_image') {
           const result = await callGeminiImageAnalysis(geminiApiKey, payload, GEMINI_MODEL);
           return NextResponse.json({ ...result, ai_provider: 'gemini' });
+        } else if (action === 'ambient_scribe') {
+          const result = await callGeminiAmbientScribe(geminiApiKey, payload, GEMINI_MODEL);
+          return NextResponse.json({ ...result, ai_provider: 'gemini' });
         }
       } catch (geminiError) {
         console.warn('Gemini error, failing over to NVIDIA NIM:', geminiError instanceof Error ? geminiError.message : geminiError);
@@ -73,6 +78,9 @@ export async function POST(req: Request) {
         } else if (action === 'analyze_image') {
           const result = await callNvidiaImageAnalysis(nvidiaApiKey, payload);
           return NextResponse.json({ ...result, ai_provider: 'nvidia_nim' });
+        } else if (action === 'ambient_scribe') {
+          const result = await callNvidiaAmbientScribe(nvidiaApiKey, payload, DEFAULT_NVIDIA_MODEL);
+          return NextResponse.json({ ...result, ai_provider: 'nvidia_nim' });
         }
       } catch (nvidiaError) {
         console.warn('NVIDIA NIM error, falling back to local clinical rules:', nvidiaError instanceof Error ? nvidiaError.message : nvidiaError);
@@ -88,6 +96,8 @@ export async function POST(req: Request) {
       return NextResponse.json(mockFullPrescription(payload.diagnosis || ''));
     } else if (action === 'analyze_image') {
       return NextResponse.json(mockImageAnalysis(payload));
+    } else if (action === 'ambient_scribe') {
+      return NextResponse.json(mockAmbientScribe(payload));
     }
 
     return NextResponse.json({ error: 'Unsupported action' }, { status: 400 });
