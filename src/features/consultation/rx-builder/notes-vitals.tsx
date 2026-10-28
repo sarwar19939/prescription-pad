@@ -37,31 +37,23 @@ const VITAL_FIELDS: Array<{ key: keyof VitalsT; label: string; unit: string; pla
 ];
 
 export function NotesVitals({ encounter, patient }: { encounter: Encounter; patient?: Patient }) {
-  // Fluid 0ms local state prevents cursor freezing, character drops & stale race conditions
   const [localVitals, setLocalVitals] = useState<VitalsT>({
-    bp: encounter.vitals?.bp || '',
-    pulse: encounter.vitals?.pulse || '',
-    temp: encounter.vitals?.temp || '',
-    weight: encounter.vitals?.weight || '',
-    spo2: encounter.vitals?.spo2 || '',
+    bp: encounter.vitals?.bp || '', pulse: encounter.vitals?.pulse || '', temp: encounter.vitals?.temp || '', weight: encounter.vitals?.weight || '', spo2: encounter.vitals?.spo2 || '',
   });
+  const [localOe, setLocalOe] = useState<string>(encounter.clinical_findings || '');
 
   const vitalsTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const encounterIdRef = useRef(encounter.id);
+  const oeTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  // Sync state if switching between encounters
   useEffect(() => {
-    if (encounterIdRef.current !== encounter.id) {
-      encounterIdRef.current = encounter.id;
-      setLocalVitals({
-        bp: encounter.vitals?.bp || '',
-        pulse: encounter.vitals?.pulse || '',
-        temp: encounter.vitals?.temp || '',
-        weight: encounter.vitals?.weight || '',
-        spo2: encounter.vitals?.spo2 || '',
-      });
-    }
-  }, [encounter.id, encounter.vitals]);
+    setLocalVitals({
+      bp: encounter.vitals?.bp || '', pulse: encounter.vitals?.pulse || '', temp: encounter.vitals?.temp || '', weight: encounter.vitals?.weight || '', spo2: encounter.vitals?.spo2 || '',
+    });
+  }, [encounter.id, encounter.vitals?.bp, encounter.vitals?.pulse, encounter.vitals?.temp, encounter.vitals?.weight, encounter.vitals?.spo2]);
+
+  useEffect(() => {
+    setLocalOe(encounter.clinical_findings || '');
+  }, [encounter.id, encounter.clinical_findings]);
 
   const saveVitalsDebounced = (nextVitals: VitalsT) => {
     if (vitalsTimer.current) clearTimeout(vitalsTimer.current);
@@ -74,12 +66,30 @@ export function NotesVitals({ encounter, patient }: { encounter: Encounter; pati
     }, 350);
   };
 
+  const saveOeDebounced = (val: string) => {
+    if (oeTimer.current) clearTimeout(oeTimer.current);
+    oeTimer.current = setTimeout(() => {
+      void db.encounters.update(encounter.id, {
+        clinical_findings: val,
+        updated_at: new Date().toISOString(),
+        sync_status: 'pending',
+      });
+    }, 350);
+  };
+
   const setVital = (key: keyof VitalsT, val: string) => {
     setLocalVitals((prev) => {
       const next = { ...prev, [key]: val };
       saveVitalsDebounced(next);
       return next;
     });
+  };
+
+  const addOePreset = (preset: string) => {
+    const cur = localOe.trim();
+    const next = cur ? (cur.includes(preset) ? cur : `${cur}, ${preset}`) : preset;
+    setLocalOe(next);
+    saveOeDebounced(next);
   };
 
   const writeEncounterField = (patch: Partial<Encounter>) => {
@@ -189,14 +199,32 @@ export function NotesVitals({ encounter, patient }: { encounter: Encounter; pati
 
       <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
         <div>
-          <label className="mb-2 block text-xs font-bold uppercase tracking-wider text-slate-600">
-            On Examination (O/E)
-          </label>
+          <div className="flex items-center justify-between mb-2">
+            <label className="block text-xs font-bold uppercase tracking-wider text-slate-600">
+              On Examination (O/E) / শারীরিক পরীক্ষা
+            </label>
+            <span className="text-[11px] text-teal-700 font-medium">ভয়েস বা ক্লিকে অটো সেটআপ</span>
+          </div>
+          <div className="flex flex-wrap gap-1 mb-2">
+            {['Chest: Clear', 'Throat: Congested', 'Abdomen: Soft', 'Heart: S1 S2 Normal', 'Anemia: Nil', 'Jaundice: Nil', 'Oedema: Nil'].map((p) => (
+              <button
+                key={p}
+                type="button"
+                onClick={() => addOePreset(p)}
+                className="rounded bg-slate-100 hover:bg-teal-50 hover:border-teal-300 border border-slate-200 px-2 py-0.5 text-xs font-semibold text-slate-700 transition-colors"
+              >
+                + {p}
+              </button>
+            ))}
+          </div>
           <textarea
-            className="min-h-[96px] w-full rounded-xl border border-slate-300 p-3.5 text-base text-slate-800 outline-none focus:border-teal-600 focus:ring-2 focus:ring-teal-500/30 leading-relaxed transition-all placeholder:text-slate-400"
-            placeholder="Chest clear, no added sounds, abdominal soft…"
-            defaultValue={encounter.clinical_findings}
-            onChange={(e) => writeEncounterField({ clinical_findings: e.target.value })}
+            className="min-h-[96px] w-full rounded-xl border border-slate-300 p-3.5 text-sm text-slate-800 outline-none focus:border-teal-600 focus:ring-2 focus:ring-teal-500/30 leading-relaxed transition-all placeholder:text-slate-400 font-medium"
+            placeholder="Chest clear, Throat congested, Abdomen soft, no added sounds…"
+            value={localOe}
+            onChange={(e) => {
+              setLocalOe(e.target.value);
+              saveOeDebounced(e.target.value);
+            }}
           />
         </div>
         <div>

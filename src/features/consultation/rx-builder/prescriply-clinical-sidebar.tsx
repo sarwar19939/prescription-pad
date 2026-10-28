@@ -19,17 +19,9 @@ import { VoiceScribeDialog } from './voice-scribe-dialog';
 import { AddReportDialog } from '../lab-trends/add-report-dialog';
 import type { Encounter, InvestigationReport, Patient, Vitals as VitalsT } from '@/types/schema';
 
-const COMPLAINT_SUGGESTIONS = [
-  'Fever', 'Cough', 'Cold', 'Headache', 'Body ache', 'Vomiting',
-  'Diarrhea', 'Abdominal pain', 'Chest pain', 'Weakness',
-];
-
-const COMMON_DIAGNOSIS_PRESETS = [
-  'Dengue', 'Scabies', 'Diarrhea / GE', 'PUD / GERD',
-  'Hypertension', 'Type 2 Diabetes', 'Asthma', 'COPD',
-  'UTI', 'Typhoid', 'Common Cold', 'Back Pain',
-];
-
+const COMPLAINT_SUGGESTIONS = ['Fever', 'Cough', 'Cold', 'Headache', 'Body ache', 'Vomiting', 'Diarrhea', 'Abdominal pain', 'Chest pain', 'Weakness'];
+const COMMON_DIAGNOSIS_PRESETS = ['Dengue', 'Scabies', 'Diarrhea / GE', 'PUD / GERD', 'Hypertension', 'Type 2 Diabetes', 'Asthma', 'COPD', 'UTI', 'Typhoid', 'Common Cold', 'Back Pain'];
+const OE_PRESETS = ['Chest: Clear', 'Throat: Congested', 'Abdomen: Soft', 'Heart: S1 S2 Normal', 'Anemia: Nil', 'Jaundice: Nil', 'Oedema: Nil'];
 const VITAL_FIELDS: Array<{ key: keyof VitalsT; label: string; unit: string; placeholder: string }> = [
   { key: 'bp', label: 'BP', unit: 'mmHg', placeholder: '120/80' },
   { key: 'pulse', label: 'Pulse', unit: 'bpm', placeholder: '78' },
@@ -49,24 +41,22 @@ export function PrescriplyClinicalSidebar({
 }) {
   const [addReportOpen, setAddReportOpen] = useState(false);
   const [localVitals, setLocalVitals] = useState<VitalsT>({
-    bp: encounter.vitals?.bp || '',
-    pulse: encounter.vitals?.pulse || '',
-    temp: encounter.vitals?.temp || '',
-    weight: encounter.vitals?.weight || '',
-    spo2: encounter.vitals?.spo2 || '',
+    bp: encounter.vitals?.bp || '', pulse: encounter.vitals?.pulse || '', temp: encounter.vitals?.temp || '', weight: encounter.vitals?.weight || '', spo2: encounter.vitals?.spo2 || '',
   });
+  const [localOe, setLocalOe] = useState<string>(encounter.clinical_findings || '');
 
   const vitalsTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const oeTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(() => {
     setLocalVitals({
-      bp: encounter.vitals?.bp || '',
-      pulse: encounter.vitals?.pulse || '',
-      temp: encounter.vitals?.temp || '',
-      weight: encounter.vitals?.weight || '',
-      spo2: encounter.vitals?.spo2 || '',
+      bp: encounter.vitals?.bp || '', pulse: encounter.vitals?.pulse || '', temp: encounter.vitals?.temp || '', weight: encounter.vitals?.weight || '', spo2: encounter.vitals?.spo2 || '',
     });
   }, [encounter.id, encounter.vitals]);
+
+  useEffect(() => {
+    setLocalOe(encounter.clinical_findings || '');
+  }, [encounter.id, encounter.clinical_findings]);
 
   const saveVitalsDebounced = (nextVitals: VitalsT) => {
     if (vitalsTimer.current) clearTimeout(vitalsTimer.current);
@@ -79,12 +69,30 @@ export function PrescriplyClinicalSidebar({
     }, 350);
   };
 
+  const saveOeDebounced = (val: string) => {
+    if (oeTimer.current) clearTimeout(oeTimer.current);
+    oeTimer.current = setTimeout(() => {
+      void db.encounters.update(encounter.id, {
+        clinical_findings: val,
+        updated_at: new Date().toISOString(),
+        sync_status: 'pending',
+      });
+    }, 350);
+  };
+
   const setVital = (key: keyof VitalsT, val: string) => {
     setLocalVitals((prev) => {
       const next = { ...prev, [key]: val };
       saveVitalsDebounced(next);
       return next;
     });
+  };
+
+  const addOePreset = (preset: string) => {
+    const cur = localOe.trim();
+    const next = cur ? (cur.includes(preset) ? cur : `${cur}, ${preset}`) : preset;
+    setLocalOe(next);
+    saveOeDebounced(next);
   };
 
   const writeEncounterField = (patch: Partial<Encounter>) => {
@@ -159,11 +167,28 @@ export function PrescriplyClinicalSidebar({
           </div>
         )}
 
+        {/* Quick O/E Presets */}
+        <div className="flex flex-wrap gap-1 pt-0.5">
+          {OE_PRESETS.map((p) => (
+            <button
+              key={p}
+              type="button"
+              onClick={() => addOePreset(p)}
+              className="rounded bg-slate-100 hover:bg-teal-50 hover:border-teal-300 border border-slate-200 px-1.5 py-0.5 text-[10px] font-semibold text-slate-700 transition-colors"
+            >
+              + {p}
+            </button>
+          ))}
+        </div>
+
         <textarea
-          className="mt-1 min-h-[56px] w-full rounded-lg border border-slate-300 p-2 text-xs text-slate-800 outline-none focus:border-teal-600 focus:ring-1 focus:ring-teal-500/30"
-          placeholder="O/E notes: Chest clear, Abdomen soft…"
-          defaultValue={encounter.clinical_findings}
-          onChange={(e) => writeEncounterField({ clinical_findings: e.target.value })}
+          className="mt-1 min-h-[58px] w-full rounded-lg border border-slate-300 p-2 text-xs text-slate-800 outline-none focus:border-teal-600 focus:ring-1 focus:ring-teal-500/30 font-medium placeholder:text-slate-400"
+          placeholder="O/E notes: Chest clear, Throat congested, Abdomen soft..."
+          value={localOe}
+          onChange={(e) => {
+            setLocalOe(e.target.value);
+            saveOeDebounced(e.target.value);
+          }}
         />
       </div>
 

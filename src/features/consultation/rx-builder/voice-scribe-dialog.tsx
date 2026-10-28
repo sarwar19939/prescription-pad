@@ -51,6 +51,7 @@ export function VoiceScribeDialog({
   const [applied, setApplied] = useState(false);
 
   const recognitionRef = useRef<any>(null);
+  const savedPrefixRef = useRef<string>('');
 
   useEffect(() => {
     if (typeof window !== 'undefined') {
@@ -62,11 +63,15 @@ export function VoiceScribeDialog({
         recognition.interimResults = true;
         recognition.lang = lang;
         recognition.onresult = (event: any) => {
-          let current = '';
+          let sessionText = '';
           for (let i = 0; i < event.results.length; i++) {
-            current += event.results[i][0].transcript + ' ';
+            sessionText += event.results[i][0].transcript;
+            if (event.results[i].isFinal) {
+              sessionText += ' ';
+            }
           }
-          setTranscript((prev) => (current.trim().length > prev.length ? current : prev + ' ' + current));
+          const full = (savedPrefixRef.current + sessionText).trim();
+          setTranscript(full);
         };
         recognition.onerror = () => setListening(false);
         recognition.onend = () => setListening(false);
@@ -83,8 +88,10 @@ export function VoiceScribeDialog({
     if (listening) {
       recognitionRef.current.stop();
       setListening(false);
+      savedPrefixRef.current = '';
     } else {
       try {
+        savedPrefixRef.current = transcript.trim() ? transcript.trim() + ' ' : '';
         recognitionRef.current.lang = lang;
         recognitionRef.current.start();
         setListening(true);

@@ -65,11 +65,53 @@ export function extractVitalsFromSpokenText(rawText: string): Partial<Vitals> {
   return vitals;
 }
 
+export function extractExaminationFromSpokenText(rawText: string): string[] {
+  const text = rawText.toLowerCase();
+  const findings: string[] = [];
+
+  if (text.includes('বুক ক্লিয়ার') || text.includes('chest clear') || text.includes('শ্বাস পরিষ্কার')) {
+    findings.push('Chest: Clear with vesicular breath sounds');
+  } else if (text.includes('বাঁশি') || text.includes('wheeze') || text.includes('হুইজ')) {
+    findings.push('Chest: Bilateral wheezing present');
+  } else if (text.includes('খড়খড়') || text.includes('crepitation') || text.includes('রংকাই')) {
+    findings.push('Chest: Crepitations noted');
+  }
+
+  if (text.includes('গলা লাল') || text.includes('গলা ফোলা') || text.includes('throat') || text.includes('টনসিল') || text.includes('pharynx')) {
+    findings.push('Throat: Congested pharyngeal wall');
+  }
+
+  if (text.includes('পেট নরম') || text.includes('পেট সফট') || text.includes('abdomen soft')) {
+    findings.push('Abdomen: Soft, non-tender, bowel sounds present');
+  } else if (text.includes('পেটে চাপ দিলে ব্যথা') || text.includes('টেন্ডারনেস') || text.includes('পেটে ব্যথা')) {
+    findings.push('Abdomen: Mild localized tenderness');
+  }
+
+  if (text.includes('অ্যানিমিয়া নেই') || text.includes('রক্তশূন্যতা নেই') || text.includes('জিহ্বা স্বাভাবিক')) {
+    findings.push('Anemia: Absent');
+  }
+  if (text.includes('জন্ডিস নেই') || text.includes('চোখ স্বাভাবিক')) {
+    findings.push('Jaundice: Absent');
+  }
+  if (text.includes('পা ফোলা নেই') || text.includes('ইডিমা নেই') || text.includes('no oedema') || text.includes('no edema')) {
+    findings.push('Oedema: Nil');
+  } else if (text.includes('পা ফোলা') || text.includes('ইডিমা আছে')) {
+    findings.push('Oedema: Pedal oedema present');
+  }
+
+  if (text.includes('হার্ট সাউন্ড') || text.includes('হার্ট ঠিক আছে') || text.includes('heart sound')) {
+    findings.push('Heart: S1, S2 audible, no murmurs');
+  }
+
+  return findings;
+}
+
 export async function processVoiceConsultation(
   transcript: string,
   patientContext?: { age: number; gender: string; chronic_conditions?: string[]; allergies?: string[] },
 ): Promise<ScribeExtractionResult> {
   const localVitals = extractVitalsFromSpokenText(transcript);
+  const localExam = extractExaminationFromSpokenText(transcript);
 
   const res = await fetch('/api/ai/clinical-copilot', {
     method: 'POST',
@@ -95,6 +137,12 @@ export async function processVoiceConsultation(
     ...localVitals,
     ...(result.vitals_mentioned || {}),
   };
+
+  // Merge locally parsed examination findings with AI extracted findings
+  if (localExam.length > 0) {
+    const existing = result.examination_findings ? [result.examination_findings] : [];
+    result.examination_findings = Array.from(new Set([...existing, ...localExam])).join('. ');
+  }
 
   return result;
 }
