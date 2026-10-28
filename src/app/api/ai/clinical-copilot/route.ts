@@ -1,8 +1,9 @@
 import { NextResponse } from 'next/server';
-import { mockClinicalTrack, mockFullPrescription, mockLabAnalysis } from './mockData';
+import { mockClinicalTrack, mockFullPrescription, mockImageAnalysis, mockLabAnalysis } from './mockData';
+import { callGeminiImageAnalysis, callNvidiaImageAnalysis } from './visionHelper';
 
 interface RequestBody {
-  action: 'analyze_lab' | 'suggest_track' | 'full_prescription';
+  action: 'analyze_lab' | 'suggest_track' | 'full_prescription' | 'analyze_image';
   payload: any;
 }
 
@@ -48,6 +49,9 @@ export async function POST(req: Request) {
         } else if (action === 'full_prescription') {
           const result = await callGeminiFullPrescription(geminiApiKey, payload);
           return NextResponse.json({ ...result, ai_provider: 'gemini' });
+        } else if (action === 'analyze_image') {
+          const result = await callGeminiImageAnalysis(geminiApiKey, payload, GEMINI_MODEL);
+          return NextResponse.json({ ...result, ai_provider: 'gemini' });
         }
       } catch (geminiError) {
         console.warn('Gemini error, failing over to NVIDIA NIM:', geminiError instanceof Error ? geminiError.message : geminiError);
@@ -66,6 +70,9 @@ export async function POST(req: Request) {
         } else if (action === 'full_prescription') {
           const result = await callNvidiaFullPrescription(nvidiaApiKey, payload);
           return NextResponse.json({ ...result, ai_provider: 'nvidia_nim' });
+        } else if (action === 'analyze_image') {
+          const result = await callNvidiaImageAnalysis(nvidiaApiKey, payload);
+          return NextResponse.json({ ...result, ai_provider: 'nvidia_nim' });
         }
       } catch (nvidiaError) {
         console.warn('NVIDIA NIM error, falling back to local clinical rules:', nvidiaError instanceof Error ? nvidiaError.message : nvidiaError);
@@ -79,6 +86,8 @@ export async function POST(req: Request) {
       return NextResponse.json(mockClinicalTrack(payload));
     } else if (action === 'full_prescription') {
       return NextResponse.json(mockFullPrescription(payload.diagnosis || ''));
+    } else if (action === 'analyze_image') {
+      return NextResponse.json(mockImageAnalysis(payload));
     }
 
     return NextResponse.json({ error: 'Unsupported action' }, { status: 400 });

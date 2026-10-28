@@ -200,3 +200,65 @@ export function mockFullPrescription(diagnosis: string) {
     ],
   };
 }
+
+export function mockImageAnalysis(payload: any) {
+  const notes = (payload?.clinicalNotes || '').toLowerCase();
+  const isAcne = notes.includes('acne') || notes.includes('ব্রণ') || notes.includes('pimple');
+
+  if (isAcne) {
+    return {
+      observed_features: [
+        'Inflammatory erythematous papules and open comedones',
+        'Facial distribution predominantly across cheeks and forehead',
+      ],
+      differential_diagnoses: [
+        'Acne Vulgaris (Grade II Moderate)',
+        'Rosacea (Papulopustular)',
+        'Folliculitis',
+      ],
+      primary_diagnosis: 'Acne Vulgaris',
+      recommended_workup: ['Clinical evaluation of severity grade'],
+      suggested_treatment: {
+        medicines: [
+          { brand_name: 'A-Ret Gel', generic_name: 'Tretinoin 0.05% Gel', dosage_form: 'Oint', strength: '0.05%', schedule: '0+0+1', meal_timing: 'Anytime', duration: '60 Days', special_instructions: 'রাতে ঘুমানোর পূর্বে মুখ ধুয়ে শুকিয়ে শুধু ব্রণের জায়গায় হালকা লাগাবেন।' },
+          { brand_name: 'Clinda Gel', generic_name: 'Clindamycin 1% Gel', dosage_form: 'Oint', strength: '1%', schedule: '1+0+0', meal_timing: 'Anytime', duration: '30 Days', special_instructions: 'সকালে গোসলের পর লাগাবেন।' },
+        ],
+        advice: [
+          'বারবার মুখে হাত দেওয়া বা ব্রণ খোঁটা সম্পূর্ণ বন্ধ করুন।',
+          'নন-কমেডোজেনিক মৃদু ফেসওয়াশ দিয়ে দিনে ২ বার মুখ পরিষ্কার করুন।',
+        ],
+      },
+      safety_warnings: ['রেটিনয়েড জেল ব্যবহারের পর রোদে যাওয়ার সময় সানস্ক্রিন ব্যবহার করুন।'],
+    };
+  }
+
+  return {
+    observed_features: [
+      'Annular erythematous scaly plaque with active raised borders and central clearing',
+      'Mild excoriation marks secondary to intense pruritus',
+    ],
+    differential_diagnoses: [
+      'Tinea Corporis / Ringworm (দাদ)',
+      'Nummular Eczema',
+      'Psoriasis (Plaque type)',
+      'Contact Dermatitis',
+    ],
+    primary_diagnosis: 'Tinea Corporis (দাদ)',
+    recommended_workup: ['10% KOH skin scraping examination for fungal hyphae'],
+    suggested_treatment: {
+      medicines: [
+        { brand_name: 'Exifin', generic_name: 'Terbinafine', dosage_form: 'Tab', strength: '250 mg', schedule: '1+0+0', meal_timing: 'After Meal', duration: '14-21 Days', special_instructions: 'প্রতিদিন দুপুরে খাবারের পর ১টি।' },
+        { brand_name: 'Lulizol Cream', generic_name: 'Luliconazole 1% Cream', dosage_form: 'Oint', strength: '1%', schedule: '0+0+1', meal_timing: 'Anytime', duration: '14-21 Days', special_instructions: 'ক্ষতস্থানের অন্তত ১ ইঞ্চি বাইরে পর্যন্ত হালকা মেখে দিন।' },
+        { brand_name: 'Alatrol', generic_name: 'Cetirizine', dosage_form: 'Tab', strength: '10 mg', schedule: '0+0+1', meal_timing: 'After Meal', duration: '7 Days', special_instructions: 'রাতে শোয়ার আগে চুলকানি কমাতে।' },
+      ],
+      advice: [
+        'ক্ষতস্থানে কোনো অবস্থাতেই স্টেরয়েড মলম (যেমন: ডার্মোমিক্স, পেভিসন, ক্লোবেটাসল) লাগাবেন না।',
+        'ব্যক্তিগত তোয়ালে, বিছানার চাদর ও কাপড় আলাদা রাখুন ও ফুটন্ত পানিতে ধুয়ে রোদে শুকান।',
+        'স্থানটি সবসময় শুকনো ও পরিষ্কার রাখুন।',
+      ],
+    },
+    safety_warnings: [
+      'স্টেরয়েডযুক্ত মলম ব্যবহারের ফলে ছত্রাক ছড়িয়ে গিয়ে Tinea Incognito হতে পারে—স্টেরয়েড সম্পূর্ণ নিষিদ্ধ।',
+    ],
+  };
+}

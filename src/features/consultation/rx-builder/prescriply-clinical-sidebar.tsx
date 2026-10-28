@@ -14,6 +14,8 @@ import { Badge } from '@/components/ui/badge';
 import { analyzeVitals } from '@/services/vitalsService';
 import { ProtocolTemplatesDialog } from './protocol-templates-dialog';
 import { SuggestedProtocolBanner } from './suggested-protocol-banner';
+import { ClinicalPhotoDialog } from './clinical-photo-dialog';
+import { AddReportDialog } from '../lab-trends/add-report-dialog';
 import type { Encounter, InvestigationReport, Patient, Vitals as VitalsT } from '@/types/schema';
 
 const COMPLAINT_SUGGESTIONS = [
@@ -44,6 +46,7 @@ export function PrescriplyClinicalSidebar({
   patient: Patient;
   reports?: InvestigationReport[];
 }) {
+  const [addReportOpen, setAddReportOpen] = useState(false);
   const [localVitals, setLocalVitals] = useState<VitalsT>({
     bp: encounter.vitals?.bp || '',
     pulse: encounter.vitals?.pulse || '',
@@ -184,13 +187,16 @@ export function PrescriplyClinicalSidebar({
         </div>
       )}
 
-      {/* 4. Diagnosis (Dx) */}
+      {/* 4. Diagnosis (Dx) & Clinical Photo Vision */}
       <div className="space-y-1.5 pt-1 border-t border-slate-200">
-        <div className="flex items-center justify-between">
+        <div className="flex items-center justify-between flex-wrap gap-1">
           <span className="font-bold uppercase tracking-wider text-slate-800 flex items-center gap-1">
             <Sparkles className="h-3.5 w-3.5 text-indigo-600" /> Diagnosis (Dx)
           </span>
-          <ProtocolTemplatesDialog encounter={encounter} patient={patient} compact triggerLabel="১৬৮+ টেমপ্লেট" />
+          <div className="flex items-center gap-1">
+            <ClinicalPhotoDialog encounter={encounter} patient={patient} />
+            <ProtocolTemplatesDialog encounter={encounter} patient={patient} compact triggerLabel="১৬৮+ টেমপ্লেট" />
+          </div>
         </div>
         <TagInput
           value={encounter.diagnosis || []}
@@ -218,25 +224,42 @@ export function PrescriplyClinicalSidebar({
         <SuggestedProtocolBanner encounter={encounter} patient={patient} />
       </div>
 
-      {/* 5. Investigations (Ix / ল্যাব টেস্ট) */}
+      {/* 5. Investigations (Ix / ল্যাব টেস্ট ও রিপোর্ট আপলোড) */}
       <div className="space-y-1.5 pt-1 border-t border-slate-200">
-        <span className="font-bold uppercase tracking-wider text-slate-800 flex items-center gap-1">
-          <FlaskConical className="h-3.5 w-3.5 text-teal-600" /> Investigations (Ix)
-        </span>
+        <div className="flex items-center justify-between">
+          <span className="font-bold uppercase tracking-wider text-slate-800 flex items-center gap-1">
+            <FlaskConical className="h-3.5 w-3.5 text-teal-600" /> Investigations (Ix)
+          </span>
+          <button
+            type="button"
+            onClick={() => setAddReportOpen(true)}
+            className="flex items-center gap-1 text-[11px] font-bold text-teal-800 bg-teal-50 border border-teal-200 hover:bg-teal-100 rounded-md px-2 py-0.5 transition-colors shadow-2xs"
+          >
+            + রিপোর্ট আপলোড (AI OCR)
+          </button>
+        </div>
+
         {reports.length > 0 ? (
           <div className="space-y-1">
             {reports.map((r) => (
               <div key={r.id} className="rounded-md border border-slate-200 bg-slate-50 px-2 py-1 text-[11px]">
                 <span className="font-bold text-slate-800">• {r.test_name}</span>
                 {r.abnormality_flags.length > 0 && (
-                  <span className="text-rose-600 text-[10px] ml-1">({r.abnormality_flags.join(', ')})</span>
+                  <span className="text-rose-600 text-[10px] ml-1 font-semibold">({r.abnormality_flags.join(', ')})</span>
                 )}
               </div>
             ))}
           </div>
         ) : (
-          <p className="text-[11px] text-slate-400 italic">No investigations added yet.</p>
+          <p className="text-[11px] text-slate-400 italic">No investigations added yet. রিপোর্ট আপলোড বাটনে ক্লিক করুন।</p>
         )}
+
+        <AddReportDialog
+          patient={patient}
+          encounterId={encounter.id}
+          open={addReportOpen}
+          onOpenChange={setAddReportOpen}
+        />
       </div>
     </div>
   );
