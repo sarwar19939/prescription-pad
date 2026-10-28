@@ -1,12 +1,6 @@
 /**
  * MedRecord — AI Clinical Decision Support & Lab Analyzer Service Layer.
- *
- * Supports two backends:
- * 1. Cloud Provider: /api/ai/clinical-copilot (server-side Gemini / OpenAI)
- * 2. Local Offline Provider: Direct fetch to Ollama (http://localhost:11434/api/generate)
- *
- * Strict Privacy Rule: NEVER send PII (Patient Name, Phone, National ID) to Cloud AI.
- * All PII is stripped client-side prior to prompt serialization.
+ * Strict Privacy Rule: All PII is stripped client-side prior to prompt serialization.
  */
 import type { Encounter, InvestigationReport, Patient } from '@/types/schema';
 
@@ -28,11 +22,20 @@ export interface SuggestedMedication {
   rationale: string;
 }
 
+export interface ClinicalQuestion {
+  id: string;
+  question: string;
+  options?: string[];
+  hint?: string;
+}
+
 export interface ClinicalTrackResult {
   differential_diagnoses: string[];
   suggested_medications: SuggestedMedication[];
   recommended_investigations: string[];
   safety_warnings: string[];
+  clinical_questions?: ClinicalQuestion[];
+  clinical_summary?: string;
 }
 
 export interface AnonymizedPatientContext {
@@ -44,33 +47,24 @@ export interface AnonymizedPatientContext {
   medical_surgical_history?: string;
   current_complaints: string[];
   current_vitals: Record<string, string>;
-  past_encounters_summary: Array<{
-    date: string;
-    complaints: string[];
-    diagnosis: string[];
-    findings?: string;
-  }>;
-  latest_labs_summary: Array<{
-    date: string;
-    test_name: string;
-    metrics: Record<string, string | number>;
-    abnormality_flags: string[];
-  }>;
+  clinical_findings?: string;
+  active_diagnoses?: string[];
+  current_medicines?: string[];
+  doctor_answers?: Record<string, string>;
+  past_encounters_summary: Array<{ date: string; complaints: string[]; diagnosis: string[]; findings?: string }>;
+  latest_labs_summary: Array<{ date: string; test_name: string; metrics: Record<string, string | number>; abnormality_flags: string[] }>;
 }
 
 const DEFAULT_OLLAMA_URL = 'http://localhost:11434';
 const DEFAULT_OLLAMA_MODEL = 'llama3.2';
 
-/**
- * Sanitizes patient data by stripping all identifiable PII.
- * Conforms to strict clinical data governance.
- */
 export function sanitizePatientContext(
   patient: Patient,
   pastEncounters: Encounter[] = [],
   latestLabs: InvestigationReport[] = [],
   currentComplaints: string[] = [],
   currentVitals: Record<string, string> = {},
+  options?: { clinicalFindings?: string; activeDiagnoses?: string[]; currentMedicines?: string[]; doctorAnswers?: Record<string, string> },
 ): AnonymizedPatientContext {
   return {
     age: patient.age,
@@ -81,18 +75,12 @@ export function sanitizePatientContext(
     medical_surgical_history: patient.medical_surgical_history || undefined,
     current_complaints: [...currentComplaints],
     current_vitals: { ...currentVitals },
-    past_encounters_summary: pastEncounters.map((e) => ({
-      date: e.visit_date,
-      complaints: e.chief_complaints,
-      diagnosis: e.diagnosis,
-      findings: e.clinical_findings || undefined,
-    })),
-    latest_labs_summary: latestLabs.map((l) => ({
-      date: l.report_date,
-      test_name: l.test_name,
-      metrics: l.extracted_metrics,
-      abnormality_flags: l.abnormality_flags,
-    })),
+    clinical_findings: options?.clinicalFindings,
+    active_diagnoses: options?.activeDiagnoses,
+    current_medicines: options?.currentMedicines,
+    doctor_answers: options?.doctorAnswers,
+    past_encounters_summary: pastEncounters.map((e) => ({ date: e.visit_date, complaints: e.chief_complaints, diagnosis: e.diagnosis, findings: e.clinical_findings || undefined })),
+    latest_labs_summary: latestLabs.map((l) => ({ date: l.report_date, test_name: l.test_name, metrics: l.extracted_metrics, abnormality_flags: l.abnormality_flags })),
   };
 }
 
@@ -143,11 +131,15 @@ export async function analyzeLabReport(
  */
 export async function suggestClinicalTrack(
   patient: Patient,
-  pastEncounters: Encounter[],
-  latestLabs: InvestigationReport[],
-  currentComplaints: string[],
-  currentVitals: Record<string, string>,
+  pastEncounters: Encounter[] = [],
+  latestLabs: InvestigationReport[] = [],
+  currentComplaints: string[] = [],
+  currentVitals: Record<string, string> = {},
   options?: {
+    clinicalFindings?: string;
+    activeDiagnoses?: string[];
+    currentMedicines?: string[];
+    doctorAnswers?: Record<string, string>;
     provider?: AIProvider;
     ollamaBaseUrl?: string;
     geminiApiKey?: string;
@@ -160,6 +152,12 @@ export async function suggestClinicalTrack(
     latestLabs,
     currentComplaints,
     currentVitals,
+    {
+      clinicalFindings: options?.clinicalFindings,
+      activeDiagnoses: options?.activeDiagnoses,
+      currentMedicines: options?.currentMedicines,
+      doctorAnswers: options?.doctorAnswers,
+    },
   );
 
   const provider = options?.provider ?? (navigator.onLine ? 'cloud' : 'local');

@@ -2,10 +2,10 @@
 
 /**
  * AI Co-Pilot Results Presentation:
- * Displays differential diagnoses, safety alerts, recommended investigations,
- * full multi-drug prescription packages, and 1-click Add to Rx.
+ * Displays clinical summary, interactive clarifying questions, differential diagnoses,
+ * safety alerts, recommended investigations, full prescription packages, and 1-click Add to Rx.
  */
-import { AlertTriangle, Check, ChevronRight, PlusCircle, Sparkles, Wand2 } from 'lucide-react';
+import { AlertTriangle, Check, ChevronRight, Info, PlusCircle, Sparkles, Wand2 } from 'lucide-react';
 
 import type { ClinicalTrackResult, SuggestedMedication } from '@/services/aiClinicalCopilot';
 import type { FullPrescriptionPackage } from '@/services/aiPrescriptionService';
@@ -13,6 +13,7 @@ import type { Patient } from '@/types/schema';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { AIFullPrescriptionCard } from './ai-full-prescription-card';
+import { AICopilotQuestions } from './ai-copilot-questions';
 
 interface AICopilotResultsProps {
   results: ClinicalTrackResult;
@@ -22,6 +23,10 @@ interface AICopilotResultsProps {
   onConfirmDiagnosis?: (diag: string) => void;
   fullPackage?: FullPrescriptionPackage | null;
   onApplyFullPackage?: (pkg: FullPrescriptionPackage) => Promise<{ addedCount: number; skippedCount: number }>;
+  doctorAnswers?: Record<string, string>;
+  onAnswerChange?: (id: string, answer: string) => void;
+  onSubmitAnswers?: () => void;
+  loadingAnswers?: boolean;
 }
 
 export function AICopilotResults({
@@ -32,19 +37,42 @@ export function AICopilotResults({
   onConfirmDiagnosis,
   fullPackage,
   onApplyFullPackage,
+  doctorAnswers = {},
+  onAnswerChange = () => {},
+  onSubmitAnswers = () => {},
+  loadingAnswers = false,
 }: AICopilotResultsProps) {
   return (
-    <div className="space-y-5">
+    <div className="space-y-4">
+      {/* Clinical Summary Alert */}
+      {results.clinical_summary && (
+        <div className="rounded-xl border border-indigo-200 bg-indigo-50/70 p-3 text-xs text-indigo-950 flex items-start gap-2">
+          <Info className="h-4 w-4 text-indigo-600 shrink-0 mt-0.5" />
+          <p className="leading-relaxed font-medium">{results.clinical_summary}</p>
+        </div>
+      )}
+
+      {/* Interactive Clinical Clarifying Questions */}
+      {results.clinical_questions && results.clinical_questions.length > 0 && (
+        <AICopilotQuestions
+          questions={results.clinical_questions}
+          answers={doctorAnswers}
+          onAnswerChange={onAnswerChange}
+          onSubmitAnswers={onSubmitAnswers}
+          loading={loadingAnswers}
+        />
+      )}
+
       {/* Safety Warnings Section */}
       {results.safety_warnings?.length > 0 && (
-        <div className="rounded-2xl border border-rose-200 bg-rose-50/80 p-4">
-          <div className="flex items-center gap-2 font-bold text-sm text-rose-900 mb-2">
-            <AlertTriangle className="h-4.5 w-4.5 text-rose-600" />
+        <div className="rounded-2xl border border-rose-200 bg-rose-50/80 p-3.5">
+          <div className="flex items-center gap-2 font-bold text-xs text-rose-900 mb-1.5 uppercase tracking-wider">
+            <AlertTriangle className="h-4 w-4 text-rose-600" />
             <span>Safety Alerts &amp; Drug Interactions</span>
           </div>
-          <ul className="space-y-1.5 text-sm text-rose-800 font-medium">
+          <ul className="space-y-1 text-xs text-rose-800 font-medium">
             {results.safety_warnings.map((w, i) => (
-              <li key={i} className="flex items-start gap-2">
+              <li key={i} className="flex items-start gap-1.5">
                 <span className="text-rose-500 font-bold">•</span>
                 <span>{w}</span>
               </li>
@@ -101,7 +129,7 @@ export function AICopilotResults({
         <span className="text-xs font-bold uppercase tracking-wider text-slate-500 block mb-2">
           সাজেস্টেড সহায়ক ঔষধ তালিকা
         </span>
-        <div className="space-y-2.5">
+        <div className="space-y-2">
           {results.suggested_medications?.map((med, i) => {
             const added = addedMeds.has(med.generic_name);
             return (
@@ -160,7 +188,7 @@ export function AICopilotResults({
           <span className="text-xs font-bold uppercase tracking-wider text-slate-500 block mb-2">
             প্রয়োজনীয় প্যাথলজি ও পরীক্ষা
           </span>
-          <ul className="space-y-1.5 text-xs text-slate-700 bg-slate-50 p-3 rounded-xl border border-slate-200">
+          <ul className="space-y-1 text-xs text-slate-700 bg-slate-50 p-3 rounded-xl border border-slate-200">
             {results.recommended_investigations.map((inv, i) => (
               <li key={i} className="flex items-center gap-2">
                 <ChevronRight className="h-3.5 w-3.5 text-teal-600 shrink-0" />

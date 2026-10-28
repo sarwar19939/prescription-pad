@@ -11,7 +11,7 @@ import { Loader2, Mic, MicOff, Radio, Sparkles } from 'lucide-react';
 import { db } from '@/db/localDb';
 import { generateUUID } from '@/lib/uuid';
 import { processVoiceConsultation, type ScribeExtractionResult } from '@/services/aiScribeService';
-import type { Encounter, Patient, PrescriptionItem } from '@/types/schema';
+import type { Encounter, Patient, PrescriptionItem, Vitals } from '@/types/schema';
 import { Button } from '@/components/ui/button';
 import {
   Dialog,
@@ -123,8 +123,22 @@ export function VoiceScribeDialog({
     const existingAdvice = encounter.advice || [];
     const mergedAdvice = Array.from(new Set([...existingAdvice, ...result.advice]));
 
+    const updatedVitals: Vitals = {
+      bp: result.vitals_mentioned?.bp || encounter.vitals?.bp || '',
+      pulse: result.vitals_mentioned?.pulse || encounter.vitals?.pulse || '',
+      temp: result.vitals_mentioned?.temp || encounter.vitals?.temp || '',
+      weight: result.vitals_mentioned?.weight || encounter.vitals?.weight || '',
+      spo2: result.vitals_mentioned?.spo2 || encounter.vitals?.spo2 || '',
+    };
+
+    const newHistory = result.history_notes?.length ? `H/O: ${result.history_notes.join('; ')}` : '';
+    const newExam = result.examination_findings ? `O/E: ${result.examination_findings}` : '';
+    const updatedFindings = [encounter.clinical_findings, newHistory, newExam].filter(Boolean).join('\n');
+
     await db.encounters.update(encounter.id, {
       chief_complaints: mergedComplaints,
+      vitals: updatedVitals,
+      clinical_findings: updatedFindings,
       diagnosis: newDiags.slice(0, 3),
       advice: mergedAdvice,
       updated_at: ts,

@@ -2,22 +2,12 @@
 
 /**
  * AI Clinical Co-Pilot Sidebar Drawer:
- * Uses SlideOverDrawer spring motion wrapper with Indigo/Violet gradient branding.
- * Provides AI-assisted differential diagnoses, safety alerts, full prescription packages,
- * and 1-click Add to Rx.
+ * Integrates comprehensive clinical context (vitals, complaints, findings, labs, current meds)
+ * and interactive clinical probing questions for personalized decision support.
  */
 import { useEffect, useState } from 'react';
-import Link from 'next/link';
 import { useLiveQuery } from 'dexie-react-hooks';
-import {
-  Check,
-  Info,
-  Loader2,
-  ShieldAlert,
-  Sparkles,
-  Stethoscope,
-  Wand2,
-} from 'lucide-react';
+import { Loader2, ShieldAlert, Sparkles, Stethoscope } from 'lucide-react';
 
 import { db } from '@/db/localDb';
 import { generateUUID } from '@/lib/uuid';
@@ -53,8 +43,10 @@ export function AICopilotDrawer({
   activeEncounter,
 }: AICopilotDrawerProps) {
   const [loading, setLoading] = useState(false);
+  const [loadingAnswers, setLoadingAnswers] = useState(false);
   const [provider, setProvider] = useState<AIProvider>('cloud');
   const [results, setResults] = useState<ClinicalTrackResult | null>(null);
+  const [doctorAnswers, setDoctorAnswers] = useState<Record<string, string>>({});
   const [addedMeds, setAddedMeds] = useState<Set<string>>(new Set());
   const [error, setError] = useState<string | null>(null);
 
@@ -73,10 +65,13 @@ export function AICopilotDrawer({
     [patient.id],
     [],
   );
-  const tenant = useLiveQuery(() => db.tenants.get(patient.tenant_id), [patient.tenant_id]);
+  const currentRxItems = useLiveQuery(
+    async () => (activeEncounter ? db.prescription_items.where('encounter_id').equals(activeEncounter.id).toArray() : []),
+    [activeEncounter?.id],
+    [],
+  );
   const confirmedDiagnoses = activeEncounter?.diagnosis || [];
 
-  // Auto-generate full package if confirmed diagnoses exist and none loaded yet
   useEffect(() => {
     if (open && confirmedDiagnoses.length > 0 && !fullPackage && !packageLoading) {
       void handleGenerateFullPackage(confirmedDiagnoses[0]);
@@ -106,13 +101,22 @@ export function AICopilotDrawer({
     await handleGenerateFullPackage(diag);
   };
 
-  const handleRunAnalysis = async () => {
+  const handleRunAnalysis = async (answersOverride?: Record<string, string>) => {
     setLoading(true);
     setError(null);
     try {
       const complaints = activeEncounter?.chief_complaints || [];
       const vitals = (activeEncounter?.vitals || {}) as Record<string, string>;
+      const clinicalFindings = activeEncounter?.clinical_findings || '';
+      const activeDiagnoses = confirmedDiagnoses;
+      const currentMedicines = currentRxItems.map((m) => `${m.brand_name} (${m.generic_name})`);
+      const answers = answersOverride || doctorAnswers;
+
       const track = await suggestClinicalTrack(patient, pastEncounters, labReports, complaints, vitals, {
+        clinicalFindings,
+        activeDiagnoses,
+        currentMedicines,
+        doctorAnswers: answers,
         provider,
       });
       setResults(track);
@@ -120,7 +124,17 @@ export function AICopilotDrawer({
       setError(err instanceof Error ? err.message : String(err));
     } finally {
       setLoading(false);
+      setLoadingAnswers(false);
     }
+  };
+
+  const handleAnswerChange = (qId: string, answer: string) => {
+    setDoctorAnswers((prev) => ({ ...prev, [qId]: answer }));
+  };
+
+  const handleSubmitAnswers = async () => {
+    setLoadingAnswers(true);
+    await handleRunAnalysis(doctorAnswers);
   };
 
   const handleAddToRx = async (med: SuggestedMedication) => {
@@ -152,68 +166,15 @@ export function AICopilotDrawer({
 
   const handleApplyFullPackage = async (pkg: FullPrescriptionPackage) => {
     const encounter = activeEncounter || (await ensureTodayEncounter(patient));
-    return await applyFullPrescriptionToEncounter(encounter.id, pkg, patient);
+    const result = await applyFullPrescriptionToEncounter(encounter.id, pkg, patient);
+    return result;
   };
 
   return (
-    <SlideOverDrawer
-      open={open}
-      onClose={onClose}
-      title="AI Clinical Co-Pilot"
-      subtitle="Evidence-based differential guidance & full prescription support"
-      badge="Decision Support"
-      widthClass="max-w-xl"
-    >
-      <div className="flex flex-col gap-4">
-        {/* Medical Disclaimer Banner */}
-        <div className="flex items-start gap-2.5 rounded-xl border border-amber-200 bg-amber-50 p-2.5 text-xs text-amber-900">
-          <Info className="mt-0.5 h-4 w-4 shrink-0 text-amber-700" />
-          <p className="leading-snug">
-            <strong className="font-semibold">Medical Disclaimer:</strong> AI suggestions &amp; protocols are for clinical reference only. Physician review and approval required.
-          </p>
-        </div>
-
-        {/* Confirmed Diagnoses Quick Picker if present in active encounter */}
-        {confirmedDiagnoses.length > 0 && (
-          <div className="rounded-2xl border border-indigo-200 bg-indigo-50/60 p-3.5 space-y-2">
-            <div className="flex items-center justify-between">
-              <span className="text-xs font-bold uppercase tracking-wider text-indigo-900 flex items-center gap-1.5">
-                <Stethoscope className="h-4 w-4 text-indigo-600" />
-                কনফার্মকৃত ডায়াগনোসিস
-              </span>
-              <span className="text-[11px] text-indigo-700 font-medium">
-                ক্লিক করে ফুল প্রেসক্রিপশন লোড করুন
-              </span>
-            </div>
-            <div className="flex flex-wrap gap-1.5">
-              {confirmedDiagnoses.map((d, i) => (
-                <button
-                  key={i}
-                  type="button"
-                  onClick={() => void handleGenerateFullPackage(d)}
-                  className={`rounded-lg px-2.5 py-1 text-xs font-bold border transition-all flex items-center gap-1 ${
-                    fullPackage?.diagnosis.toLowerCase().includes(d.toLowerCase())
-                      ? 'bg-indigo-600 text-white border-indigo-600 shadow-2xs'
-                      : 'bg-white text-indigo-900 border-indigo-200 hover:border-indigo-400'
-                  }`}
-                >
-                  <Wand2 className="h-3 w-3" />
-                  {d}
-                </button>
-              ))}
-            </div>
-          </div>
-        )}
-
-        {/* Full Prescription Package Card if available */}
-        {packageLoading && (
-          <div className="rounded-2xl border border-slate-200 bg-white p-6 text-center space-y-2">
-            <Loader2 className="mx-auto h-6 w-6 animate-spin text-indigo-600" />
-            <p className="text-xs font-semibold text-slate-600">সম্পূর্ণ প্রেসক্রিপশন প্যাকেজ তৈরি হচ্ছে…</p>
-          </div>
-        )}
-
-        {fullPackage && !packageLoading && (
+    <SlideOverDrawer open={open} onClose={onClose} title="AI Clinical Decision Support" widthClass="max-w-xl">
+      <div className="space-y-4 text-slate-800">
+        {/* Full Prescription Preview Banner */}
+        {confirmedDiagnoses.length > 0 && fullPackage && (
           <AIFullPrescriptionCard
             pkg={fullPackage}
             patient={patient}
@@ -245,7 +206,7 @@ export function AICopilotDrawer({
           </div>
 
           <Button
-            onClick={handleRunAnalysis}
+            onClick={() => handleRunAnalysis()}
             disabled={loading}
             className="h-10 bg-gradient-to-r from-indigo-600 to-violet-600 hover:from-indigo-700 hover:to-violet-700 text-white shadow-xs font-semibold text-xs rounded-xl"
           >
@@ -283,6 +244,10 @@ export function AICopilotDrawer({
             onConfirmDiagnosis={handleConfirmDiagnosis}
             fullPackage={fullPackage}
             onApplyFullPackage={handleApplyFullPackage}
+            doctorAnswers={doctorAnswers}
+            onAnswerChange={handleAnswerChange}
+            onSubmitAnswers={handleSubmitAnswers}
+            loadingAnswers={loadingAnswers}
           />
         )}
       </div>

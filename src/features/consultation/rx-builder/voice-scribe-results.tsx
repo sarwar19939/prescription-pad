@@ -2,13 +2,16 @@
 
 /**
  * Extracted Diagnostic Results View for Voice Scribe.
- * Focuses on Chief Complaints & Differential Diagnoses selection.
+ * Focuses on Chief Complaints & Differential Diagnoses selection,
+ * plus auto-detected Vitals (BP, Pulse, Temp, Weight, SpO2) and Clinical History.
  */
 import { useState } from 'react';
 import {
+  Activity,
   CheckCircle2,
   ChevronDown,
   ChevronUp,
+  FileText,
   Stethoscope,
   Wand2,
 } from 'lucide-react';
@@ -34,13 +37,33 @@ export function VoiceScribeResults({
   applied,
 }: VoiceScribeResultsProps) {
   const [showMeds, setShowMeds] = useState(false);
+  const vitals = result.vitals_mentioned || {};
+  const hasVitals = Object.values(vitals).some((v) => Boolean(v));
 
   return (
     <div className="space-y-3.5 rounded-2xl border border-teal-200 bg-gradient-to-b from-teal-50/50 via-white to-slate-50/30 p-4 shadow-2xs">
+      {/* Auto-detected Vitals from Speech */}
+      {hasVitals && (
+        <div className="rounded-xl border border-teal-200 bg-teal-50/90 p-2.5">
+          <span className="text-[11px] font-bold text-teal-900 block mb-1 flex items-center gap-1.5">
+            <Activity className="h-3.5 w-3.5 text-teal-700" />
+            কথা থেকে অটো-ডিটেক্টেড ভাইটালস (Auto-Detected Vitals):
+          </span>
+          <div className="flex flex-wrap gap-2 text-xs font-mono font-semibold text-teal-950">
+            {vitals.bp && <span className="bg-white border border-teal-300 px-2 py-0.5 rounded-md">BP: {vitals.bp}</span>}
+            {vitals.pulse && <span className="bg-white border border-teal-300 px-2 py-0.5 rounded-md">Pulse: {vitals.pulse}</span>}
+            {vitals.temp && <span className="bg-white border border-teal-300 px-2 py-0.5 rounded-md">Temp: {vitals.temp}</span>}
+            {vitals.weight && <span className="bg-white border border-teal-300 px-2 py-0.5 rounded-md">Weight: {vitals.weight}</span>}
+            {vitals.spo2 && <span className="bg-white border border-teal-300 px-2 py-0.5 rounded-md">SpO₂: {vitals.spo2}</span>}
+          </div>
+        </div>
+      )}
+
+      {/* Chief Complaints (Medical English) */}
       <div>
         <span className="text-xs font-bold text-slate-700 block mb-1.5 flex items-center gap-1.5">
           <Stethoscope className="h-3.5 w-3.5 text-teal-600" />
-          চিহ্নিত প্রধান উপসর্গসমূহ (Chief Complaints):
+          চিহ্নিত প্রধান উপসর্গসমূহ (Chief Complaints - Medical English):
         </span>
         <div className="flex flex-wrap gap-1.5">
           {result.chief_complaints.map((c, i) => (
@@ -51,6 +74,7 @@ export function VoiceScribeResults({
         </div>
       </div>
 
+      {/* Suggested Diagnoses (Clickable selection) */}
       <div>
         <span className="text-xs font-bold text-slate-700 block mb-1.5">
           🎯 AI প্রস্তাবিত সম্ভাব্য রোগসমূহ (ডাক্তার হিসেবে নির্বাচন করুন):
@@ -91,6 +115,19 @@ export function VoiceScribeResults({
         </div>
       </div>
 
+      {/* Clinical Examination & History Notes */}
+      {(result.history_notes?.length > 0 || result.examination_findings) && (
+        <div className="text-xs text-slate-600 space-y-1 border-t border-slate-100 pt-2">
+          {result.history_notes?.length > 0 && (
+            <p><strong className="text-slate-700">H/O:</strong> {result.history_notes.join('; ')}</p>
+          )}
+          {result.examination_findings && (
+            <p><strong className="text-slate-700">O/E:</strong> {result.examination_findings}</p>
+          )}
+        </div>
+      )}
+
+      {/* Advice */}
       {result.advice.length > 0 && (
         <div className="border-t border-slate-100 pt-2 text-xs text-slate-600">
           <span className="font-bold text-slate-700 block mb-1">পরামর্শ (Advice):</span>
@@ -105,6 +142,7 @@ export function VoiceScribeResults({
         </div>
       )}
 
+      {/* Apply Button */}
       <Button
         type="button"
         onClick={onApplyDiagnosisOnly}
@@ -114,16 +152,17 @@ export function VoiceScribeResults({
         {applied ? (
           <>
             <CheckCircle2 className="h-4 w-4 text-emerald-200" />
-            রোগ ও উপসর্গ প্রেসক্রিপশনে যুক্ত হয়েছে!
+            ভাইটালস, উপসর্গ ও রোগ প্রেসক্রিপশনে যুক্ত হয়েছে!
           </>
         ) : (
           <>
             <Wand2 className="h-4 w-4" />
-            ✓ নির্বাচিত রোগ ও উপসর্গ প্রেসক্রিপশনে যুক্ত করুন
+            ✓ নির্বাচিত রোগ, ভাইটালস ও উপসর্গ প্রেসক্রিপশনে যুক্ত করুন
           </>
         )}
       </Button>
 
+      {/* Collapsible Medicines */}
       <div className="border-t border-slate-200/60 pt-2">
         <button
           type="button"

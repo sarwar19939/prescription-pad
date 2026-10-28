@@ -3,45 +3,27 @@
  */
 export function mockLabAnalysis(payload: { content: string }) {
   const text = payload?.content || '';
-  const isDiabetes = /sugar|glucose|hba1c/i.test(text);
-  const isKidney = /creatinine|urea|egfr/i.test(text);
-
-  if (isDiabetes) {
+  if (/sugar|glucose|hba1c/i.test(text)) {
     return {
       test_name: 'Glycemic Profile',
-      extracted_metrics: {
-        'HbA1c': '7.8 %',
-        'Fasting Blood Sugar': '142 mg/dL',
-        'Post-Prandial Blood Sugar': '210 mg/dL',
-      },
+      extracted_metrics: { 'HbA1c': '7.8 %', 'Fasting Blood Sugar': '142 mg/dL', 'Post-Prandial Blood Sugar': '210 mg/dL' },
       abnormality_flags: ['High HbA1c (7.8%)', 'Elevated Fasting Glucose (142 mg/dL)'],
-      ai_summary: 'Suboptimal glycemic control indicating active diabetes progression. Lifestyle and pharmacotherapy review indicated.',
+      ai_summary: 'Suboptimal glycemic control indicating active diabetes progression. Pharmacotherapy review indicated.',
     };
   }
-
-  if (isKidney) {
+  if (/creatinine|urea|egfr/i.test(text)) {
     return {
       test_name: 'Renal Function Test (RFT)',
-      extracted_metrics: {
-        'Serum Creatinine': '1.6 mg/dL',
-        'Blood Urea Nitrogen': '28 mg/dL',
-        'eGFR': '54 mL/min/1.73m²',
-      },
+      extracted_metrics: { 'Serum Creatinine': '1.6 mg/dL', 'Blood Urea Nitrogen': '28 mg/dL', 'eGFR': '54 mL/min/1.73m²' },
       abnormality_flags: ['Elevated Serum Creatinine (1.6 mg/dL)', 'Reduced eGFR (Stage 3a CKD)'],
       ai_summary: 'Mild renal impairment observed. Monitor hydration and adjust dosages of renally-cleared medications.',
     };
   }
-
   return {
     test_name: 'Comprehensive Health Panel',
-    extracted_metrics: {
-      'Hemoglobin': '11.8 g/dL',
-      'Total Cholesterol': '225 mg/dL',
-      'Serum Creatinine': '1.1 mg/dL',
-      'HbA1c': '6.4 %',
-    },
+    extracted_metrics: { 'Hemoglobin': '11.8 g/dL', 'Total Cholesterol': '225 mg/dL', 'Serum Creatinine': '1.1 mg/dL', 'HbA1c': '6.4 %' },
     abnormality_flags: ['Borderline Total Cholesterol (225 mg/dL)', 'Pre-diabetic HbA1c (6.4%)'],
-    ai_summary: 'Borderline dyslipidemia and pre-diabetes noted. Recommend dietary lifestyle modifications and 3-month lipid re-evaluation.',
+    ai_summary: 'Borderline dyslipidemia and pre-diabetes noted. Recommend dietary lifestyle modifications.',
   };
 }
 
@@ -101,6 +83,54 @@ export function mockClinicalTrack(context: any) {
     });
   }
 
+  const questions = [];
+  if (isFever) {
+    questions.push({
+      id: 'fever_chills',
+      question: 'জ্বরের সাথে কাঁপুনি (Chills/Rigor) বা রাতে অতিরিক্ত ঘাম দেওয়ার তীব্রতা কেমন?',
+      options: ['স্বাভাবিক জ্বর (কাঁপুনি নেই)', 'তীব্র কাঁপুনি হয় (Chills/Rigor)', 'রাতে বেশি ঘাম হয়'],
+      hint: 'ইনফেকশাস বনাম ভাইরাল এটিওলজি মূল্যায়নের জন্য।',
+    });
+    questions.push({
+      id: 'dengue_warning',
+      question: 'চোখের পেছনে ব্যথা, গায়ে ফুসকুড়ি বা দাঁতের মাড়ি দিয়ে রক্তপাত আছে কি?',
+      options: ['না, কোনো রক্তপাত নেই', 'চোখের পেছনে তীব্র ব্যথা আছে', 'গায়ে লাল ফুসকুড়ি আছে'],
+      hint: 'ডেঙ্গু ওয়ার্নিং সাইন মূল্যায়নের জন্য।',
+    });
+    questions.push({
+      id: 'cough_type',
+      question: 'কাশির ধরন কেমন? কফ কি হলুদ/সবুজাভ নাকি শুকনো?',
+      options: ['শুকনো খুকখুকে কাশি', 'হলুদ/সবুজ কফ বের হয়', 'কাশি নেই'],
+      hint: 'অ্যান্টিবায়োটিকের প্রয়োজনীয়তা যাচাই করতে।',
+    });
+  } else if (isDiabetic) {
+    questions.push({
+      id: 'hypo_symptoms',
+      question: 'বুক ধড়ফড়, অতিরিক্ত ক্ষুধা বা ঘাম দিয়ে হাইপোগ্লাইসেমিয়ার অনুভূতি হয় কি?',
+      options: ['না, স্বাভাবিক', 'মাঝে মাঝে হাইপো ভাব হয়', 'ঘন ঘন প্রস্রাব ও পিপাসা লাগে'],
+      hint: 'গ্লাইসেমিক নিয়ন্ত্রণ ও ড্রাগ টাইট্রেশনের জন্য।',
+    });
+  } else {
+    questions.push({
+      id: 'gastric_relation',
+      question: 'বুক জ্বালাপোড়া বা পেটব্যথা কি খাওয়ার পর বেশি হয় নাকি খালি পেটে?',
+      options: ['খাওয়ার পর বুক জ্বালা করে', 'খালি পেটে কামড়ায়', 'রাতে ঘুমানোর সময় বাড়ে'],
+      hint: 'GERD বনাম গ্যাস্ট্রিক আলসার চিহ্নিত করতে।',
+    });
+    questions.push({
+      id: 'prior_allergy',
+      question: 'পূর্বে কোনো অ্যান্টিবায়োটিক বা ব্যথানাশক ওষুধ খেয়ে অ্যালার্জি হয়েছিল কি?',
+      options: ['না, কোনো অ্যালার্জি নেই', 'পেনিসিলিন অ্যালার্জি আছে', 'সালফা ড্রাগে সমস্যা'],
+      hint: 'রোগীর ড্রাগ সেফটি নিশ্চিত করতে।',
+    });
+  }
+
+  const answers = context?.doctor_answers;
+  const hasAnswers = answers && Object.keys(answers).length > 0;
+  const summary = hasAnswers
+    ? `ডাক্তারের ইনপুট (${Object.values(answers).join(', ')}) বিশ্লেষণ করে নিখুঁত ক্লিনিক্যাল ট্র্যাক তৈরি করা হয়েছে।`
+    : 'রোগীর উপসর্গ, হিস্ট্রি ও ডেটাবেজ প্রোফাইল পর্যালোচনা করে এআই কো-পাইলট প্রস্তাবনা।';
+
   return {
     differential_diagnoses: isFever
       ? ['Acute Viral Upper Respiratory Tract Infection', 'Dengue Fever (Early Stage)', 'Enteric Fever']
@@ -112,6 +142,8 @@ export function mockClinicalTrack(context: any) {
       ? ['Complete Blood Count (CBC) with Platelets', 'NS1 Ag (if fever within 3 days)', 'Urine R/M/E']
       : ['HbA1c & Fasting Blood Sugar', 'Lipid Profile', 'Serum Creatinine & Electrolytes'],
     safety_warnings: warnings.length > 0 ? warnings : ['Verify baseline renal and hepatic parameters before long-term therapy.'],
+    clinical_questions: questions,
+    clinical_summary: summary,
   };
 }
 

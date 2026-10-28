@@ -170,9 +170,16 @@ async function callNvidiaChat(apiKey: string, prompt: string, systemInstruction:
 }
 
 async function callNvidiaSuggestTrack(apiKey: string, context: any) {
-  const prompt = `Analyze this anonymized patient clinical summary and suggest an evidence-based clinical track:
+  const prompt = `Analyze this comprehensive patient clinical summary (vitals, complaints, examination findings, current medicines, lab trends, doctor answers) and suggest an evidence-based clinical track.
 ${JSON.stringify(context, null, 2)}
-Return STRICT JSON: { "differential_diagnoses": string[], "suggested_medications": Array<{ generic_name, suggested_brand, strength, schedule, duration, rationale }>, "recommended_investigations": string[], "safety_warnings": string[] }`;
+Return STRICT JSON: {
+  "differential_diagnoses": string[],
+  "suggested_medications": Array<{ "generic_name": string, "suggested_brand": string, "strength": string, "schedule": string, "duration": string, "rationale": string }>,
+  "recommended_investigations": string[],
+  "safety_warnings": string[],
+  "clinical_questions": Array<{ "id": string, "question": string, "options": string[], "hint": string }>,
+  "clinical_summary": string
+}`;
   return callNvidiaChat(apiKey, prompt, BD_CLINICAL_SYSTEM_INSTRUCTION);
 }
 
@@ -220,11 +227,9 @@ async function callGeminiLabAnalysis(apiKey: string, payload: { content: string 
 }
 
 async function callGeminiSuggestTrack(apiKey: string, context: any) {
-  return callGemini(
-    apiKey,
-    [{ role: 'user', parts: [{ text: `Patient Clinical Summary:\n${JSON.stringify(context, null, 2)}` }] }],
-    BD_CLINICAL_SYSTEM_INSTRUCTION,
-  );
+  const prompt = `Patient Clinical Context (Complaints, Vitals, Findings, Current Meds, Labs, Doctor Answers):\n${JSON.stringify(context, null, 2)}\n
+Provide: differential_diagnoses, suggested_medications (generic, brand, strength, schedule, duration, rationale), recommended_investigations, safety_warnings, clinical_questions (id, question, options, hint for missing info), clinical_summary.`;
+  return callGemini(apiKey, [{ role: 'user', parts: [{ text: prompt }] }], BD_CLINICAL_SYSTEM_INSTRUCTION);
 }
 
 async function callGeminiFullPrescription(apiKey: string, payload: any) {
