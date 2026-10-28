@@ -30,12 +30,14 @@ export interface ClinicalQuestion {
 }
 
 export interface ClinicalTrackResult {
+  probable_diagnosis?: string;
   differential_diagnoses: string[];
   suggested_medications: SuggestedMedication[];
   recommended_investigations: string[];
   safety_warnings: string[];
   clinical_questions?: ClinicalQuestion[];
   clinical_summary?: string;
+  is_confirmed_mode?: boolean;
 }
 
 export interface AnonymizedPatientContext {

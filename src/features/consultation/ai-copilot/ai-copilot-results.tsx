@@ -2,10 +2,19 @@
 
 /**
  * AI Co-Pilot Results Presentation:
- * Displays clinical summary, interactive clarifying questions, differential diagnoses,
- * safety alerts, recommended investigations, full prescription packages, and 1-click Add to Rx.
+ * Displays Most Probable Diagnosis card with 1-click confirmation,
+ * interactive clarifying questions to refine diagnoses, alternative differentials,
+ * safety warnings, recommended investigations, and full prescription packages.
  */
-import { AlertTriangle, Check, ChevronRight, Info, PlusCircle, Sparkles, Wand2 } from 'lucide-react';
+import {
+  AlertTriangle,
+  Check,
+  ChevronRight,
+  Info,
+  PlusCircle,
+  Sparkles,
+  Wand2,
+} from 'lucide-react';
 
 import type { ClinicalTrackResult, SuggestedMedication } from '@/services/aiClinicalCopilot';
 import type { FullPrescriptionPackage } from '@/services/aiPrescriptionService';
@@ -42,6 +51,16 @@ export function AICopilotResults({
   onSubmitAnswers = () => {},
   loadingAnswers = false,
 }: AICopilotResultsProps) {
+  const primaryProbable =
+    results.probable_diagnosis ||
+    (results.differential_diagnoses && results.differential_diagnoses.length > 0
+      ? results.differential_diagnoses[0]
+      : null);
+
+  const alternativeDiffs = (results.differential_diagnoses || []).filter(
+    (d) => d !== primaryProbable,
+  );
+
   return (
     <div className="space-y-4">
       {/* Clinical Summary Alert */}
@@ -52,7 +71,41 @@ export function AICopilotResults({
         </div>
       )}
 
-      {/* Interactive Clinical Clarifying Questions */}
+      {/* 1. Most Probable Diagnosis Primary Card */}
+      {primaryProbable && (
+        <div className="rounded-2xl border-2 border-indigo-500 bg-gradient-to-r from-indigo-50/80 via-white to-purple-50/80 p-4 shadow-2xs space-y-2.5">
+          <div className="flex items-center justify-between">
+            <span className="text-[11px] font-extrabold uppercase tracking-wider text-indigo-700 flex items-center gap-1.5">
+              <Sparkles className="h-4 w-4 text-indigo-600 animate-pulse" />
+              {results.is_confirmed_mode
+                ? 'ডাক্তার কর্তৃক নিশ্চিতকৃত ডায়াগনোসিস'
+                : '★ সর্বাধিক সম্ভাব্য রোগ (Most Probable Diagnosis)'}
+            </span>
+            <span className="text-[10px] bg-indigo-600 text-white font-bold px-2.5 py-0.5 rounded-full uppercase tracking-wide">
+              {results.is_confirmed_mode ? 'Confirmed' : 'Probable Match'}
+            </span>
+          </div>
+
+          <div className="text-sm sm:text-base font-extrabold text-slate-900 leading-snug">
+            {primaryProbable}
+          </div>
+
+          {onConfirmDiagnosis && (
+            <Button
+              type="button"
+              onClick={() => onConfirmDiagnosis(primaryProbable)}
+              className="w-full h-9 bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-xs rounded-xl shadow-xs flex items-center justify-center gap-1.5"
+            >
+              <Wand2 className="h-3.5 w-3.5" />
+              {results.is_confirmed_mode
+                ? '✓ প্রেসক্রিপশন প্রোটোকল তৈরি করুন'
+                : '✓ এই রোগ নিশ্চিত করুন ও সম্পূর্ণ প্রেসক্রিপশন লিখুন'}
+            </Button>
+          )}
+        </div>
+      )}
+
+      {/* 2. Interactive Clinical Clarifying Questions */}
       {results.clinical_questions && results.clinical_questions.length > 0 && (
         <AICopilotQuestions
           questions={results.clinical_questions}
@@ -63,12 +116,12 @@ export function AICopilotResults({
         />
       )}
 
-      {/* Safety Warnings Section */}
+      {/* 3. Safety Warnings Section */}
       {results.safety_warnings?.length > 0 && (
         <div className="rounded-2xl border border-rose-200 bg-rose-50/80 p-3.5">
           <div className="flex items-center gap-2 font-bold text-xs text-rose-900 mb-1.5 uppercase tracking-wider">
             <AlertTriangle className="h-4 w-4 text-rose-600" />
-            <span>Safety Alerts &amp; Drug Interactions</span>
+            <span>Safety Alerts &amp; Drug Warnings</span>
           </div>
           <ul className="space-y-1 text-xs text-rose-800 font-medium">
             {results.safety_warnings.map((w, i) => (
@@ -81,41 +134,43 @@ export function AICopilotResults({
         </div>
       )}
 
-      {/* Differential Diagnoses with 1-Click Confirmation & Full Prescription Generation */}
-      <div>
-        <div className="flex items-center justify-between mb-2">
-          <span className="text-xs font-bold uppercase tracking-wider text-slate-500">
-            সম্ভাব্য রোগ ও ডিফারেন্সিয়াল ডায়াগনোসিস
-          </span>
-          <span className="text-[11px] text-indigo-700 font-semibold">
-            কনফার্ম করলে ফুল প্রেসক্রিপশন আসবে
-          </span>
+      {/* 4. Alternative Differential Diagnoses */}
+      {alternativeDiffs.length > 0 && (
+        <div>
+          <div className="flex items-center justify-between mb-2">
+            <span className="text-xs font-bold uppercase tracking-wider text-slate-600">
+              বিকল্প ডিফারেনশিয়াল ডায়াগনোসিস (Alternative Differentials)
+            </span>
+            <span className="text-[11px] text-slate-500 font-medium">
+              প্রয়োজনে ক্লিক করে নির্বাচন করুন
+            </span>
+          </div>
+          <div className="flex flex-wrap gap-2">
+            {alternativeDiffs.map((diag, i) => (
+              <div
+                key={i}
+                className="inline-flex items-center gap-1.5 rounded-xl border border-slate-200 bg-white p-1.5 shadow-2xs hover:border-indigo-300 transition-colors"
+              >
+                <Badge variant="outline" className="border-0 bg-transparent text-slate-800 px-2 text-xs font-bold">
+                  {diag}
+                </Badge>
+                {onConfirmDiagnosis && (
+                  <button
+                    type="button"
+                    onClick={() => onConfirmDiagnosis(diag)}
+                    className="rounded-lg bg-indigo-50 px-2.5 py-1 text-[11px] font-bold text-indigo-700 hover:bg-indigo-600 hover:text-white transition-all flex items-center gap-1"
+                  >
+                    <Wand2 className="h-3 w-3" />
+                    কনফার্ম
+                  </button>
+                )}
+              </div>
+            ))}
+          </div>
         </div>
-        <div className="flex flex-wrap gap-2">
-          {results.differential_diagnoses?.map((diag, i) => (
-            <div
-              key={i}
-              className="inline-flex items-center gap-1.5 rounded-xl border border-slate-200 bg-white p-1 shadow-2xs hover:border-indigo-300 transition-colors"
-            >
-              <Badge variant="outline" className="border-0 bg-transparent text-slate-900 px-2 text-xs font-bold">
-                {diag}
-              </Badge>
-              {onConfirmDiagnosis && (
-                <button
-                  type="button"
-                  onClick={() => onConfirmDiagnosis(diag)}
-                  className="rounded-lg bg-indigo-50 px-2 py-1 text-[11px] font-bold text-indigo-700 hover:bg-indigo-600 hover:text-white transition-all flex items-center gap-1"
-                >
-                  <Wand2 className="h-3 w-3" />
-                  কনফার্ম &amp; প্রেসক্রিপশন
-                </button>
-              )}
-            </div>
-          ))}
-        </div>
-      </div>
+      )}
 
-      {/* Full Prescription Package if Generated */}
+      {/* 5. Full Prescription Package if Generated */}
       {fullPackage && onApplyFullPackage && (
         <AIFullPrescriptionCard
           pkg={fullPackage}
@@ -124,9 +179,9 @@ export function AICopilotResults({
         />
       )}
 
-      {/* Suggested Medications with 1-Click Add */}
+      {/* 6. Suggested Medications with 1-Click Add */}
       <div>
-        <span className="text-xs font-bold uppercase tracking-wider text-slate-500 block mb-2">
+        <span className="text-xs font-bold uppercase tracking-wider text-slate-600 block mb-2">
           সাজেস্টেড সহায়ক ঔষধ তালিকা
         </span>
         <div className="space-y-2">
@@ -182,10 +237,10 @@ export function AICopilotResults({
         </div>
       </div>
 
-      {/* Recommended Investigations */}
+      {/* 7. Recommended Investigations */}
       {results.recommended_investigations?.length > 0 && (
         <div>
-          <span className="text-xs font-bold uppercase tracking-wider text-slate-500 block mb-2">
+          <span className="text-xs font-bold uppercase tracking-wider text-slate-600 block mb-2">
             প্রয়োজনীয় প্যাথলজি ও পরীক্ষা
           </span>
           <ul className="space-y-1 text-xs text-slate-700 bg-slate-50 p-3 rounded-xl border border-slate-200">

@@ -79,6 +79,16 @@ export function AICopilotDrawer({
   }, [activeEncounter?.id]);
 
   useEffect(() => {
+    if (open && !results && !loading) {
+      const hasComplaints = (activeEncounter?.chief_complaints || []).length > 0;
+      const hasDiagnoses = (activeEncounter?.diagnosis || []).length > 0;
+      if (hasComplaints || hasDiagnoses) {
+        void handleRunAnalysis();
+      }
+    }
+  }, [open, activeEncounter?.id]);
+
+  useEffect(() => {
     if (open && confirmedDiagnoses.length > 0 && !fullPackage && !packageLoading) {
       void handleGenerateFullPackage(confirmedDiagnoses[0]);
     }
