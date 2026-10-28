@@ -1,7 +1,6 @@
 /**
  * AI-Assisted Smart Dosing & Chronotherapy Engine.
- * Automatically calculates and suggests optimal dosages, timing, and forms
- * based on patient age, weight, and real-time clinical vitals (BP, Temp, Pulse).
+ * Calibrates dosage, formulation, and timing by age (<12 pediatric), weight, and vitals.
  */
 import type { MealTiming, Patient, PrescriptionItem, Vitals } from '@/types/schema';
 import { parseBP } from './vitalsService';
@@ -24,23 +23,16 @@ function parseNum(val?: string | number): number | null {
   return match ? parseFloat(match[0]) : null;
 }
 
-/**
- * Calculates the smart initial or adjusted dosage for a medication
- * taking into account patient age, weight, and live vital signs.
- */
 export function calculateSmartDose(
-  med: {
-    brand_name: string;
-    generic_name?: string;
-    dosage_form?: PrescriptionItem['dosage_form'];
-    strength?: string;
-  },
+  med: { brand_name: string; generic_name?: string; dosage_form?: PrescriptionItem['dosage_form']; strength?: string },
   patient: Patient,
   vitals?: Partial<Vitals> | null,
 ): DoseProposal {
   const name = (med.brand_name + ' ' + (med.generic_name || '')).toLowerCase();
   const weight = parseNum(vitals?.weight);
-  const isPediatric = patient.age < 12 || (weight !== null && weight <= 35);
+  const patientAge = patient?.age ?? 30;
+  const isPediatric = patientAge < 12;
+  const isInfant = patientAge < 2;
   const temp = parseNum(vitals?.temp);
   const isFever = temp !== null && (temp > 45 ? temp >= 100 : temp >= 37.8);
   const { sbp, dbp } = parseBP(vitals?.bp);
@@ -50,47 +42,67 @@ export function calculateSmartDose(
 
   // 1. Paracetamol / Acetaminophen (Ace, Napa, Fast, Parapyrol)
   if (name.includes('paracetamol') || name.includes('napa') || name.includes('ace') || name.includes('fast')) {
-    if (isPediatric && weight !== null) {
-      // 15 mg/kg per dose
-      const doseMg = Math.round(weight * 15);
-      const ml = Math.round((doseMg / 120) * 5 * 10) / 10;
+    if (isPediatric) {
+      if (isInfant || (weight !== null && weight < 10)) {
+        const doseMg = weight !== null ? Math.round(weight * 15) : 60;
+        const drops = Math.round((doseMg / 80) * 0.8 * 20);
+        return {
+          hasAdjustment: true,
+          dosage_form: 'Drop',
+          strength: '80mg/0.8ml',
+          schedule: '1+1+1 (every 6-8 hrs SOS)',
+          meal_timing: 'After Meal',
+          duration: '3 Days',
+          special_instructions: weight !== null ? `Infant weight ${weight}kg: ~${drops} drops (${doseMg}mg) during fever` : 'Infant drop during fever',
+          reason: 'Paediatric infant drops calibrated for age < 2.',
+          badge: 'Infant Drops',
+        };
+      }
+      if (weight !== null) {
+        const doseMg = Math.round(weight * 15);
+        const ml = Math.round((doseMg / 120) * 5 * 10) / 10;
+        return {
+          hasAdjustment: true,
+          dosage_form: 'Syr',
+          strength: '120mg/5ml',
+          schedule: '1+1+1 (every 6-8 hrs SOS)',
+          meal_timing: 'After Meal',
+          duration: '3 Days',
+          special_instructions: `Weight-based pediatric dose: ${doseMg}mg (~${ml} ml) during fever`,
+          reason: `Pediatric weight ${weight}kg: calibrated 15 mg/kg per dose.`,
+          badge: `Pediatric ${doseMg}mg (~${ml}ml)`,
+        };
+      }
       return {
         hasAdjustment: true,
         dosage_form: 'Syr',
         strength: '120mg/5ml',
-        schedule: '1+1+1 (every 6-8 hrs SOS)',
+        schedule: '1+1+1 (SOS)',
         meal_timing: 'After Meal',
         duration: '3 Days',
-        special_instructions: `Weight-based pediatric dose: ${doseMg}mg (~${ml} ml) during fever`,
-        reason: `Pediatric weight ${weight}kg: calibrated 15 mg/kg per dose.`,
-        badge: `Pediatric ${doseMg}mg (~${ml}ml)`,
+        special_instructions: 'Pediatric paracetamol syrup for fever or pain.',
+        reason: 'Age-appropriate pediatric oral suspension.',
+        badge: 'Pediatric Syrup',
       };
     }
 
     if (isFever) {
       return {
         hasAdjustment: true,
-        dosage_form: isPediatric ? 'Syr' : 'Tab',
-        strength: isPediatric ? '120mg/5ml' : (med.strength || '500mg'),
+        dosage_form: 'Tab',
+        strength: med.strength || '500mg',
         schedule: '1+1+1+1 (every 6 hrs)',
         meal_timing: 'After Meal',
         duration: '3-5 Days',
         special_instructions: 'Take with full glass of water during fever. Max 4g/day.',
-        reason: `Active fever detected (${temp}°F). QDS schedule indicated.`,
+        reason: `Active fever detected (${temp}°F). QDS adult schedule indicated.`,
         badge: 'Fever SOS Dosing',
       };
     }
   }
 
   // 2. PPIs / Antacids (Omeprazole, Esomeprazole, Pantoprazole, Rabeprazole, Seclo, Maxpro, Sergel)
-  if (
-    name.includes('prazole') ||
-    name.includes('seclo') ||
-    name.includes('maxpro') ||
-    name.includes('sergel') ||
-    name.includes('finix') ||
-    name.includes('pantodac')
-  ) {
+  if (name.includes('prazole') || name.includes('seclo') || name.includes('maxpro') || name.includes('sergel') || name.includes('finix') || name.includes('pantodac')) {
     return {
       hasAdjustment: true,
       dosage_form: isPediatric ? 'Syr' : 'Cap',
@@ -105,16 +117,7 @@ export function calculateSmartDose(
   }
 
   // 3. Antihypertensives (Amlodipine, Losartan, Telmisartan, Bisoprolol, Camlosart, Osartil)
-  if (
-    name.includes('amlodipine') ||
-    name.includes('losartan') ||
-    name.includes('telmisartan') ||
-    name.includes('bisoprolol') ||
-    name.includes('camlosart') ||
-    name.includes('osartil') ||
-    name.includes('bizoran') ||
-    name.includes('angilock')
-  ) {
+  if (name.includes('amlodipine') || name.includes('losartan') || name.includes('telmisartan') || name.includes('bisoprolol') || name.includes('camlosart') || name.includes('osartil') || name.includes('bizoran') || name.includes('angilock')) {
     const highDose = sbp !== null && sbp >= 160;
     return {
       hasAdjustment: true,
@@ -124,9 +127,7 @@ export function calculateSmartDose(
       meal_timing: 'After Meal',
       duration: '30 Days',
       special_instructions: 'Take regularly every morning after breakfast. Monitor BP weekly.',
-      reason: isHighBP
-        ? `Stage 2 Hypertension (BP ${sbp}/${dbp} mmHg). Titrated morning regimen.`
-        : 'Daily cardiovascular maintenance dose.',
+      reason: isHighBP ? `Stage 2 Hypertension (BP ${sbp}/${dbp} mmHg). Titrated morning regimen.` : 'Daily cardiovascular maintenance dose.',
       badge: isHighBP ? `HTN Titrated (${sbp}/${dbp})` : 'Morning Regimen',
     };
   }
@@ -224,16 +225,17 @@ export function calculateSmartDose(
   // 8. Antiemetic / Domperidone (Omidon, Motigut)
   if (name.includes('domperidone') || name.includes('omidon') || name.includes('motigut')) {
     if (isPediatric) {
+      const isDrop = isInfant || (weight !== null && weight < 10);
       return {
         hasAdjustment: true,
-        dosage_form: 'Drop',
-        strength: '5mg/ml',
+        dosage_form: isDrop ? 'Drop' : 'Syr',
+        strength: isDrop ? '5mg/ml' : '5mg/5ml',
         schedule: '1+0+1',
         meal_timing: 'Before Meal',
         duration: '3-5 Days',
-        special_instructions: 'Take 15-30 minutes before meal for nausea/vomiting',
-        reason: 'Pediatric liquid prokinetic 15 mins before feed.',
-        badge: 'Pediatric Drop',
+        special_instructions: isDrop ? 'Take 15-30 minutes before feed' : 'Take 15-30 minutes before meal for nausea/vomiting',
+        reason: isDrop ? 'Pediatric drops before feeding.' : 'Pediatric syrup before meals.',
+        badge: isDrop ? 'Pediatric Drop' : 'Pediatric Syrup',
       };
     }
     return {
@@ -264,18 +266,18 @@ export function calculateSmartDose(
     };
   }
 
-  // 10. General Pediatric Fallback
+  // 10. General Pediatric Fallback (strictly under 12 years)
   if (isPediatric) {
     return {
       hasAdjustment: true,
-      dosage_form: 'Syr',
+      dosage_form: isInfant ? 'Drop' : 'Syr',
       strength: med.strength || '',
       schedule: '1+0+1',
       meal_timing: 'After Meal',
       duration: '7 Days',
       special_instructions: weight ? `Pediatric patient (Weight: ${weight}kg, Age: ${patient.age} yrs)` : `Pediatric patient (Age: ${patient.age} yrs)`,
-      reason: 'Switched to oral liquid/syrup formulation for pediatric safety.',
-      badge: 'Pediatric Formulation',
+      reason: 'Switched to oral liquid formulation for pediatric safety.',
+      badge: isInfant ? 'Pediatric Drops' : 'Pediatric Syrup',
     };
   }
 

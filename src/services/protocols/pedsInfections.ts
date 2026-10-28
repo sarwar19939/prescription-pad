@@ -77,8 +77,8 @@ export const PEDS_INFECTIONS_PROTOCOLS: DiseaseProtocolTemplate[] = [
       {
         brand_name: 'ORS Saline',
         generic_name: 'Oral Rehydration Salts',
-        adult: { dosage_form: 'Syr', strength: '500 ml', schedule: '1 glass after each stool', meal_timing: 'Anytime', duration: '5 Days', special_instructions: 'প্রতিবার মলত্যাগের পর ১ গ্লাস।' },
-        pediatric: { dosage_form: 'Syr', strength: '500 ml', schedule: 'Half glass after each loose stool', meal_timing: 'Anytime', duration: '5 Days', special_instructions: 'প্রতিবার পায়খানার পর আধা গ্লাস স্যালাইন চামচ দিয়ে ধীরে ধীরে খাওয়ান।' },
+        adult: { dosage_form: 'Sachet', strength: '1 Sachet / 500ml', schedule: '1 glass after each stool', meal_timing: 'Anytime', duration: '5 Days', special_instructions: 'প্রতিবার মলত্যাগের পর ১ গ্লাস।' },
+        pediatric: { dosage_form: 'Sachet', strength: '1 Sachet / 500ml', schedule: 'Half glass after each loose stool', meal_timing: 'Anytime', duration: '5 Days', special_instructions: 'প্রতিবার পায়খানার পর আধা গ্লাস স্যালাইন চামচ দিয়ে ধীরে ধীরে খাওয়ান।' },
       },
       {
         brand_name: 'Baby Zinc Syrup',

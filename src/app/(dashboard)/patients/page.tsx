@@ -2,24 +2,43 @@
 
 /**
  * Patients Directory: instant search over full_name / phone / patient_code,
- * registration modal, and direct "Start Consultation" entry.
+ * registration modal, direct "Start Consultation" entry, and safe patient deletion.
  */
 import { useState } from 'react';
 import Link from 'next/link';
 import { useLiveQuery } from 'dexie-react-hooks';
-import { Loader2, Plus, Search, Stethoscope, TriangleAlert } from 'lucide-react';
+import {
+  AlertTriangle,
+  Loader2,
+  Plus,
+  Search,
+  Stethoscope,
+  Trash2,
+  TriangleAlert,
+} from 'lucide-react';
 
 import { db } from '@/db/localDb';
 import { getCurrentTenantId } from '@/services/auth';
+import type { Patient } from '@/types/schema';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { FadeInView } from '@/components/ui/motion';
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog';
 import { RegisterPatientDialog } from '@/features/patients/register-patient-dialog';
 
 export default function PatientsPage() {
   const [query, setQuery] = useState('');
   const [open, setOpen] = useState(false);
+  const [patientToDelete, setPatientToDelete] = useState<Patient | null>(null);
+  const [deleting, setDeleting] = useState(false);
   const tenantId = getCurrentTenantId();
 
   const patients = useLiveQuery(
@@ -38,6 +57,28 @@ export default function PatientsPage() {
       );
     })
     .sort((a, b) => b.created_at.localeCompare(a.created_at));
+
+  const handleDeletePatient = async () => {
+    if (!patientToDelete) return;
+    setDeleting(true);
+    try {
+      await db.transaction(
+        'rw',
+        [db.patients, db.encounters, db.prescription_items, db.investigation_reports],
+        async () => {
+          await db.prescription_items.where('patient_id').equals(patientToDelete.id).delete();
+          await db.encounters.where('patient_id').equals(patientToDelete.id).delete();
+          await db.investigation_reports.where('patient_id').equals(patientToDelete.id).delete();
+          await db.patients.delete(patientToDelete.id);
+        },
+      );
+      setPatientToDelete(null);
+    } catch (err) {
+      alert(`ডিলিট করতে সমস্যা হয়েছে: ${err instanceof Error ? err.message : String(err)}`);
+    } finally {
+      setDeleting(false);
+    }
+  };
 
   return (
     <FadeInView className="flex flex-col gap-6">
@@ -74,7 +115,7 @@ export default function PatientsPage() {
             </tr>
           </thead>
           <tbody className="divide-y divide-slate-100">
-            {(patients === undefined) && (
+            {patients === undefined && (
               <tr><td colSpan={6} className="px-5 py-8 text-center"><Loader2 className="mx-auto h-6 w-6 animate-spin text-slate-400" aria-hidden /></td></tr>
             )}
             {patients !== undefined && filtered.length === 0 && (
@@ -110,11 +151,23 @@ export default function PatientsPage() {
                   </div>
                 </td>
                 <td className="px-5 py-3.5 text-right">
-                  <Button asChild size="sm" variant="outline" className="h-10 px-4 rounded-xl font-semibold text-sm border-slate-300 text-slate-700 hover:text-teal-700 hover:border-teal-500">
-                    <Link href={`/consultation/${p.id}`}>
-                      <Stethoscope className="h-4 w-4 mr-1.5 text-teal-600" aria-hidden /> Start Visit
-                    </Link>
-                  </Button>
+                  <div className="flex items-center justify-end gap-2">
+                    <Button asChild size="sm" variant="outline" className="h-10 px-4 rounded-xl font-semibold text-sm border-slate-300 text-slate-700 hover:text-teal-700 hover:border-teal-500">
+                      <Link href={`/consultation/${p.id}`}>
+                        <Stethoscope className="h-4 w-4 mr-1.5 text-teal-600" aria-hidden /> Start Visit
+                      </Link>
+                    </Button>
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      onClick={() => setPatientToDelete(p)}
+                      className="h-10 w-10 p-0 rounded-xl border-slate-200 text-slate-400 hover:text-rose-600 hover:bg-rose-50 hover:border-rose-300 transition-colors"
+                      title="রোগীর তথ্য ডিলিট করুন"
+                    >
+                      <Trash2 className="h-4 w-4" />
+                    </Button>
+                  </div>
                 </td>
               </tr>
             ))}
@@ -123,6 +176,41 @@ export default function PatientsPage() {
       </div>
 
       <RegisterPatientDialog open={open} onOpenChange={setOpen} />
+
+      {/* Confirmation Dialog for Deleting Patient */}
+      <Dialog open={Boolean(patientToDelete)} onOpenChange={(isOpen) => !isOpen && setPatientToDelete(null)}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2 text-rose-600 text-lg">
+              <AlertTriangle className="h-5 w-5" />
+              রোগীর প্রোফাইল ও সমস্ত হিস্ট্রি ডিলিট করবেন?
+            </DialogTitle>
+            <DialogDescription className="text-sm text-slate-600 pt-2 leading-relaxed">
+              সতর্কতা: রোগী <strong>{patientToDelete?.full_name}</strong> (কোড: {patientToDelete?.patient_code}) এর সমস্ত প্রেসক্রিপশন, ভিজিট হিস্ট্রি এবং ল্যাব রিপোর্ট ডেটাবেজ থেকে স্থায়ীভাবে মুছে ফেলা হবে।
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter className="mt-4 flex gap-2 justify-end">
+            <Button
+              type="button"
+              variant="outline"
+              disabled={deleting}
+              onClick={() => setPatientToDelete(null)}
+              className="rounded-xl font-medium"
+            >
+              বাতিল (Cancel)
+            </Button>
+            <Button
+              type="button"
+              disabled={deleting}
+              onClick={handleDeletePatient}
+              className="bg-rose-600 hover:bg-rose-700 text-white rounded-xl font-semibold flex items-center gap-2"
+            >
+              {deleting ? <Loader2 className="h-4 w-4 animate-spin" /> : <Trash2 className="h-4 w-4" />}
+              {deleting ? 'মুছে ফেলা হচ্ছে…' : 'হ্যাঁ, সম্পূর্ণ ডিলিট করুন'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </FadeInView>
   );
 }

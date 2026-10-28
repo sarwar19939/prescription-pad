@@ -13,8 +13,8 @@ export const GASTRO_LOWER_PROTOCOLS: DiseaseProtocolTemplate[] = [
       {
         brand_name: 'ORS Saline',
         generic_name: 'Oral Rehydration Salts',
-        adult: { dosage_form: 'Syr', strength: '500 ml', schedule: 'SOS', meal_timing: 'Anytime', duration: '3-5 Days', special_instructions: 'প্রতিবার পাতলা পায়খানার পর ১ গ্লাস (২৫০ মিলি) প্রস্তুত স্যালাইন পান করুন।' },
-        pediatric: { dosage_form: 'Syr', strength: '500 ml', schedule: 'SOS', meal_timing: 'Anytime', duration: '3-5 Days', special_instructions: 'প্রতিবার পায়খানার পর আধা গ্লাস প্রস্তুত স্যালাইন চামচ দিয়ে খাওয়ান।' },
+        adult: { dosage_form: 'Sachet', strength: '1 Sachet / 500ml', schedule: 'SOS', meal_timing: 'Anytime', duration: '3-5 Days', special_instructions: 'প্রতিবার পাতলা পায়খানার পর ১ গ্লাস (২৫০ মিলি) প্রস্তুত স্যালাইন পান করুন।' },
+        pediatric: { dosage_form: 'Sachet', strength: '1 Sachet / 500ml', schedule: 'SOS', meal_timing: 'Anytime', duration: '3-5 Days', special_instructions: 'প্রতিবার পায়খানার পর আধা গ্লাস প্রস্তুত স্যালাইন চামচ দিয়ে খাওয়ান।' },
       },
       {
         brand_name: 'Baby Zinc',
@@ -57,7 +57,7 @@ export const GASTRO_LOWER_PROTOCOLS: DiseaseProtocolTemplate[] = [
       {
         brand_name: 'ORS Saline',
         generic_name: 'Oral Rehydration Salts',
-        adult: { dosage_form: 'Syr', strength: '500 ml', schedule: 'SOS', meal_timing: 'Anytime', duration: '5 Days', special_instructions: 'প্রতিবার মলত্যাগের পর ১ গ্লাস।' },
+        adult: { dosage_form: 'Sachet', strength: '1 Sachet / 500ml', schedule: 'SOS', meal_timing: 'Anytime', duration: '5 Days', special_instructions: 'প্রতিবার মলত্যাগের পর ১ গ্লাস প্রস্তুত স্যালাইন।' },
       },
     ],
     adviceBn: [
@@ -236,7 +236,7 @@ export const GASTRO_LOWER_PROTOCOLS: DiseaseProtocolTemplate[] = [
       {
         brand_name: 'ORS Saline',
         generic_name: 'Oral Rehydration Salts',
-        adult: { dosage_form: 'Syr', strength: '500 ml', schedule: 'SOS', meal_timing: 'Anytime', duration: '3 Days', special_instructions: 'প্রতিবার বমি বা মলত্যাগের পর স্যালাইন খান।' },
+        adult: { dosage_form: 'Sachet', strength: '1 Sachet / 500ml', schedule: 'SOS', meal_timing: 'Anytime', duration: '3 Days', special_instructions: 'প্রতিবার বমি বা মলত্যাগের পর ১ গ্লাস স্যালাইন খান।' },
       },
     ],
     adviceBn: [

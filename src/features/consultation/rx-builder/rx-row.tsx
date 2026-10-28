@@ -26,7 +26,7 @@ const MEAL_LABELS: Record<MealTiming, string> = {
   'With Meal': 'With Meal (খাবারের সাথে)',
   'Anytime': 'Anytime (যেকোনো সময়)',
 };
-const FORM_OPTIONS = ['Tab', 'Cap', 'Syr', 'Inj', 'Oint', 'Drop'] as const;
+const FORM_OPTIONS = ['Tab', 'Cap', 'Syr', 'Drop', 'Sachet', 'Inhaler', 'Inj', 'Oint', 'Supp'] as const;
 
 function useDebouncedField(item: PrescriptionItem, field: 'strength' | 'special_instructions', delay = 400) {
   const [value, setValue] = useState(item[field]);

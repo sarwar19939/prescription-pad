@@ -126,7 +126,7 @@ export function mockFullPrescription(diagnosis: string) {
         { brand_name: 'Napa Extend', generic_name: 'Paracetamol Extended Release', dosage_form: 'Tab', strength: '665 mg', schedule: '1+1+1', meal_timing: 'After Meal', duration: '5 Days', special_instructions: 'জ্বর ও ব্যথায় সেব্য। দিনে ৩টির বেশি খাবেন না।' },
         { brand_name: 'Maxpro', generic_name: 'Esomeprazole', dosage_form: 'Cap', strength: '20 mg', schedule: '1+0+1', meal_timing: 'Before Meal', duration: '7 Days', special_instructions: 'খাবারের ২০ মিনিট পূর্বে খালি পেটে।' },
         { brand_name: 'Ceevit', generic_name: 'Ascorbic Acid (Vitamin C)', dosage_form: 'Tab', strength: '250 mg', schedule: '1+0+1', meal_timing: 'After Meal', duration: '7 Days', special_instructions: 'চিবিয়ে সেবনযোগ্য ট্যাবলেট।' },
-        { brand_name: 'ORS Saline', generic_name: 'Oral Rehydration Salts', dosage_form: 'Syr', strength: '500 ml', schedule: '1+1+1', meal_timing: 'Anytime', duration: '5 Days', special_instructions: 'প্রতিদিন অন্তত ২.৫ থেকে ৩ লিটার স্যালাইন ও তরল খাবার পান করুন।' },
+        { brand_name: 'ORS Saline', generic_name: 'Oral Rehydration Salts', dosage_form: 'Sachet', strength: '1 Sachet / 500ml', schedule: '1+1+1', meal_timing: 'Anytime', duration: '5 Days', special_instructions: 'প্রতিদিন অন্তত ২.৫ থেকে ৩ লিটার স্যালাইন ও তরল খাবার পান করুন।' },
       ],
       advice: [
         'প্রচুর পরিমাণে পানি, খাবার স্যালাইন, ডাবের পানি ও ফলের রস পান করুন।',
@@ -141,7 +141,7 @@ export function mockFullPrescription(diagnosis: string) {
     return {
       diagnosis,
       medicines: [
-        { brand_name: 'ORS Saline', generic_name: 'Oral Rehydration Salts', dosage_form: 'Syr', strength: '500 ml', schedule: 'SOS', meal_timing: 'Anytime', duration: '5 Days', special_instructions: 'প্রতিবার পাতলা পায়খানার পর ১ গ্লাস (২৫০ মিলি) প্রস্তুত স্যালাইন।' },
+        { brand_name: 'ORS Saline', generic_name: 'Oral Rehydration Salts', dosage_form: 'Sachet', strength: '1 Sachet / 500ml', schedule: 'SOS', meal_timing: 'Anytime', duration: '5 Days', special_instructions: 'প্রতিবার পাতলা পায়খানার পর ১ গ্লাস (২৫০ মিলি) প্রস্তুত স্যালাইন।' },
         { brand_name: 'Baby Zinc', generic_name: 'Zinc Sulphate', dosage_form: 'Tab', strength: '20 mg', schedule: '1+0+0', meal_timing: 'After Meal', duration: '14 Days', special_instructions: 'ডায়রিয়া ভালো হয়ে গেলেও টানা ১৪ দিন সম্পূর্ণ কোর্স শেষ করুন।' },
         { brand_name: 'Motigut', generic_name: 'Domperidone', dosage_form: 'Tab', strength: '10 mg', schedule: '1+1+1', meal_timing: 'Before Meal', duration: '5 Days', special_instructions: 'খাবারের ১৫ মিনিট পূর্বে বমি ভাব উপশমে।' },
         { brand_name: 'Enterogermina', generic_name: 'Bacillus clausii spores', dosage_form: 'Syr', strength: '2 billion/5 ml', schedule: '1+0+1', meal_timing: 'Anytime', duration: '5 Days', special_instructions: 'অন্ত্রের স্বাভাবিক ব্যাকটেরিয়া রক্ষায় সরাসরি পান করুন।' },

@@ -104,7 +104,7 @@ export const CARDIO_HYPERTENSION_PROTOCOLS: DiseaseProtocolTemplate[] = [
       {
         brand_name: 'ORS Saline',
         generic_name: 'Oral Rehydration Salts',
-        adult: { dosage_form: 'Syr', strength: '500 ml', schedule: '1+1+1', meal_timing: 'Anytime', duration: '14 Days', special_instructions: 'রক্তের ভলিউম বাড়াতে তরল স্যালাইন।' },
+        adult: { dosage_form: 'Sachet', strength: '1 Sachet / 500ml', schedule: '1+1+1', meal_timing: 'Anytime', duration: '14 Days', special_instructions: '৫০০ মিলি বিশুদ্ধ পানিতে ১ প্যাকেট গুলে খাবার স্যালাইন পান করুন।' },
       },
     ],
     adviceBn: [

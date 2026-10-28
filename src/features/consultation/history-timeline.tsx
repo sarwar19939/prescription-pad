@@ -7,7 +7,7 @@
  */
 import { useState } from 'react';
 import { useLiveQuery } from 'dexie-react-hooks';
-import { ChevronDown, Copy, FlaskConical, Loader2, PackageOpen } from 'lucide-react';
+import { ChevronDown, Copy, FlaskConical, Loader2, PackageOpen, Trash2 } from 'lucide-react';
 
 import { db } from '@/db/localDb';
 import { copyRxToToday } from './copy-rx';
@@ -182,10 +182,24 @@ function EncounterDetail({
           </ul>
         )}
       </Detail>
-      <div className="pt-2">
-        <Button size="sm" variant="outline" className="h-10 px-4 rounded-xl font-medium text-sm border-slate-300 text-slate-700 hover:text-teal-700 hover:border-teal-500 flex items-center gap-2" onClick={onCopy} disabled={copying}>
-          {copying ? <Loader2 className="h-4 w-4 animate-spin" aria-hidden /> : <Copy className="h-4 w-4" aria-hidden />}
+      <div className="pt-2 flex items-center justify-between">
+        <Button size="sm" variant="outline" className="h-9 px-3 rounded-xl font-medium text-xs border-slate-300 text-slate-700 hover:text-teal-700 hover:border-teal-500 flex items-center gap-1.5" onClick={onCopy} disabled={copying}>
+          {copying ? <Loader2 className="h-3.5 w-3.5 animate-spin" aria-hidden /> : <Copy className="h-3.5 w-3.5" aria-hidden />}
           Copy Rx to Today
+        </Button>
+        <Button
+          size="sm"
+          variant="ghost"
+          className="h-9 px-2.5 rounded-xl font-medium text-xs text-slate-400 hover:text-rose-600 hover:bg-rose-50 flex items-center gap-1.5"
+          onClick={async () => {
+            if (confirm('এই ভিজিট ও প্রেসক্রিপশন মুছে ফেলতে চান?')) {
+              await db.prescription_items.where('encounter_id').equals(encounter.id).delete();
+              await db.encounters.delete(encounter.id);
+            }
+          }}
+        >
+          <Trash2 className="h-3.5 w-3.5" />
+          Delete Visit
         </Button>
       </div>
     </div>

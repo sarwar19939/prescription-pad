@@ -1,23 +1,24 @@
 /**
  * Clinical Disease Treatment Protocol & Dosing Type Definitions.
  */
+import type { DosageForm, MealTiming } from '@/types/schema';
 
 export interface ProtocolMedicineDef {
   brand_name: string;
   generic_name: string;
   adult: {
-    dosage_form: 'Tab' | 'Cap' | 'Syr' | 'Inj' | 'Oint' | 'Drop';
+    dosage_form: DosageForm;
     strength: string;
     schedule: string;
-    meal_timing: 'Before Meal' | 'After Meal' | 'With Meal' | 'Anytime';
+    meal_timing: MealTiming;
     duration: string;
     special_instructions: string;
   };
   pediatric?: {
-    dosage_form: 'Tab' | 'Cap' | 'Syr' | 'Inj' | 'Oint' | 'Drop';
+    dosage_form: DosageForm;
     strength: string;
     schedule: string;
-    meal_timing: 'Before Meal' | 'After Meal' | 'With Meal' | 'Anytime';
+    meal_timing: MealTiming;
     duration: string;
     special_instructions: string;
     perKgDoseMg?: number;
@@ -48,5 +49,6 @@ export interface DiseaseProtocolTemplate {
   description: string;
   descriptionBn: string;
   medicines: ProtocolMedicineDef[];
+  investigations?: string[];
   adviceBn: string[];
 }

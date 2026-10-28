@@ -6,15 +6,15 @@
 import { db } from '@/db/localDb';
 import { generateUUID } from '@/lib/uuid';
 import { matchProtocolsForDiagnosis } from '@/services/clinicalProtocolsService';
-import type { Patient, PrescriptionItem, Vitals } from '@/types/schema';
+import type { DosageForm, MealTiming, Patient, PrescriptionItem, Vitals } from '@/types/schema';
 
 export interface FullPrescriptionMedicine {
-  dosage_form: 'Tab' | 'Cap' | 'Syr' | 'Inj' | 'Oint' | 'Drop';
+  dosage_form: DosageForm;
   brand_name: string;
   generic_name: string;
   strength: string;
   schedule: string;
-  meal_timing: 'Before Meal' | 'After Meal' | 'With Meal' | 'Anytime';
+  meal_timing: MealTiming;
   duration: string;
   special_instructions: string;
 }
@@ -47,7 +47,8 @@ export async function generateFullPrescription(
   if (matched.length > 0) {
     const proto = matched[0];
     const weightNum = vitals?.weight ? parseFloat(String(vitals.weight)) : null;
-    const isPediatric = (patient?.age ?? 30) < 12 || (weightNum !== null && weightNum <= 35);
+    const patientAge = patient?.age ?? 30;
+    const isPediatric = patientAge < 12;
 
     const meds: FullPrescriptionMedicine[] = proto.medicines.map((m) => {
       const usePed = isPediatric && m.pediatric ? m.pediatric : m.adult;

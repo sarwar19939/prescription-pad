@@ -25,7 +25,7 @@ export interface BaseRecord {
 export type UUID = string;
 
 export type SubscriptionPlan = 'free' | 'pro' | 'enterprise';
-export type DosageForm = 'Tab' | 'Cap' | 'Syr' | 'Inj' | 'Oint' | 'Drop';
+export type DosageForm = 'Tab' | 'Cap' | 'Syr' | 'Inj' | 'Oint' | 'Drop' | 'Sachet' | 'Inhaler' | 'Supp';
 export type MealTiming = 'After Meal' | 'Before Meal' | 'With Meal' | 'Anytime';
 export type Gender = 'male' | 'female' | 'other';
 

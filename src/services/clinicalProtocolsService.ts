@@ -55,7 +55,8 @@ export function adaptMedicineForPatient(
   encounterId: string,
   weightKg: number | null,
 ): PrescriptionItem {
-  const isPediatric = (patient?.age ?? 30) < 12 || (weightKg !== null && weightKg <= 35);
+  const patientAge = patient?.age ?? 30;
+  const isPediatric = patientAge < 12;
   const usePed = isPediatric && med.pediatric ? med.pediatric : med.adult;
 
   let finalStrength = usePed.strength;

@@ -2,31 +2,15 @@
 
 /**
  * VoiceScribeDialog — Ambient AI Voice Consultation & Dialogue Scribe.
- * Listens to doctor-patient spoken conversation in Bengali or English,
- * and automatically extracts Chief Complaints, Diagnoses, full Prescription, and Advice.
+ * Listens to doctor-patient conversation in Bengali or English,
+ * and extracts Chief Complaints, Differential Diagnoses, and Advice.
  */
 import { useEffect, useRef, useState } from 'react';
-import {
-  Check,
-  CheckCircle2,
-  FileText,
-  Languages,
-  Loader2,
-  Mic,
-  MicOff,
-  Pill,
-  Radio,
-  Sparkles,
-  Volume2,
-  Wand2,
-} from 'lucide-react';
+import { Loader2, Mic, MicOff, Radio, Sparkles } from 'lucide-react';
 
 import { db } from '@/db/localDb';
 import { generateUUID } from '@/lib/uuid';
-import {
-  processVoiceConsultation,
-  type ScribeExtractionResult,
-} from '@/services/aiScribeService';
+import { processVoiceConsultation, type ScribeExtractionResult } from '@/services/aiScribeService';
 import type { Encounter, Patient, PrescriptionItem } from '@/types/schema';
 import { Button } from '@/components/ui/button';
 import {
@@ -37,6 +21,7 @@ import {
   DialogTitle,
   DialogTrigger,
 } from '@/components/ui/dialog';
+import { VoiceScribeResults } from './voice-scribe-results';
 
 const SAMPLE_DIALOGUES = [
   {
@@ -62,11 +47,11 @@ export function VoiceScribeDialog({
   const [transcript, setTranscript] = useState('');
   const [processing, setProcessing] = useState(false);
   const [result, setResult] = useState<ScribeExtractionResult | null>(null);
+  const [selectedDiagnosis, setSelectedDiagnosis] = useState('');
   const [applied, setApplied] = useState(false);
 
   const recognitionRef = useRef<any>(null);
 
-  // Initialize Web Speech API for in-browser speech recognition
   useEffect(() => {
     if (typeof window !== 'undefined') {
       const SpeechRecognition =
@@ -76,7 +61,6 @@ export function VoiceScribeDialog({
         recognition.continuous = true;
         recognition.interimResults = true;
         recognition.lang = lang;
-
         recognition.onresult = (event: any) => {
           let current = '';
           for (let i = 0; i < event.results.length; i++) {
@@ -84,15 +68,8 @@ export function VoiceScribeDialog({
           }
           setTranscript((prev) => (current.trim().length > prev.length ? current : prev + ' ' + current));
         };
-
-        recognition.onerror = () => {
-          setListening(false);
-        };
-
-        recognition.onend = () => {
-          setListening(false);
-        };
-
+        recognition.onerror = () => setListening(false);
+        recognition.onend = () => setListening(false);
         recognitionRef.current = recognition;
       }
     }
@@ -100,7 +77,7 @@ export function VoiceScribeDialog({
 
   const toggleListening = () => {
     if (!recognitionRef.current) {
-      alert('আপনার ব্রাউজারে স্পিচ রিকগনিশন সাপোর্ট নেই। আপনি নিচের টেক্সটবক্সে কথা পেস্ট বা টাইপ করতে পারেন।');
+      alert('আপনার ব্রাউজারে স্পিচ রিকগনিশন সাপোর্ট নেই। টেক্সটবক্সে কথা পেস্ট বা টাইপ করতে পারেন।');
       return;
     }
     if (listening) {
@@ -112,7 +89,7 @@ export function VoiceScribeDialog({
         recognitionRef.current.start();
         setListening(true);
       } catch (err) {
-        console.error('Speech recognition start error:', err);
+        console.error('Speech recognition error:', err);
       }
     }
   };
@@ -128,6 +105,7 @@ export function VoiceScribeDialog({
         allergies: patient.allergies,
       });
       setResult(data);
+      setSelectedDiagnosis(data.primary_diagnosis);
     } catch (err) {
       alert(`AI Scribe Error: ${err instanceof Error ? err.message : String(err)}`);
     } finally {
@@ -135,17 +113,13 @@ export function VoiceScribeDialog({
     }
   };
 
-  const handleApplyToConsultation = async () => {
+  const handleApplyDiagnosisOnly = async () => {
     if (!result) return;
     const ts = new Date().toISOString();
-
-    // 1. Update chief complaints and diagnosis in encounter
     const existingComplaints = encounter.chief_complaints || [];
     const mergedComplaints = Array.from(new Set([...existingComplaints, ...result.chief_complaints]));
-
-    const existingDiags = encounter.diagnosis || [];
-    const newDiags = Array.from(new Set([...existingDiags, result.primary_diagnosis, ...result.differential_diagnoses]));
-
+    const diffs = result.differential_diagnoses.filter((d) => d !== selectedDiagnosis);
+    const newDiags = Array.from(new Set([selectedDiagnosis, ...diffs])).filter(Boolean);
     const existingAdvice = encounter.advice || [];
     const mergedAdvice = Array.from(new Set([...existingAdvice, ...result.advice]));
 
@@ -157,7 +131,18 @@ export function VoiceScribeDialog({
       sync_status: 'pending',
     });
 
-    // 2. Add suggested rational medications into Dexie
+    setApplied(true);
+    setTimeout(() => {
+      setOpen(false);
+      setApplied(false);
+      setResult(null);
+      setTranscript('');
+    }, 1500);
+  };
+
+  const handleAddMedicinesAlso = async () => {
+    if (!result) return;
+    const ts = new Date().toISOString();
     for (const m of result.suggested_medicines) {
       await db.prescription_items.add({
         id: generateUUID(),
@@ -177,14 +162,7 @@ export function VoiceScribeDialog({
         sync_status: 'pending',
       } as PrescriptionItem);
     }
-
-    setApplied(true);
-    setTimeout(() => {
-      setOpen(false);
-      setApplied(false);
-      setResult(null);
-      setTranscript('');
-    }, 1800);
+    await handleApplyDiagnosisOnly();
   };
 
   return (
@@ -195,7 +173,7 @@ export function VoiceScribeDialog({
           className="flex items-center gap-1.5 rounded-lg border border-teal-200 bg-teal-50 hover:bg-teal-100/90 px-2.5 py-1 text-xs font-bold text-teal-800 shadow-2xs transition-all"
         >
           <Mic className="h-3.5 w-3.5 text-teal-600 animate-pulse" />
-          <span>🎙️ ভয়েস স্ক্রাইব (কথা বলে প্রেসক্রিপশন)</span>
+          <span>🎙️ ভয়েস স্ক্রাইব (কথা শুনে রোগ নির্ণয়)</span>
         </button>
       </DialogTrigger>
 
@@ -203,27 +181,24 @@ export function VoiceScribeDialog({
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2 text-base text-slate-900">
             <Radio className="h-5 w-5 text-teal-600 animate-pulse" />
-            অ্যাম্বিয়েন্ট এআই ভয়েস স্ক্রাইব (Voice Consultation Scribe)
+            অ্যাম্বিয়েন্ট এআই ভয়েস স্ক্রাইব (রোগ ও উপসর্গ নির্ণয়)
           </DialogTitle>
           <DialogDescription className="text-xs text-slate-500">
-            ডাক্তার ও রোগীর স্বাভাবিক কথোপকথন শুনে AI স্বয়ংক্রিয়ভাবে প্রধান উপসর্গ, রোগ নির্ণয় এবং প্রেসক্রিপশন তৈরি করবে।
+            রোগী ও ডাক্তারের কথোপকথন শুনে AI উপসর্গ (C/C) ও সম্ভাব্য রোগসমূহ সাজেস্ট করবে।
           </DialogDescription>
         </DialogHeader>
 
         <div className="space-y-4 pt-1">
-          {/* Controls: Microphone Record & Language Toggle */}
           <div className="flex flex-wrap items-center justify-between gap-2 border-b border-slate-100 pb-2">
             <Button
               type="button"
               onClick={toggleListening}
               className={`h-10 px-4 rounded-xl text-xs font-bold gap-2 transition-all ${
-                listening
-                  ? 'bg-rose-600 hover:bg-rose-700 text-white animate-pulse'
-                  : 'bg-teal-600 hover:bg-teal-700 text-white shadow-xs'
+                listening ? 'bg-rose-600 hover:bg-rose-700 text-white animate-pulse' : 'bg-teal-600 hover:bg-teal-700 text-white shadow-xs'
               }`}
             >
               {listening ? <MicOff className="h-4 w-4" /> : <Mic className="h-4 w-4" />}
-              {listening ? 'কথা শোনা বন্ধ করুন (Stop Recording)' : 'কথা বলা শুরু করুন (Start Voice Input)'}
+              {listening ? 'কথা শোনা বন্ধ করুন' : 'কথা বলা শুরু করুন (Start Recording)'}
             </Button>
 
             <div className="flex items-center gap-1.5 text-xs">
@@ -231,27 +206,22 @@ export function VoiceScribeDialog({
               <button
                 type="button"
                 onClick={() => setLang('bn-BD')}
-                className={`rounded px-2 py-1 text-xs font-bold border ${
-                  lang === 'bn-BD' ? 'bg-teal-600 text-white border-teal-600' : 'bg-white text-slate-700'
-                }`}
+                className={`rounded px-2.5 py-1 text-xs font-bold border ${lang === 'bn-BD' ? 'bg-teal-600 text-white border-teal-600' : 'bg-white text-slate-700'}`}
               >
-                বাংলা (Bengali)
+                বাংলা
               </button>
               <button
                 type="button"
                 onClick={() => setLang('en-US')}
-                className={`rounded px-2 py-1 text-xs font-bold border ${
-                  lang === 'en-US' ? 'bg-teal-600 text-white border-teal-600' : 'bg-white text-slate-700'
-                }`}
+                className={`rounded px-2.5 py-1 text-xs font-bold border ${lang === 'en-US' ? 'bg-teal-600 text-white border-teal-600' : 'bg-white text-slate-700'}`}
               >
                 English
               </button>
             </div>
           </div>
 
-          {/* Quick Demo Dialogues */}
           <div className="flex flex-wrap items-center gap-1.5">
-            <span className="text-[11px] font-bold text-slate-500">স্যাম্পল কথোপকথন:</span>
+            <span className="text-[11px] font-bold text-slate-500">স্যাম্পল:</span>
             {SAMPLE_DIALOGUES.map((d, i) => (
               <button
                 key={i}
@@ -264,18 +234,14 @@ export function VoiceScribeDialog({
             ))}
           </div>
 
-          {/* Spoken Transcript Box */}
-          <div>
-            <textarea
-              rows={4}
-              value={transcript}
-              onChange={(e) => setTranscript(e.target.value)}
-              placeholder="কথা বলুন... এখানে ডাক্তার ও রোগীর কথোপকথন লাইভ লেখা উঠবে। প্রয়োজনে নিজে সম্পাদন বা পেস্টও করতে পারেন।"
-              className="w-full rounded-xl border border-slate-300 p-3 text-xs leading-relaxed text-slate-900 outline-none focus:border-teal-600 focus:ring-1 focus:ring-teal-500/30 font-medium"
-            />
-          </div>
+          <textarea
+            rows={4}
+            value={transcript}
+            onChange={(e) => setTranscript(e.target.value)}
+            placeholder="এখানে কথা বললে লাইভ লেখা উঠবে। প্রয়োজনে নিজে পেস্ট বা সম্পাদন করুন।"
+            className="w-full rounded-xl border border-slate-300 p-3 text-xs leading-relaxed text-slate-900 outline-none focus:border-teal-600 focus:ring-1 focus:ring-teal-500/30 font-medium"
+          />
 
-          {/* Process with AI Scribe Button */}
           <Button
             type="button"
             onClick={handleProcess}
@@ -285,92 +251,25 @@ export function VoiceScribeDialog({
             {processing ? (
               <>
                 <Loader2 className="h-4 w-4 animate-spin" />
-                AI কথোপকথন বিশ্লেষণ করছে…
+                AI উপসর্গ ও রোগ নির্ণয় বিশ্লেষণ করছে…
               </>
             ) : (
               <>
                 <Sparkles className="h-4 w-4" />
-                ✨ AI দিয়ে প্রেসক্রিপশন ও তথ্য তৈরি করুন
+                🔍 রোগ ও উপসর্গ নির্ণয় করুন (Extract Diagnoses)
               </>
             )}
           </Button>
 
-          {/* Extracted Results Card */}
           {result && (
-            <div className="space-y-3 rounded-2xl border border-teal-200 bg-gradient-to-b from-teal-50/60 via-white to-indigo-50/30 p-4 shadow-2xs">
-              <div className="flex items-center justify-between border-b border-teal-100 pb-2">
-                <span className="text-xs font-bold text-teal-950 uppercase tracking-wider">
-                  নির্ণীত রোগ: {result.primary_diagnosis}
-                </span>
-                <span className="rounded bg-teal-100 text-teal-800 text-[10px] font-bold px-2 py-0.5">
-                  AI Scribe Extracted
-                </span>
-              </div>
-
-              {/* Chief Complaints */}
-              <div>
-                <span className="text-[11px] font-bold text-slate-700 block mb-1">চিহ্নিত উপসর্গ (C/C):</span>
-                <div className="flex flex-wrap gap-1">
-                  {result.chief_complaints.map((c, i) => (
-                    <span key={i} className="rounded-md bg-white border border-teal-200 px-2 py-0.5 text-xs font-semibold text-slate-800">
-                      • {c}
-                    </span>
-                  ))}
-                </div>
-              </div>
-
-              {/* Medicines */}
-              <div>
-                <span className="text-[11px] font-bold text-slate-700 block mb-1">প্রস্তাবিত ঔষধমালা ({result.suggested_medicines.length}টি):</span>
-                <div className="space-y-1">
-                  {result.suggested_medicines.map((m, i) => (
-                    <div key={i} className="flex items-center justify-between rounded-lg bg-white border border-slate-200 p-2 text-xs">
-                      <div>
-                        <span className="font-bold text-slate-900">{m.dosage_form}. {m.brand_name} {m.strength}</span>
-                        <span className="text-slate-500 text-[11px] ml-1">({m.generic_name})</span>
-                      </div>
-                      <span className="font-mono font-bold text-teal-800 bg-teal-50 px-2 py-0.5 rounded border border-teal-200 text-[11px]">
-                        {m.schedule} ({m.meal_timing})
-                      </span>
-                    </div>
-                  ))}
-                </div>
-              </div>
-
-              {/* Advice */}
-              {result.advice.length > 0 && (
-                <div>
-                  <span className="text-[11px] font-bold text-slate-700 block mb-0.5">পরামর্শ:</span>
-                  <ul className="text-xs text-slate-600 space-y-0.5">
-                    {result.advice.map((adv, i) => (
-                      <li key={i} className="flex items-start gap-1">
-                        <span className="text-teal-600 font-bold">•</span> <span>{adv}</span>
-                      </li>
-                    ))}
-                  </ul>
-                </div>
-              )}
-
-              {/* 1-Click Apply Button */}
-              <Button
-                type="button"
-                onClick={handleApplyToConsultation}
-                disabled={applied}
-                className="w-full h-11 bg-teal-600 hover:bg-teal-700 text-white font-bold text-xs rounded-xl shadow-xs flex items-center justify-center gap-2 mt-2"
-              >
-                {applied ? (
-                  <>
-                    <CheckCircle2 className="h-4 w-4 text-emerald-200" />
-                    সফলভাবে প্রেসক্রিপশনে প্রয়োগ করা হয়েছে!
-                  </>
-                ) : (
-                  <>
-                    <Wand2 className="h-4 w-4" />
-                    ১-ক্লিকে প্রেসক্রিপশন ও তথ্যে প্রয়োগ করুন
-                  </>
-                )}
-              </Button>
-            </div>
+            <VoiceScribeResults
+              result={result}
+              selectedDiagnosis={selectedDiagnosis}
+              onSelectDiagnosis={setSelectedDiagnosis}
+              onApplyDiagnosisOnly={handleApplyDiagnosisOnly}
+              onAddMedicinesAlso={handleAddMedicinesAlso}
+              applied={applied}
+            />
           )}
         </div>
       </DialogContent>

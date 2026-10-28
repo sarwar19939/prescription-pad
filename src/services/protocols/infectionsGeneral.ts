@@ -29,7 +29,7 @@ export const INFECTIONS_GENERAL: DiseaseProtocolTemplate[] = [
       {
         brand_name: 'ORS Saline',
         generic_name: 'Oral Rehydration Salts',
-        adult: { dosage_form: 'Syr', strength: '500 ml', schedule: '1+1+1', meal_timing: 'Anytime', duration: '5 Days', special_instructions: 'প্রতিদিন অন্তত ২.৫ থেকে ৩ লিটার স্যালাইন ও তরল খাবার পান করুন।' },
+        adult: { dosage_form: 'Sachet', strength: '1 Sachet / 500ml', schedule: '1+1+1', meal_timing: 'Anytime', duration: '5 Days', special_instructions: '৫০০ মিলি পানিতে ১ প্যাকেট গুলে প্রতিদিন ২.৫ থেকে ৩ লিটার স্যালাইন পান করুন।' },
       },
     ],
     adviceBn: [
