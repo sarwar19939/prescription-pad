@@ -2,7 +2,8 @@
 
 /**
  * RxPad: the numbered list of prescription lines for the active draft encounter.
- * Enhanced with AnimatedList and AnimatedListItem for smooth layout transitions.
+ * Enhanced with AnimatedList and AnimatedListItem for smooth layout transitions,
+ * plus 1-click unlisted custom medicine & preparation creation auto-saved to catalog.
  */
 import { useState } from 'react';
 import { useLiveQuery } from 'dexie-react-hooks';
@@ -15,12 +16,16 @@ import { getDrugGuideline } from '@/services/drugGuidelinesService';
 import { MedicineSearch } from './medicine-search';
 import { ProtocolTemplatesDialog } from './protocol-templates-dialog';
 import { SaveAsTemplateDialog } from './save-as-template-dialog';
+import { AddCustomMedicineDialog } from './add-custom-medicine-dialog';
 import { RxRow } from './rx-row';
 import { AnimatedList, AnimatedListItem } from '@/components/ui/motion';
+import { Button } from '@/components/ui/button';
 import type { MedicineCatalog, Patient, PrescriptionItem } from '@/types/schema';
 
 export function RxPad({ patient, encounterId }: { patient: Patient; encounterId: string }) {
   const [search, setSearch] = useState('');
+  const [customMedOpen, setCustomMedOpen] = useState(false);
+  const [customMedInitial, setCustomMedInitial] = useState('');
 
   const encounter = useLiveQuery(
     () => db.encounters.get(encounterId),
@@ -38,12 +43,12 @@ export function RxPad({ patient, encounterId }: { patient: Patient; encounterId:
     [encounterId],
   );
 
-  const addItem = async (med: MedicineCatalog | { freeText: true }) => {
+  const addItem = async (med: MedicineCatalog) => {
     const ts = new Date().toISOString();
-    const brand = 'freeText' in med ? (search.trim() || 'New Medicine') : med.brand_name;
-    const generic = 'freeText' in med ? '' : med.generic_name;
-    const form = 'freeText' in med ? 'Tab' : med.dosage_form;
-    const str = 'freeText' in med ? '' : med.strength;
+    const brand = med.brand_name;
+    const generic = med.generic_name;
+    const form = med.dosage_form;
+    const str = med.strength;
 
     // AI & Clinical Rule Auto-Dosing based on patient age, weight & live vitals
     const smart = calculateSmartDose(
@@ -101,9 +106,25 @@ export function RxPad({ patient, encounterId }: { patient: Patient; encounterId:
           <h3 className="text-base font-bold text-slate-900 tracking-tight">Prescription Pad</h3>
         </div>
         <div className="flex flex-wrap items-center gap-2">
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            onClick={() => {
+              setCustomMedInitial(search.trim());
+              setCustomMedOpen(true);
+            }}
+            className="h-8 gap-1 rounded-lg border-teal-300 bg-teal-50/70 text-teal-900 hover:bg-teal-100 font-bold text-xs shadow-2xs transition-colors"
+            title="লিস্টের বাইরের যেকোনো নতুন ওষুধ বা প্রিপারেশন যোগ করুন"
+          >
+            <Plus className="h-3.5 w-3.5 text-teal-700" />
+            <span>+ নতুন ওষুধ / প্রিপারেশন</span>
+          </Button>
+
           {encounter && (
             <ProtocolTemplatesDialog encounter={encounter} patient={patient} />
           )}
+
           {encounter && items && items.length > 0 && (
             <SaveAsTemplateDialog
               encounter={encounter}
@@ -111,12 +132,7 @@ export function RxPad({ patient, encounterId }: { patient: Patient; encounterId:
               prescriptionItems={items}
             />
           )}
-          {encounter?.vitals && (encounter.vitals.bp || encounter.vitals.temp || encounter.vitals.weight) && (
-            <span className="hidden sm:inline-flex items-center gap-1 rounded-full bg-teal-50 border border-teal-200 px-2.5 py-0.5 text-xs font-semibold text-teal-800">
-              <Sparkles className="h-3.5 w-3.5 text-teal-600" />
-              Smart Auto-Dosing Active
-            </span>
-          )}
+
           <span className="rounded-full bg-slate-100 px-2.5 py-0.5 text-xs font-semibold text-slate-500 uppercase tracking-wider">
             {items?.length || 0} {items?.length === 1 ? 'Medication' : 'Medications'}
           </span>
@@ -126,8 +142,19 @@ export function RxPad({ patient, encounterId }: { patient: Patient; encounterId:
       <MedicineSearch
         value={search}
         onChange={setSearch}
-        onPick={(med) => void addItem(med as MedicineCatalog | { freeText: true })}
-        placeholder="Type brand name (Napa, Seclo, Maxpro...) or generic to add..."
+        onPick={(med) => {
+          if ('freeText' in med) {
+            setCustomMedInitial(search.trim());
+            setCustomMedOpen(true);
+          } else {
+            void addItem(med);
+          }
+        }}
+        onCustomClick={(query) => {
+          setCustomMedInitial(query);
+          setCustomMedOpen(true);
+        }}
+        placeholder="Search by brand (Napa, Seclo, Maxpro...) or generic (Paracetamol)..."
       />
 
       {items === undefined && (
@@ -140,7 +167,7 @@ export function RxPad({ patient, encounterId }: { patient: Patient; encounterId:
         <div className="rounded-2xl border border-dashed border-slate-300 bg-white p-6 text-center text-sm text-slate-500 space-y-1">
           <p className="font-semibold text-slate-700">No medications prescribed yet.</p>
           <p className="text-xs text-slate-400">
-            Search from 21,000+ MedEx drugs above, use AI Co-Pilot suggestions, or copy from a past visit.
+            ওপরের সার্চবারে ওষুধের নাম লিখুন অথবা "+ নতুন ওষুধ / প্রিপারেশন" বাটনে ক্লিক করে লিস্টের বাইরের যেকোনো ওষুধ যোগ করুন।
           </p>
         </div>
       )}
@@ -158,6 +185,21 @@ export function RxPad({ patient, encounterId }: { patient: Patient; encounterId:
           </AnimatedListItem>
         ))}
       </AnimatedList>
+
+      {/* Add Custom Medicine Modal */}
+      {customMedOpen && (
+        <AddCustomMedicineDialog
+          open={customMedOpen}
+          onClose={() => {
+            setCustomMedOpen(false);
+            setSearch('');
+          }}
+          initialBrand={customMedInitial}
+          encounterId={encounterId}
+          patient={patient}
+          onAdded={() => setSearch('')}
+        />
+      )}
     </section>
   );
 }
