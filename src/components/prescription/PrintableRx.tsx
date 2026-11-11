@@ -84,6 +84,22 @@ export function PrintableRx({
               </div>
             ))}
           </PrintList>
+          {(patient.chronic_conditions?.length > 0 ||
+            patient.allergies?.length > 0 ||
+            patient.medical_surgical_history) && (
+            <div className="mb-1.5">
+              <div className="font-bold underline">H/O (History)</div>
+              {patient.chronic_conditions?.length > 0 && (
+                <div>• Illness: {patient.chronic_conditions.join(', ')}</div>
+              )}
+              {patient.allergies?.length > 0 && (
+                <div className="font-bold">• Allergy: {patient.allergies.join(', ')}</div>
+              )}
+              {patient.medical_surgical_history && (
+                <div>• Notes: {patient.medical_surgical_history}</div>
+              )}
+            </div>
+          )}
           {encounter.clinical_findings && (
             <>
               <div className="font-bold underline">O/E</div>
