@@ -6,10 +6,11 @@
  * Family History, and Gynae/Obstetric records with instant 0ms Dexie updates.
  */
 import { useState } from 'react';
-import { ChevronDown, ChevronUp, History, Plus, ShieldAlert, Sparkles, X } from 'lucide-react';
+import { ChevronDown, ChevronUp, Clock, History, ShieldAlert, X } from 'lucide-react';
 import { db } from '@/db/localDb';
 import type { Encounter, Patient } from '@/types/schema';
 import { HISTORY_CATEGORIES } from './clinical-presets';
+import { HistoryModifierPanel } from './history-modifier-panel';
 
 export function ClinicalHistorySection({
   patient,
@@ -20,6 +21,13 @@ export function ClinicalHistorySection({
 }) {
   const [showAllCategories, setShowAllCategories] = useState(false);
   const [selectedTab, setSelectedTab] = useState<number>(0);
+
+  // Active chronic condition being modified for duration/status
+  const [activeChronicModifier, setActiveChronicModifier] = useState<{
+    conditionName: string;
+    existingText: string;
+    index?: number;
+  } | null>(null);
 
   const allergies = patient.allergies || [];
   const chronic = patient.chronic_conditions || [];
@@ -38,15 +46,76 @@ export function ClinicalHistorySection({
   };
 
   const toggleChronic = async (conditionName: string) => {
-    const has = chronic.includes(conditionName);
-    const updated = has
-      ? chronic.filter((c) => c !== conditionName)
-      : [...chronic, conditionName];
+    const base = conditionName.toLowerCase().split(/[\s(/]+/)[0];
+    const existingIdx = chronic.findIndex((c) => c.toLowerCase().includes(base));
+
+    if (existingIdx >= 0) {
+      // Toggle or open modifier
+      setActiveChronicModifier({
+        conditionName,
+        existingText: chronic[existingIdx],
+        index: existingIdx,
+      });
+    } else {
+      const updated = [...chronic, conditionName];
+      await db.patients.update(patient.id, {
+        chronic_conditions: updated,
+        updated_at: new Date().toISOString(),
+        sync_status: 'pending',
+      });
+      setActiveChronicModifier({
+        conditionName,
+        existingText: conditionName,
+        index: updated.length - 1,
+      });
+    }
+  };
+
+  const handleApplyChronicModifier = async (formattedText: string) => {
+    if (!activeChronicModifier) return;
+    const { index, conditionName } = activeChronicModifier;
+    let next: string[];
+
+    if (typeof index === 'number' && index >= 0 && index < chronic.length) {
+      next = [...chronic];
+      next[index] = formattedText;
+    } else {
+      const base = conditionName.toLowerCase().split(/[\s(/]+/)[0];
+      const existingIdx = chronic.findIndex((c) => c.toLowerCase().includes(base));
+      if (existingIdx >= 0) {
+        next = [...chronic];
+        next[existingIdx] = formattedText;
+      } else {
+        next = [...chronic, formattedText];
+      }
+    }
+
     await db.patients.update(patient.id, {
-      chronic_conditions: updated,
+      chronic_conditions: next,
       updated_at: new Date().toISOString(),
       sync_status: 'pending',
     });
+    setActiveChronicModifier({ ...activeChronicModifier, existingText: formattedText });
+  };
+
+  const handleRemoveChronic = async () => {
+    if (!activeChronicModifier) return;
+    const { index, conditionName } = activeChronicModifier;
+    let next: string[];
+
+    if (typeof index === 'number' && index >= 0 && index < chronic.length) {
+      next = chronic.filter((_, i) => i !== index);
+    } else {
+      const base = conditionName.toLowerCase().split(/[\s(/]+/)[0];
+      next = chronic.filter((c) => !c.toLowerCase().includes(base));
+    }
+
+    await db.patients.update(patient.id, {
+      chronic_conditions: next,
+      updated_at: new Date().toISOString(),
+      sync_status: 'pending',
+    });
+    setActiveChronicModifier(null);
   };
 
   const toggleGeneralHistory = async (historyNote: string) => {
@@ -79,11 +148,13 @@ export function ClinicalHistorySection({
 
   const isSelected = (type: string, item: string) => {
     if (type === 'allergy') return allergies.includes(item);
-    if (type === 'chronic') return chronic.includes(item);
+    if (type === 'chronic') {
+      const base = item.toLowerCase().split(/[\s(/]+/)[0];
+      return chronic.some((c) => c.toLowerCase().includes(base));
+    }
     return surgicalHistory.toLowerCase().includes(item.toLowerCase());
   };
 
-  // Top regular quick-pick items (most common)
   const TOP_HISTORY_ITEMS = [
     { type: 'chronic', label: 'Diabetes (DM)' },
     { type: 'chronic', label: 'Hypertension (HTN)' },
@@ -123,7 +194,7 @@ export function ClinicalHistorySection({
         </button>
       </div>
 
-      {/* Active Selected Badges */}
+      {/* Active Selected Badges (Clicking opens modifier for duration/status) */}
       <div className="flex flex-wrap gap-1 min-h-[22px]">
         {allergies.map((a) => (
           <span
@@ -136,15 +207,37 @@ export function ClinicalHistorySection({
             <X className="h-2.5 w-2.5 ml-0.5 opacity-60" />
           </span>
         ))}
-        {chronic.map((c) => (
+        {chronic.map((c, idx) => (
           <span
-            key={c}
-            onClick={() => void toggleChronic(c)}
+            key={`${c}-${idx}`}
+            onClick={() =>
+              setActiveChronicModifier({
+                conditionName: c.split(/[-:(]/)[0].trim(),
+                existingText: c,
+                index: idx,
+              })
+            }
             className="cursor-pointer inline-flex items-center gap-1 rounded-md bg-amber-50 border border-amber-300 text-amber-800 px-2 py-0.5 text-[10px] font-semibold hover:bg-amber-100 transition-colors shadow-2xs"
-            title="ক্লিক করে রিমুভ করুন"
+            title="ক্লিক করে সময়কাল ও স্ট্যাটাস নির্বাচন করুন"
           >
-            ✓ {c}
-            <X className="h-2.5 w-2.5 ml-0.5 opacity-60" />
+            <Clock className="h-2.5 w-2.5 text-amber-600" />
+            <span>{c}</span>
+            <button
+              type="button"
+              onClick={(e) => {
+                e.stopPropagation();
+                const next = chronic.filter((_, i) => i !== idx);
+                void db.patients.update(patient.id, {
+                  chronic_conditions: next,
+                  updated_at: new Date().toISOString(),
+                  sync_status: 'pending',
+                });
+                if (activeChronicModifier?.index === idx) setActiveChronicModifier(null);
+              }}
+              className="ml-0.5 rounded hover:bg-amber-200/60 p-0.5 text-amber-700"
+            >
+              <X className="h-2.5 w-2.5" />
+            </button>
           </span>
         ))}
         {surgicalHistory &&
@@ -163,9 +256,20 @@ export function ClinicalHistorySection({
               </span>
             ))}
         {allergies.length === 0 && chronic.length === 0 && !surgicalHistory && (
-          <span className="text-[11px] text-slate-400 italic">কোনো অতীত রোগ বা হিস্ট্রি রেকর্ড নেই। নিচের অপশনগুলো থেকে নির্বাচন করুন:</span>
+          <span className="text-[11px] text-slate-400 italic">কোনো অতীত রোগ রেকর্ড নেই। নিচের অপশনগুলো থেকে নির্বাচন করুন:</span>
         )}
       </div>
+
+      {/* Chronic Modifier Panel */}
+      {activeChronicModifier && (
+        <HistoryModifierPanel
+          conditionName={activeChronicModifier.conditionName}
+          existingText={activeChronicModifier.existingText}
+          onApply={handleApplyChronicModifier}
+          onRemove={handleRemoveChronic}
+          onClose={() => setActiveChronicModifier(null)}
+        />
+      )}
 
       {/* Top Regular Quick Selectors */}
       <div className="flex flex-wrap gap-1 pt-0.5">
@@ -194,7 +298,6 @@ export function ClinicalHistorySection({
       {/* Expanded 35+ Categorized History Drawer */}
       {showAllCategories && (
         <div className="rounded-xl border border-teal-200 bg-slate-50/70 p-2.5 space-y-2.5 text-xs animate-in fade-in duration-150">
-          {/* Category Tabs */}
           <div className="flex flex-wrap gap-1 border-b border-slate-200/80 pb-1.5">
             {HISTORY_CATEGORIES.map((cat, idx) => (
               <button
@@ -212,7 +315,6 @@ export function ClinicalHistorySection({
             ))}
           </div>
 
-          {/* Active Category Items */}
           <div className="space-y-1">
             <span className="text-[10px] font-bold text-slate-500 uppercase block">
               {HISTORY_CATEGORIES[selectedTab].title}:

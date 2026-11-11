@@ -59,7 +59,9 @@ export function mockClinicalTrack(context: any) {
       text.includes('টক ঢেকুর') ||
       text.includes('গ্যাস'));
 
-  if (isFever) {
+  if (isGastro) {
+    track = GASTRO_TRACK;
+  } else if (isFever) {
     track = FEVER_TRACK;
   } else if (isGastric) {
     track = GASTRIC_TRACK;
