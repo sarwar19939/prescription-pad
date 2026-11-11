@@ -2,11 +2,11 @@
 
 /**
  * ClinicalOeSection — 40+ Categorized Physical Examination (O/E) Presets & Vitals.
- * Includes 1-Click "All Normal (সব স্বাভাবিক)" template, real-time vitals alerts,
- * General physical exam, Systemic examination, and controlled text synchronization.
+ * Includes 1-Click "All Normal (সব স্বাভাবিক)" template, interactive toggle/unselect,
+ * opposing finding replacement, real-time vitals alerts, and controlled text sync.
  */
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { ChevronDown, ChevronUp, Sparkles, Stethoscope, Wand2 } from 'lucide-react';
+import { ChevronDown, ChevronUp, RotateCcw, Sparkles, Stethoscope } from 'lucide-react';
 import { db } from '@/db/localDb';
 import { analyzeVitals } from '@/services/vitalsService';
 import type { Encounter, Vitals as VitalsT } from '@/types/schema';
@@ -32,6 +32,19 @@ const TOP_OE_CHIPS = [
   'CNS: Conscious & Oriented',
   'Epigastric Tenderness (+)',
   'Wheezing Present (+)',
+];
+
+// Mutually exclusive clinical finding pairs (e.g. Normal vs Adverse)
+const OPPOSING_PAIRS: Array<[RegExp, RegExp]> = [
+  [/anemia:\s*nil/i, /anemia|pallor/i],
+  [/jaundice:\s*absent/i, /jaundice/i],
+  [/oedema:\s*nil|edema:\s*nil/i, /oedema|edema|swelling/i],
+  [/cyanosis:\s*absent/i, /cyanosis/i],
+  [/dehydration:\s*none/i, /dehydration/i],
+  [/chest:\s*clear|lungs:\s*clear/i, /rhonchi|crepitation|creps|wheez/i],
+  [/abdomen:\s*soft/i, /tenderness|distended|guarding|rigidity/i],
+  [/throat:\s*normal/i, /throat:\s*congested|tonsil/i],
+  [/heart:\s*s1\s*\+?\s*s2/i, /murmur/i],
 ];
 
 export function ClinicalOeSection({ encounter }: { encounter: Encounter }) {
@@ -94,18 +107,88 @@ export function ClinicalOeSection({ encounter }: { encounter: Encounter }) {
     });
   };
 
-  const addOePreset = (preset: string) => {
-    const cur = localOe.trim();
-    const next = cur ? (cur.includes(preset) ? cur : `${cur}, ${preset}`) : preset;
-    setLocalOe(next);
-    saveOeDebounced(next);
+  // Parses raw O/E string into individual token list
+  const getOeItems = (raw: string): string[] => {
+    return raw
+      .split(/[\n,;]+/)
+      .map((s) => s.trim())
+      .filter(Boolean);
+  };
+
+  // Checks whether a preset item is currently present in localOe
+  const isOeActive = (preset: string): boolean => {
+    const p = preset.toLowerCase().trim();
+    const items = getOeItems(localOe);
+    return items.some((item) => {
+      const it = item.toLowerCase();
+      return it === p || it.includes(p) || p.includes(it);
+    });
+  };
+
+  /**
+   * Toggles an O/E preset:
+   * 1. If already active: removes it (unselect).
+   * 2. If opposing item is present (e.g. Jaundice: Absent vs Jaundice (+)): replaces opposing item.
+   * 3. Otherwise: appends the new preset.
+   */
+  const toggleOePreset = (preset: string) => {
+    const pTrim = preset.trim();
+    const pLower = pTrim.toLowerCase();
+    const currentItems = getOeItems(localOe);
+
+    // 1. Check if already active (exact or partial match)
+    const existingIdx = currentItems.findIndex((item) => {
+      const it = item.toLowerCase();
+      return it === pLower || it.includes(pLower) || pLower.includes(it);
+    });
+
+    if (existingIdx >= 0) {
+      // Unselect / remove item
+      const updated = currentItems.filter((_, idx) => idx !== existingIdx);
+      const nextStr = updated.join(', ');
+      setLocalOe(nextStr);
+      saveOeDebounced(nextStr);
+      return;
+    }
+
+    // 2. Check if opposing finding exists (e.g. Normal vs Abnormal)
+    let filteredItems = [...currentItems];
+    for (const [patternA, patternB] of OPPOSING_PAIRS) {
+      if (patternA.test(pTrim)) {
+        filteredItems = filteredItems.filter((it) => !patternB.test(it));
+      } else if (patternB.test(pTrim)) {
+        filteredItems = filteredItems.filter((it) => !patternA.test(it));
+      }
+    }
+
+    // 3. Add the preset
+    filteredItems.push(pTrim);
+    const nextStr = filteredItems.join(', ');
+    setLocalOe(nextStr);
+    saveOeDebounced(nextStr);
   };
 
   const applyAllNormal = () => {
     const cur = localOe.trim();
-    const next = cur ? `${cur}\n${ALL_NORMAL_OE_TEXT}` : ALL_NORMAL_OE_TEXT;
+    const normalItems = getOeItems(ALL_NORMAL_OE_TEXT);
+    const curItems = getOeItems(cur);
+
+    // Merge normal items, preserving any specific custom items already entered
+    const merged = [...curItems];
+    for (const norm of normalItems) {
+      if (!merged.some((it) => it.toLowerCase() === norm.toLowerCase())) {
+        merged.push(norm);
+      }
+    }
+
+    const next = merged.join(', ');
     setLocalOe(next);
     saveOeDebounced(next);
+  };
+
+  const clearAllOe = () => {
+    setLocalOe('');
+    saveOeDebounced('');
   };
 
   const vitalAnalysis = useMemo(() => analyzeVitals(localVitals), [localVitals]);
@@ -119,14 +202,26 @@ export function ClinicalOeSection({ encounter }: { encounter: Encounter }) {
           <Stethoscope className="h-3.5 w-3.5 text-teal-600" />
           O/E ও ভাইটালস (Physical Examination)
         </span>
-        <button
-          type="button"
-          onClick={applyAllNormal}
-          className="text-[10px] font-bold text-emerald-800 bg-emerald-50 hover:bg-emerald-100 border border-emerald-300 px-2 py-0.5 rounded-md flex items-center gap-1 transition-colors shadow-2xs"
-          title="সকল শারীরিক পরীক্ষা স্বাভাবিক নির্বাচন করুন"
-        >
-          <Sparkles className="h-3 w-3 text-emerald-600" /> ★ All Normal (সব স্বাভাবিক)
-        </button>
+        <div className="flex items-center gap-1">
+          {localOe.trim() && (
+            <button
+              type="button"
+              onClick={clearAllOe}
+              className="text-[10px] font-semibold text-slate-500 hover:text-rose-600 bg-slate-100 hover:bg-rose-50 px-1.5 py-0.5 rounded border border-slate-200 flex items-center gap-0.5 transition-colors"
+              title="সব ও/ই মুছে ফেলুন"
+            >
+              <RotateCcw className="h-2.5 w-2.5" /> মুছুন
+            </button>
+          )}
+          <button
+            type="button"
+            onClick={applyAllNormal}
+            className="text-[10px] font-bold text-emerald-800 bg-emerald-50 hover:bg-emerald-100 border border-emerald-300 px-2 py-0.5 rounded-md flex items-center gap-1 transition-colors shadow-2xs"
+            title="সকল শারীরিক পরীক্ষা স্বাভাবিক নির্বাচন করুন"
+          >
+            <Sparkles className="h-3 w-3 text-emerald-600" /> ★ All Normal (সব স্বাভাবিক)
+          </button>
+        </div>
       </div>
 
       {/* Vitals Grid */}
@@ -138,10 +233,11 @@ export function ClinicalOeSection({ encounter }: { encounter: Encounter }) {
               <span className="font-normal text-slate-400 text-[9px]">{f.unit}</span>
             </span>
             <input
-              className={cell}
-              placeholder={f.placeholder}
+              type="text"
               value={localVitals[f.key]}
               onChange={(e) => setVital(f.key, e.target.value)}
+              placeholder={f.placeholder}
+              className={cell}
             />
           </label>
         ))}
@@ -161,20 +257,21 @@ export function ClinicalOeSection({ encounter }: { encounter: Encounter }) {
         </div>
       )}
 
-      {/* Top Regular O/E Chips */}
+      {/* Top Regular O/E Chips (Click to Toggle / Unselect) */}
       <div className="flex flex-wrap items-center gap-1 pt-0.5">
         {TOP_OE_CHIPS.map((p) => {
-          const active = localOe.includes(p);
+          const active = isOeActive(p);
           return (
             <button
               key={p}
               type="button"
-              onClick={() => addOePreset(p)}
+              onClick={() => toggleOePreset(p)}
               className={`rounded px-1.5 py-0.5 text-[10px] font-semibold border transition-all ${
                 active
-                  ? 'bg-teal-700 text-white border-teal-700 font-bold'
+                  ? 'bg-teal-700 text-white border-teal-700 font-bold shadow-2xs'
                   : 'bg-slate-100 hover:bg-teal-50 hover:border-teal-300 border-slate-200 text-slate-700'
               }`}
+              title={active ? 'ক্লিক করে বাদ দিন (Unselect)' : 'ক্লিক করে যোগ করুন'}
             >
               {active ? '✓ ' : '+ '}
               {p}
@@ -212,17 +309,18 @@ export function ClinicalOeSection({ encounter }: { encounter: Encounter }) {
 
           <div className="flex flex-wrap gap-1">
             {OE_CATEGORIES[selectedOeTab].items.map((p) => {
-              const active = localOe.includes(p);
+              const active = isOeActive(p);
               return (
                 <button
                   key={p}
                   type="button"
-                  onClick={() => addOePreset(p)}
+                  onClick={() => toggleOePreset(p)}
                   className={`rounded px-1.5 py-0.5 text-[10px] font-semibold border transition-all ${
                     active
-                      ? 'bg-teal-700 text-white border-teal-700 font-bold'
+                      ? 'bg-teal-700 text-white border-teal-700 font-bold shadow-2xs'
                       : 'bg-white text-slate-700 border-slate-200 hover:border-teal-500 hover:bg-teal-50'
                   }`}
+                  title={active ? 'ক্লিক করে আনসিলেক্ট করুন' : 'ক্লিক করে সিলেক্ট করুন'}
                 >
                   {active ? '✓ ' : '+ '}
                   {p}

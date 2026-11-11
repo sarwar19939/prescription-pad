@@ -14,6 +14,7 @@ import { calculateSmartDose } from '@/services/dosingEngine';
 import { getDrugGuideline } from '@/services/drugGuidelinesService';
 import { MedicineSearch } from './medicine-search';
 import { ProtocolTemplatesDialog } from './protocol-templates-dialog';
+import { SaveAsTemplateDialog } from './save-as-template-dialog';
 import { RxRow } from './rx-row';
 import { AnimatedList, AnimatedListItem } from '@/components/ui/motion';
 import type { MedicineCatalog, Patient, PrescriptionItem } from '@/types/schema';
@@ -102,6 +103,13 @@ export function RxPad({ patient, encounterId }: { patient: Patient; encounterId:
         <div className="flex flex-wrap items-center gap-2">
           {encounter && (
             <ProtocolTemplatesDialog encounter={encounter} patient={patient} />
+          )}
+          {encounter && items && items.length > 0 && (
+            <SaveAsTemplateDialog
+              encounter={encounter}
+              patient={patient}
+              prescriptionItems={items}
+            />
           )}
           {encounter?.vitals && (encounter.vitals.bp || encounter.vitals.temp || encounter.vitals.weight) && (
             <span className="hidden sm:inline-flex items-center gap-1 rounded-full bg-teal-50 border border-teal-200 px-2.5 py-0.5 text-xs font-semibold text-teal-800">

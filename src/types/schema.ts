@@ -131,6 +131,37 @@ export interface MedicineCatalog extends BaseRecord {
   contraindications: string[];
 }
 
+export type AgeGroupCategory = 'infant' | 'child' | 'adolescent' | 'adult' | 'elderly' | 'all';
+
+export interface TemplateMedicineItem {
+  brand_name: string;
+  generic_name: string;
+  dosage_form: DosageForm | string;
+  strength: string;
+  schedule: string;
+  meal_timing: MealTiming | string;
+  duration: string;
+  special_instructions?: string;
+}
+
+/** Doctor custom and customizable disease prescription template. */
+export interface PrescriptionTemplate extends BaseRecord {
+  title: string;
+  title_bn: string;
+  category: string; // System: Respiratory, GI, Fever, Cardio, Pediatrics, Dermatology, etc.
+  disease_group: string; // e.g. Pneumonia, Fever, Diarrhea, Asthma, Dengue, PUD
+  age_group: AgeGroupCategory;
+  age_range_label?: string; // e.g. "১ - ৫ বছর"
+  description?: string;
+  description_bn?: string;
+  diagnosis: string[];
+  chief_complaints?: string[];
+  medicines: TemplateMedicineItem[];
+  advice: string[];
+  investigations?: string[];
+  is_custom?: boolean;
+}
+
 /* ------------------------------------------------------------------ */
 /* Registry: map of Dexie table name -> entity record type             */
 /* ------------------------------------------------------------------ */
@@ -142,6 +173,7 @@ export interface DbSchema {
   prescription_items: PrescriptionItem;
   investigation_reports: InvestigationReport;
   medicine_catalog: MedicineCatalog;
+  prescription_templates: PrescriptionTemplate;
 }
 
 /** Exposed for typing Dexie tables. */
@@ -151,6 +183,7 @@ export type AnyRecord =
   | Encounter
   | PrescriptionItem
   | InvestigationReport
-  | MedicineCatalog;
+  | MedicineCatalog
+  | PrescriptionTemplate;
 
 export type { Table };

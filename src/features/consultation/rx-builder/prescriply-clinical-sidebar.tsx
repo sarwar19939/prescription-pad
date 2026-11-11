@@ -72,7 +72,7 @@ export function PrescriplyClinicalSidebar({
           </span>
           <div className="flex items-center gap-1">
             <ClinicalPhotoDialog encounter={encounter} patient={patient} />
-            <ProtocolTemplatesDialog encounter={encounter} patient={patient} compact triggerLabel="১৬৮+ টেমপ্লেট" />
+            <ProtocolTemplatesDialog encounter={encounter} patient={patient} compact triggerLabel="রোগভিত্তিক টেমপ্লেট" />
           </div>
         </div>
 

@@ -13,7 +13,7 @@ import type { DbSchema } from '@/types/schema';
 export const LOCAL_DB_NAME = 'medrecord';
 
 /** Dexie index schemes per table. Primary key is always `id` (UUID v4). */
-const SCHEMA_V1: { [K in keyof DbSchema]: string } = {
+const SCHEMA_V1: { [K in keyof DbSchema]?: string } = {
   tenants: 'id, tenant_id, phone',
   patients: 'id, tenant_id, patient_code, phone, sync_status',
   encounters: 'id, tenant_id, patient_id, visit_date, sync_status',
@@ -22,9 +22,19 @@ const SCHEMA_V1: { [K in keyof DbSchema]: string } = {
   medicine_catalog: 'id, tenant_id, brand_name, generic_name, sync_status',
 };
 
-const SCHEMA_V2: { [K in keyof DbSchema]: string } = {
+const SCHEMA_V2: { [K in keyof DbSchema]?: string } = {
   ...SCHEMA_V1,
   tenants: 'id, tenant_id, phone, sync_status',
+};
+
+const SCHEMA_V3: { [K in keyof DbSchema]: string } = {
+  tenants: 'id, tenant_id, phone, sync_status',
+  patients: 'id, tenant_id, patient_code, phone, sync_status',
+  encounters: 'id, tenant_id, patient_id, visit_date, sync_status',
+  prescription_items: 'id, tenant_id, patient_id, encounter_id, sync_status',
+  investigation_reports: 'id, tenant_id, patient_id, encounter_id, sync_status',
+  medicine_catalog: 'id, tenant_id, brand_name, generic_name, sync_status',
+  prescription_templates: 'id, tenant_id, category, disease_group, age_group, sync_status',
 };
 
 export class ClinicLocalDB extends Dexie {
@@ -34,16 +44,18 @@ export class ClinicLocalDB extends Dexie {
   prescription_items!: EntityTable<DbSchema['prescription_items'], 'id'>;
   investigation_reports!: EntityTable<DbSchema['investigation_reports'], 'id'>;
   medicine_catalog!: EntityTable<DbSchema['medicine_catalog'], 'id'>;
+  prescription_templates!: EntityTable<DbSchema['prescription_templates'], 'id'>;
 
   constructor(dbName: string = LOCAL_DB_NAME) {
     super(dbName);
-    this.version(1).stores(SCHEMA_V1);
-    this.version(2).stores(SCHEMA_V2);
+    this.version(1).stores(SCHEMA_V1 as any);
+    this.version(2).stores(SCHEMA_V2 as any);
+    this.version(3).stores(SCHEMA_V3);
   }
 }
 
 /** Singleton instance used across the app (must run in a browser context). */
 export const db = new ClinicLocalDB();
 
-/** All 6 table names, for generic iteration (sync engine, stats, wipe). */
-export const TABLE_NAMES = Object.keys(SCHEMA_V2) as Array<keyof DbSchema>;
+/** All table names, for generic iteration (sync engine, stats, wipe). */
+export const TABLE_NAMES = Object.keys(SCHEMA_V3) as Array<keyof DbSchema>;
