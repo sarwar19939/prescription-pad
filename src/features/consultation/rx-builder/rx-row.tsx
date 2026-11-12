@@ -15,6 +15,7 @@ import { checkMedicineWithCatalog, type SafetyWarning } from './safety';
 import { SafetyBanners } from './safety-banners';
 import { parseShorthand } from './shorthand';
 import { MedExGuidelineCard } from './medex-guideline-card';
+import { TaperingDosePanel } from './tapering-dose-panel';
 import type { MealTiming, Patient, PrescriptionItem, Vitals } from '@/types/schema';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -41,7 +42,7 @@ function useDebouncedField(item: PrescriptionItem, field: 'strength' | 'special_
         [field]: next,
         updated_at: new Date().toISOString(),
         sync_status: 'pending',
-      });
+      } as any);
     }, delay);
   };
   return [value, onChange, value !== item[field]] as const;
@@ -108,21 +109,13 @@ export function RxRow({
     if (parsed.meal_timing) patch.meal_timing = parsed.meal_timing;
     if (parsed.duration) patch.duration = parsed.duration;
     if (Object.keys(patch).length > 0) {
-      await db.prescription_items.update(item.id, {
-        ...patch,
-        updated_at: new Date().toISOString(),
-        sync_status: 'pending',
-      });
+      await db.prescription_items.update(item.id, { ...patch, updated_at: new Date().toISOString(), sync_status: 'pending' });
       setCmd('');
     }
   };
 
   const write = (patch: Partial<PrescriptionItem>) => {
-    void db.prescription_items.update(item.id, {
-      ...patch,
-      updated_at: new Date().toISOString(),
-      sync_status: 'pending',
-    });
+    void db.prescription_items.update(item.id, { ...patch, updated_at: new Date().toISOString(), sync_status: 'pending' });
   };
 
   const cell =
@@ -145,6 +138,11 @@ export function RxRow({
           <span className="text-sm font-medium text-slate-500 italic">
             ({item.generic_name})
           </span>
+          {item.tapering_steps && item.tapering_steps.length > 0 && (
+            <span className="text-[10px] font-bold text-amber-900 bg-amber-100 border border-amber-300 px-2 py-0.5 rounded-full">
+              {item.tapering_steps.length} ধাপের টেপারিং শিডিউল
+            </span>
+          )}
         </div>
 
         <Button
@@ -245,6 +243,9 @@ export function RxRow({
           />
         </label>
       </div>
+
+      {/* Tapering & Stepped Dose Adjustment Panel */}
+      <TaperingDosePanel item={item} onSaveSteps={(steps) => write({ tapering_steps: steps })} />
 
       {/* Shorthand quick-command bar & Auto-Adjust Button */}
       <div className="mt-3 flex flex-wrap items-center gap-2">

@@ -4,6 +4,7 @@
  * using multimodal vision AI (Gemini Vision / NVIDIA Nemotron-VL).
  */
 import type { PrescriptionItem } from '@/types/schema';
+import { getActiveTenantAiConfig } from './auth';
 
 export interface ClinicalVisionResult {
   observed_features: string[];
@@ -26,6 +27,7 @@ export async function analyzeClinicalPhoto(
   const mimeTypeMatch = base64DataUrl.match(/^data:([^;]+);base64,/);
   const mimeType = mimeTypeMatch ? mimeTypeMatch[1] : 'image/jpeg';
   const rawBase64 = base64DataUrl.replace(/^data:[^;]+;base64,/, '');
+  const aiCfg = await getActiveTenantAiConfig();
 
   const res = await fetch('/api/ai/clinical-copilot', {
     method: 'POST',
@@ -37,6 +39,8 @@ export async function analyzeClinicalPhoto(
         mimeType,
         clinicalNotes,
         patientContext,
+        geminiApiKey: aiCfg.ai_api_key,
+        nvidiaApiKey: aiCfg.nvidia_api_key,
       },
     }),
   });

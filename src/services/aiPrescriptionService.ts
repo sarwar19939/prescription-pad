@@ -6,6 +6,7 @@
 import { db } from '@/db/localDb';
 import { generateUUID } from '@/lib/uuid';
 import { matchProtocolsForDiagnosis } from '@/services/clinicalProtocolsService';
+import { getActiveTenantAiConfig } from './auth';
 import type { DosageForm, MealTiming, Patient, PrescriptionItem, Vitals } from '@/types/schema';
 
 export interface FullPrescriptionMedicine {
@@ -84,6 +85,7 @@ export async function generateFullPrescription(
 
   // 2. Cloud AI synthesis for non-templated conditions
   try {
+    const aiCfg = await getActiveTenantAiConfig();
     const res = await fetch('/api/ai/clinical-copilot', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -96,8 +98,8 @@ export async function generateFullPrescription(
           allergies: patient.allergies || [],
           chronic_conditions: patient.chronic_conditions || [],
           vitals: vitals || {},
-          geminiApiKey: options?.geminiApiKey,
-          nvidiaApiKey: options?.nvidiaApiKey,
+          geminiApiKey: options?.geminiApiKey || aiCfg.ai_api_key,
+          nvidiaApiKey: options?.nvidiaApiKey || aiCfg.nvidia_api_key,
         },
       }),
     });

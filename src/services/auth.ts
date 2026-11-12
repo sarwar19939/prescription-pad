@@ -171,6 +171,29 @@ export async function signUpDoctor(
 }
 
 /**
+ * Returns active tenant AI configuration (API keys and preferred provider).
+ */
+export async function getActiveTenantAiConfig(): Promise<{
+  ai_api_key?: string;
+  nvidia_api_key?: string;
+  ollama_base_url?: string;
+  ai_provider?: 'cloud' | 'local';
+}> {
+  try {
+    const tid = getCurrentTenantId();
+    const tenant = (await db.tenants.get(tid)) || (await db.tenants.toCollection().first());
+    return {
+      ai_api_key: tenant?.ai_api_key,
+      nvidia_api_key: tenant?.nvidia_api_key,
+      ollama_base_url: tenant?.ollama_base_url,
+      ai_provider: tenant?.ai_provider,
+    };
+  } catch {
+    return {};
+  }
+}
+
+/**
  * Signs out the doctor and optionally clears cached local session.
  */
 export async function logoutDoctor(): Promise<void> {

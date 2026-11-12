@@ -20,16 +20,11 @@ export interface SymptomQualifierConfig {
 }
 
 export const UNIVERSAL_DURATIONS = [
-  { label: '১ দিন', value: '1 day' },
-  { label: '২ দিন', value: '2 days' },
-  { label: '৩ দিন', value: '3 days' },
-  { label: '৪ দিন', value: '4 days' },
-  { label: '৫ দিন', value: '5 days' },
-  { label: '৭ দিন', value: '7 days' },
-  { label: '১০ দিন', value: '10 days' },
-  { label: '১৫ দিন', value: '15 days' },
-  { label: '১ মাস', value: '1 month' },
-  { label: 'দীর্ঘদিন', value: 'several months' },
+  { label: '১ দিন', value: '1 day' }, { label: '২ দিন', value: '2 days' },
+  { label: '৩ দিন', value: '3 days' }, { label: '৪ দিন', value: '4 days' },
+  { label: '৫ দিন', value: '5 days' }, { label: '৭ দিন', value: '7 days' },
+  { label: '১০ দিন', value: '10 days' }, { label: '১৫ দিন', value: '15 days' },
+  { label: '১ মাস', value: '1 month' }, { label: 'দীর্ঘদিন', value: 'several months' },
 ];
 
 export const SYMPTOM_QUALIFIER_MAP: Record<string, SymptomQualifierConfig> = {
@@ -37,21 +32,15 @@ export const SYMPTOM_QUALIFIER_MAP: Record<string, SymptomQualifierConfig> = {
     banglaTitle: 'জ্বর (Fever)',
     englishTitle: 'Fever',
     durations: [
-      { label: '১ দিন', value: 'for 1 day' },
-      { label: '২ দিন', value: 'for 2 days' },
-      { label: '৩ দিন', value: 'for 3 days' },
-      { label: '৪ দিন', value: 'for 4 days' },
-      { label: '৫ দিন', value: 'for 5 days' },
-      { label: '৭ দিন', value: 'for 7 days' },
-      { label: '১০ দিন', value: 'for 10 days' },
-      { label: '১৫ দিন', value: 'for 15 days' },
+      { label: '১ দিন', value: 'for 1 day' }, { label: '২ দিন', value: 'for 2 days' },
+      { label: '৩ দিন', value: 'for 3 days' }, { label: '৪ দিন', value: 'for 4 days' },
+      { label: '৫ দিন', value: 'for 5 days' }, { label: '৭ দিন', value: 'for 7 days' },
+      { label: '১০ দিন', value: 'for 10 days' }, { label: '১৫ দিন', value: 'for 15 days' },
       { label: '১ মাস', value: 'for 1 month' },
     ],
     characters: [
-      { label: 'তীব্র জ্বর', value: 'High grade' },
-      { label: 'মৃদু জ্বর', value: 'Low grade' },
-      { label: 'কাঁপুনি দিয়ে', value: 'With chills & rigor' },
-      { label: 'থেমে থেমে', value: 'Intermittent' },
+      { label: 'তীব্র জ্বর', value: 'High grade' }, { label: 'মৃদু জ্বর', value: 'Low grade' },
+      { label: 'কাঁপুনি দিয়ে', value: 'With chills & rigor' }, { label: 'থেমে থেমে', value: 'Intermittent' },
       { label: 'টানা জ্বর', value: 'Continuous' },
     ],
     formatString: ({ duration, character }) => {
@@ -68,24 +57,17 @@ export const SYMPTOM_QUALIFIER_MAP: Record<string, SymptomQualifierConfig> = {
     banglaTitle: 'বমি (Vomiting)',
     englishTitle: 'Vomiting',
     frequencies: [
-      { label: '১-২ বার', value: '1-2 times' },
-      { label: '৩-৪ বার', value: '3-4 times' },
-      { label: '৫-৬ বার', value: '5-6 times' },
-      { label: '৮-১০ বার', value: '8-10 times' },
-      { label: '১০+ বার', value: '10+ times' },
-      { label: 'ঘন ঘন বমি', value: 'Multiple times' },
+      { label: '১-২ বার', value: '1-2 times' }, { label: '৩-৪ বার', value: '3-4 times' },
+      { label: '৫-৬ বার', value: '5-6 times' }, { label: '৮-১০ বার', value: '8-10 times' },
+      { label: '১০+ বার', value: '10+ times' }, { label: 'ঘন ঘন বমি', value: 'Multiple times' },
     ],
     durations: [
-      { label: 'আজ সকাল থেকে', value: 'since morning' },
-      { label: '১ দিন ধরে', value: 'for 1 day' },
-      { label: '২ দিন ধরে', value: 'for 2 days' },
-      { label: '৩ দিন ধরে', value: 'for 3 days' },
+      { label: 'আজ সকাল থেকে', value: 'since morning' }, { label: '১ দিন ধরে', value: 'for 1 day' },
+      { label: '২ দিন ধরে', value: 'for 2 days' }, { label: '৩ দিন ধরে', value: 'for 3 days' },
     ],
     characters: [
-      { label: 'পানির মতো', value: 'Watery' },
-      { label: 'খাওয়ার পর পরই', value: 'Post-meal' },
-      { label: 'খাদ্য উপাদানসহ', value: 'Food particles' },
-      { label: 'হলুদাভ পিত্তবমি', value: 'Bilious' },
+      { label: 'পানির মতো', value: 'Watery' }, { label: 'খাওয়ার পর পরই', value: 'Post-meal' },
+      { label: 'খাদ্য উপাদানসহ', value: 'Food particles' }, { label: 'হলুদাভ পিত্তবমি', value: 'Bilious' },
     ],
     formatString: ({ frequency, duration, character }) => {
       let out = 'Vomiting';
@@ -100,25 +82,18 @@ export const SYMPTOM_QUALIFIER_MAP: Record<string, SymptomQualifierConfig> = {
     banglaTitle: 'পাতলা পায়খানা (Diarrhea / Loose Motion)',
     englishTitle: 'Loose motion',
     frequencies: [
-      { label: '৩-৪ বার/দিন', value: '3-4 times/day' },
-      { label: '৫-৬ বার/দিন', value: '5-6 times/day' },
-      { label: '৮-১০ বার/দিন', value: '8-10 times/day' },
-      { label: '১০+ বার/দিন', value: '>10 times/day' },
+      { label: '৩-৪ বার/দিন', value: '3-4 times/day' }, { label: '৫-৬ বার/দিন', value: '5-6 times/day' },
+      { label: '৮-১০ বার/দিন', value: '8-10 times/day' }, { label: '১০+ বার/দিন', value: '>10 times/day' },
       { label: 'ঘন ঘন পাতলা পায়খানা', value: 'Frequent' },
     ],
     durations: [
-      { label: 'আজ সকাল থেকে', value: 'since morning' },
-      { label: '১ দিন', value: 'for 1 day' },
-      { label: '২ দিন', value: 'for 2 days' },
-      { label: '৩ দিন', value: 'for 3 days' },
-      { label: '৫ দিন', value: 'for 5 days' },
-      { label: '১ সপ্তাহ', value: 'for 1 week' },
+      { label: 'আজ সকাল থেকে', value: 'since morning' }, { label: '১ দিন', value: 'for 1 day' },
+      { label: '২ দিন', value: 'for 2 days' }, { label: '৩ দিন', value: 'for 3 days' },
+      { label: '৫ দিন', value: 'for 5 days' }, { label: '১ সপ্তাহ', value: 'for 1 week' },
     ],
     characters: [
-      { label: 'পানির মতো', value: 'Watery' },
-      { label: 'আমযুক্ত (Mucus)', value: 'With mucus' },
-      { label: 'রক্তযুক্ত (Dysentery)', value: 'With blood' },
-      { label: 'চাল ধোয়া পানির মতো', value: 'Rice-watery' },
+      { label: 'পানির মতো', value: 'Watery' }, { label: 'আমযুক্ত (Mucus)', value: 'With mucus' },
+      { label: 'রক্তযুক্ত (Dysentery)', value: 'With blood' }, { label: 'চাল ধোয়া পানির মতো', value: 'Rice-watery' },
     ],
     formatString: ({ frequency, duration, character }) => {
       let out = 'Loose motion';
@@ -133,21 +108,15 @@ export const SYMPTOM_QUALIFIER_MAP: Record<string, SymptomQualifierConfig> = {
     banglaTitle: 'পেটে ব্যথা (Abdominal Pain)',
     englishTitle: 'Abdominal pain',
     durations: [
-      { label: 'কয়েক ঘণ্টা ধরে', value: 'for few hours' },
-      { label: '১ দিন', value: 'for 1 day' },
-      { label: '২ দিন', value: 'for 2 days' },
-      { label: '৩ দিন', value: 'for 3 days' },
-      { label: '৫ দিন', value: 'for 5 days' },
-      { label: '১ সপ্তাহ', value: 'for 1 week' },
+      { label: 'কয়েক ঘণ্টা ধরে', value: 'for few hours' }, { label: '১ দিন', value: 'for 1 day' },
+      { label: '২ দিন', value: 'for 2 days' }, { label: '৩ দিন', value: 'for 3 days' },
+      { label: '৫ দিন', value: 'for 5 days' }, { label: '১ সপ্তাহ', value: 'for 1 week' },
       { label: '১ মাস ধরে', value: 'for 1 month' },
     ],
     locations: [
-      { label: 'বুকের নিচে / গ্যাস্ট্রিক', value: 'Epigastric' },
-      { label: 'নাভির চারদিকে', value: 'Umbilical' },
-      { label: 'তলপেটে ব্যথা', value: 'Lower abdomen' },
-      { label: 'ডান পাশে (RIF/অ্যাপেন্ডিক্স)', value: 'Right iliac fossa' },
-      { label: 'বাম পাশে', value: 'Left iliac fossa' },
-      { label: 'পুরো পেটে', value: 'Generalized' },
+      { label: 'বুকের নিচে / গ্যাস্ট্রিক', value: 'Epigastric' }, { label: 'নাভির চারদিকে', value: 'Umbilical' },
+      { label: 'তলপেটে ব্যথা', value: 'Lower abdomen' }, { label: 'ডান পাশে (RIF/অ্যাপেন্ডিক্স)', value: 'Right iliac fossa' },
+      { label: 'বাম পাশে', value: 'Left iliac fossa' }, { label: 'পুরো পেটে', value: 'Generalized' },
     ],
     characters: [
       { label: 'মোচড়ানো ব্যথা', value: 'Colicky' },
@@ -239,6 +208,39 @@ export const SYMPTOM_QUALIFIER_MAP: Record<string, SymptomQualifierConfig> = {
       return out;
     },
   },
+
+  amenorrhea: {
+    banglaTitle: 'মাসিক বন্ধ (Amenorrhea)',
+    englishTitle: 'Amenorrhea',
+    durations: [
+      { label: '১৫ দিন', value: 'for 15 days' },
+      { label: '১ মাস', value: 'for 1 month' },
+      { label: '২ মাস', value: 'for 2 months' },
+      { label: '৩ মাস', value: 'for 3 months' },
+      { label: '৪ মাস', value: 'for 4 months' },
+      { label: '৬ মাস', value: 'for 6 months' },
+      { label: '১ বছর', value: 'for 1 yr' },
+      { label: 'LMP অজানা', value: 'LMP unknown' },
+    ],
+    characters: [
+      { label: 'Secondary (আগে স্বাভাবিক ছিল)', value: 'Secondary' },
+      { label: 'Primary (শুরু থেকেই বন্ধ)', value: 'Primary' },
+      { label: 'সম্ভাব্য গর্ভধারণ / UPT(+)', value: 'Pregnancy suspected' },
+      { label: 'তলপেটে ব্যথা সহ', value: 'With lower abdominal pain' },
+      { label: 'দুগ্ধদানকালীন (Lactational)', value: 'Lactational' },
+    ],
+    locations: [
+      { label: 'LMP: ১ মাস পূর্বে', value: 'LMP 1 mo ago' },
+      { label: 'LMP: ২ মাস পূর্বে', value: 'LMP 2 mos ago' },
+      { label: 'LMP: ৩ মাস পূর্বে', value: 'LMP 3 mos ago' },
+    ],
+    formatString: ({ character, duration, location }) => {
+      let base = character ? `${character} Amenorrhea` : 'Amenorrhea';
+      if (location) base += ` (${location})`;
+      if (duration) base += ` - ${duration}`;
+      return base;
+    },
+  },
 };
 
 /**
@@ -270,6 +272,15 @@ export function getQualifierKey(symptom: string): string | null {
     s.includes('প্রস্রাব')
   ) {
     return 'burning_micturition';
+  }
+  if (
+    s.includes('amenorrh') ||
+    s.includes('মাসিক বন্ধ') ||
+    s.includes('ঋতুস্রাব') ||
+    s.includes('period stop') ||
+    s.includes('missed period')
+  ) {
+    return 'amenorrhea';
   }
   return null;
 }

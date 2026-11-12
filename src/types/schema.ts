@@ -60,6 +60,15 @@ export interface Tenant extends BaseRecord {
   ai_api_key?: string;
   nvidia_api_key?: string;
   ollama_base_url?: string;
+  pad_layout_style?: 'modern_teal' | 'classic_clinical' | 'executive_navy' | 'minimal_elegant';
+  logo_url?: string;
+  watermark_enabled?: boolean;
+  watermark_type?: 'custom_image' | 'logo' | 'text';
+  watermark_image_url?: string;
+  watermark_text?: string;
+  watermark_opacity?: number;
+  visiting_hours?: string;
+  special_notes?: string;
 }
 
 /** A patient registered by a tenant. */
@@ -88,6 +97,15 @@ export interface Encounter extends BaseRecord {
   ai_suggested_notes: string | null;
 }
 
+/** A step in a tapered or stepped dosage schedule (e.g. Week 1 high dose, Week 2 low dose). */
+export interface TaperingStep {
+  step: number; // 1, 2, 3...
+  schedule: string; // e.g. '2+0+2'
+  duration: string; // e.g. '7 Days'
+  meal_timing?: MealTiming;
+  note?: string; // e.g. '১ম সপ্তাহ', '২য় সপ্তাহে'
+}
+
 /** One medicine line on a prescription. */
 export interface PrescriptionItem extends BaseRecord {
   encounter_id: UUID;
@@ -100,6 +118,7 @@ export interface PrescriptionItem extends BaseRecord {
   meal_timing: MealTiming;
   duration: string; // e.g. '7 Days'
   special_instructions: string;
+  tapering_steps?: TaperingStep[];
 }
 
 /** An uploaded lab/imaging report for a patient (optionally an encounter). */

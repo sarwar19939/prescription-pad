@@ -20,6 +20,8 @@ import type { Encounter, Patient } from '@/types/schema';
 import { VoiceScribeDialog } from './voice-scribe-dialog';
 import { ALL_CHIEF_COMPLAINTS_BY_CATEGORY, TOP_CHIEF_COMPLAINTS } from './clinical-presets';
 import { SymptomModifierPanel } from './symptom-modifier-panel';
+import { ClinicalAutocompleteInput } from './clinical-autocomplete-input';
+import { searchComplaintSuggestions, type ClinicalSuggestionItem } from '@/services/clinicalAutocompleteService';
 
 export function ClinicalCcSection({
   encounter,
@@ -117,22 +119,29 @@ export function ClinicalCcSection({
   const handleRemoveItem = (index: number) => {
     const next = complaints.filter((_, i) => i !== index);
     updateComplaints(next);
-    if (activeModifier?.index === index) {
-      setActiveModifier(null);
-    }
+    if (activeModifier?.index === index) setActiveModifier(null);
   };
 
-  const handleAddCustom = () => {
-    const val = customInput.trim();
+  const handleAddCustom = (valOverride?: string) => {
+    const val = (valOverride || customInput).trim();
     if (!val) return;
     if (!complaints.some((c) => c.toLowerCase() === val.toLowerCase())) {
       const next = [...complaints, val];
       updateComplaints(next);
-      setActiveModifier({
-        symptomName: val,
-        existingText: val,
-        index: next.length - 1,
-      });
+      setActiveModifier({ symptomName: val, existingText: val, index: next.length - 1 });
+    }
+    setCustomInput('');
+  };
+
+  const handleSelectSuggestion = (item: ClinicalSuggestionItem) => {
+    const val = item.text;
+    const existingIdx = findExistingIndex(val);
+    if (existingIdx >= 0) {
+      setActiveModifier({ symptomName: val, existingText: complaints[existingIdx], index: existingIdx });
+    } else {
+      const next = [...complaints, val];
+      updateComplaints(next);
+      setActiveModifier({ symptomName: val, existingText: val, index: next.length - 1 });
     }
     setCustomInput('');
   };
@@ -275,17 +284,13 @@ export function ClinicalCcSection({
           );
         })}
 
-        <input
+        <ClinicalAutocompleteInput
           value={customInput}
-          onChange={(e) => setCustomInput(e.target.value)}
-          onKeyDown={(e) => {
-            if (e.key === 'Enter') {
-              e.preventDefault();
-              handleAddCustom();
-            }
-          }}
-          placeholder={complaints.length === 0 ? 'উপসর্গ লিখুন বা সিলেক্ট করুন…' : '+ আরও যোগ করুন…'}
-          className="h-7 min-w-28 flex-1 border-0 bg-transparent text-xs font-medium outline-none placeholder:text-slate-400"
+          onChange={setCustomInput}
+          onSelect={handleSelectSuggestion}
+          onSubmitFreeText={handleAddCustom}
+          searchFn={searchComplaintSuggestions}
+          placeholder={complaints.length === 0 ? 'উপসর্গ লিখুন বা খুঁজুন (যেমন: Amenorrhea, Fever)...' : '+ আরও উপসর্গ খুঁজুন/লিখুন…'}
         />
       </div>
     </div>

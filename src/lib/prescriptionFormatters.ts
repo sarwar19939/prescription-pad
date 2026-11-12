@@ -102,11 +102,24 @@ export function formatSubcontinentDuration(duration?: string | null): string {
 export function formatSubcontinentRxLine(item: Partial<PrescriptionItem>): {
   title: string;
   dosageDetails: string;
+  taperingLines?: string[];
 } {
   const form = item.dosage_form || 'Tab';
   const brand = item.brand_name || 'Medicine';
   const strength = item.strength ? `(${item.strength})` : '';
   const title = `${form}. ${brand} ${strength}`.trim();
+
+  let taperingLines: string[] | undefined;
+  if (item.tapering_steps && item.tapering_steps.length > 0) {
+    taperingLines = item.tapering_steps.map((st, i) => {
+      const stepPrefix = i === 0 ? 'ধাপ ১' : `অতঃপর ধাপ ${toBengaliNumerals(i + 1)}`;
+      const s = formatSubcontinentSchedule(st.schedule);
+      const m = formatSubcontinentMealTiming(st.meal_timing || item.meal_timing);
+      const d = formatSubcontinentDuration(st.duration);
+      const note = st.note ? ` (${st.note})` : '';
+      return `${stepPrefix}: ${[s, m, d].filter(Boolean).join(' — ')}${note}`;
+    });
+  }
 
   const sched = formatSubcontinentSchedule(item.schedule);
   const meal = formatSubcontinentMealTiming(item.meal_timing);
@@ -115,5 +128,5 @@ export function formatSubcontinentRxLine(item: Partial<PrescriptionItem>): {
   const parts = [sched, meal, dur].filter(Boolean);
   const dosageDetails = parts.join(' — ');
 
-  return { title, dosageDetails };
+  return { title, dosageDetails, taperingLines };
 }

@@ -6,6 +6,7 @@
  * All chief complaints & history notes are standardized in professional Medical English.
  */
 import type { PrescriptionItem, Vitals } from '@/types/schema';
+import { getActiveTenantAiConfig } from './auth';
 
 export interface ScribeExtractionResult {
   chief_complaints: string[];
@@ -173,6 +174,7 @@ export async function processVoiceConsultation(
   const localComplaints = extractComplaintsFromSpokenText(transcript);
 
   try {
+    const aiCfg = await getActiveTenantAiConfig();
     const res = await fetch('/api/ai/clinical-copilot', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -181,6 +183,8 @@ export async function processVoiceConsultation(
         payload: {
           transcript,
           patientContext,
+          geminiApiKey: aiCfg.ai_api_key,
+          nvidiaApiKey: aiCfg.nvidia_api_key,
         },
       }),
     });

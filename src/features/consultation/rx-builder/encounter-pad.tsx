@@ -126,12 +126,45 @@ export function EncounterPad({ patient }: { patient: Patient }) {
       </div>
 
       {/* Unified Digital Prescription Pad Sheet (A4 Style Canvas) */}
-      <div className="rounded-2xl border border-slate-200/90 bg-white p-5 sm:p-7 shadow-sm max-w-5xl mx-auto w-full space-y-6 print:hidden">
+      <div className="relative overflow-hidden rounded-2xl border border-slate-200/90 bg-white p-5 sm:p-7 shadow-sm max-w-5xl mx-auto w-full space-y-6 print:hidden">
+        {/* On-screen Watermark (জলছাপ) Layer */}
+        {tenant?.watermark_enabled && (
+          <div
+            aria-hidden
+            className="pointer-events-none select-none absolute inset-0 flex items-center justify-center overflow-hidden z-0"
+          >
+            {tenant.watermark_type === 'custom_image' && tenant.watermark_image_url ? (
+              <img
+                src={tenant.watermark_image_url}
+                alt=""
+                className="max-w-[340px] max-h-[340px] object-contain grayscale"
+                style={{ opacity: tenant.watermark_opacity ?? 0.07 }}
+              />
+            ) : tenant.watermark_type === 'logo' && tenant.logo_url ? (
+              <img
+                src={tenant.logo_url}
+                alt=""
+                className="max-w-[320px] max-h-[320px] object-contain grayscale"
+                style={{ opacity: tenant.watermark_opacity ?? 0.07 }}
+              />
+            ) : (
+              <span
+                className="text-4xl sm:text-6xl font-black uppercase tracking-widest text-slate-800 rotate-[-25deg] whitespace-nowrap"
+                style={{ opacity: tenant.watermark_opacity ?? 0.05 }}
+              >
+                {tenant.watermark_text || tenant.clinic_name}
+              </span>
+            )}
+          </div>
+        )}
+
         {/* 1. Letterhead & Patient Bar */}
-        <PrescriplyPadHeader tenant={tenant} patient={patient} encounter={encounter} />
+        <div className="relative z-10">
+          <PrescriplyPadHeader tenant={tenant} patient={patient} encounter={encounter} />
+        </div>
 
         {/* 2. Authentic Two-Column Clinical Pad Layout */}
-        <div className="grid grid-cols-1 lg:grid-cols-[33%_67%] gap-6 text-slate-900">
+        <div className="relative z-10 grid grid-cols-1 lg:grid-cols-[33%_67%] gap-6 text-slate-900">
           {/* Left Column (33%): Clinical Assessment (C/C, O/E, Vitals, History, Dx, Ix) */}
           <div className="lg:border-r lg:border-dashed lg:border-slate-300 lg:pr-5">
             <PrescriplyClinicalSidebar

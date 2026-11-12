@@ -17,6 +17,7 @@ import type { Tenant } from '@/types/schema';
 import { Button } from '@/components/ui/button';
 import { Separator } from '@/components/ui/separator';
 import { BackupRestoreCard } from '@/features/settings/backup-restore-card';
+import { PrescriptionPadSetupCard } from '@/features/settings/prescription-pad-setup-card';
 
 const CLINICAL_FIELDS: Array<{ key: keyof Tenant; label: string; placeholder?: string }> = [
   { key: 'clinic_name', label: 'Clinic / Practice Name' },
@@ -90,7 +91,10 @@ export default function SettingsPage() {
         </div>
       </div>
 
-      {/* 2. Print Margin Calibration */}
+      {/* 2. Prescription Pad Theme, Logo & Watermark Setup */}
+      <PrescriptionPadSetupCard tenant={tenant} onPatch={patch} />
+
+      {/* 3. Print Margin Calibration */}
       <div className="rounded-lg border border-neutral-200 bg-white p-4 shadow-2xs">
         <h2 className="text-sm font-semibold uppercase tracking-wide text-neutral-600">
           Prescription Print Calibration (Pre-Printed Pads)

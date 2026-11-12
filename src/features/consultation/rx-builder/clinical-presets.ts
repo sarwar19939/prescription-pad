@@ -107,6 +107,18 @@ export const ALL_CHIEF_COMPLAINTS_BY_CATEGORY = [
       'Excessive hair loss',
     ],
   },
+  {
+    category: 'মহিলা ও প্রসূতি (Gynae & Obstetric)',
+    items: [
+      'Amenorrhea (মাসিক বন্ধ)',
+      'Primary Amenorrhea',
+      'Secondary Amenorrhea',
+      'Dysmenorrhea / Menstrual cramp',
+      'Menorrhagia / Excessive bleeding',
+      'White discharge / Leucorrhea',
+      'Lower abdominal pain (Pelvic)',
+    ],
+  },
 ];
 
 export const HISTORY_CATEGORIES = [
@@ -182,8 +194,11 @@ export const HISTORY_CATEGORIES = [
     title: 'মহিলা ও প্রসূতি ইতিহাস (Obstetric & Gynae)',
     type: 'gynae',
     items: [
+      'Amenorrhea (মাসিক বন্ধ)',
       'Regular Menstrual Cycle',
       'Irregular Menstrual Cycle',
+      'Dysmenorrhea / Menstrual pain',
+      'Polycystic Ovarian Syndrome (PCOS)',
       'Lactating Mother (দুগ্ধদানকারী মা)',
       'Pregnant (1st Trimester)',
       'Pregnant (2nd Trimester)',

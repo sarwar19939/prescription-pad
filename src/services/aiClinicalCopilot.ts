@@ -3,6 +3,7 @@
  * Strict Privacy Rule: All PII is stripped client-side prior to prompt serialization.
  */
 import type { Encounter, InvestigationReport, Patient } from '@/types/schema';
+import { getActiveTenantAiConfig } from './auth';
 
 export type AIProvider = 'cloud' | 'local';
 
@@ -99,10 +100,11 @@ export async function analyzeLabReport(
     nvidiaApiKey?: string;
   },
 ): Promise<LabAnalysisResult> {
-  const provider = options?.provider ?? (navigator.onLine ? 'cloud' : 'local');
+  const aiCfg = await getActiveTenantAiConfig();
+  const provider = options?.provider ?? aiCfg.ai_provider ?? (navigator.onLine ? 'cloud' : 'local');
 
   if (provider === 'local') {
-    return analyzeWithOllama(imageBase64OrText, options?.ollamaBaseUrl);
+    return analyzeWithOllama(imageBase64OrText, options?.ollamaBaseUrl || aiCfg.ollama_base_url);
   }
 
   const res = await fetch('/api/ai/clinical-copilot', {
@@ -113,8 +115,8 @@ export async function analyzeLabReport(
       payload: {
         content: imageBase64OrText,
         mimeType: options?.mimeType || 'text/plain',
-        geminiApiKey: options?.geminiApiKey,
-        nvidiaApiKey: options?.nvidiaApiKey,
+        geminiApiKey: options?.geminiApiKey || aiCfg.ai_api_key,
+        nvidiaApiKey: options?.nvidiaApiKey || aiCfg.nvidia_api_key,
       },
     }),
   });
@@ -162,10 +164,11 @@ export async function suggestClinicalTrack(
     },
   );
 
-  const provider = options?.provider ?? (navigator.onLine ? 'cloud' : 'local');
+  const aiCfg = await getActiveTenantAiConfig();
+  const provider = options?.provider ?? aiCfg.ai_provider ?? (navigator.onLine ? 'cloud' : 'local');
 
   if (provider === 'local') {
-    return suggestTrackWithOllama(anonymized, options?.ollamaBaseUrl);
+    return suggestTrackWithOllama(anonymized, options?.ollamaBaseUrl || aiCfg.ollama_base_url);
   }
 
   const res = await fetch('/api/ai/clinical-copilot', {
@@ -175,8 +178,8 @@ export async function suggestClinicalTrack(
       action: 'suggest_track',
       payload: {
         ...anonymized,
-        geminiApiKey: options?.geminiApiKey,
-        nvidiaApiKey: options?.nvidiaApiKey,
+        geminiApiKey: options?.geminiApiKey || aiCfg.ai_api_key,
+        nvidiaApiKey: options?.nvidiaApiKey || aiCfg.nvidia_api_key,
       },
     }),
   });
