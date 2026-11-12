@@ -77,8 +77,8 @@ export async function loginDoctor(email: string, password: string): Promise<Auth
       userId: DEFAULT_TENANT_ID,
       email,
       tenantId: DEFAULT_TENANT_ID,
-      doctorName: 'Dr. A. Verma',
-      clinicName: 'MedRecord Clinic (Offline)',
+      doctorName: 'ডাঃ গোলাম সারোয়ার',
+      clinicName: 'বসিরবানিয়া চেম্বার',
       cachedAt: new Date().toISOString(),
     };
     saveCachedSession(session);

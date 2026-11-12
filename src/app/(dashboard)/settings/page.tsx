@@ -20,13 +20,13 @@ import { BackupRestoreCard } from '@/features/settings/backup-restore-card';
 import { PrescriptionPadSetupCard } from '@/features/settings/prescription-pad-setup-card';
 
 const CLINICAL_FIELDS: Array<{ key: keyof Tenant; label: string; placeholder?: string }> = [
-  { key: 'clinic_name', label: 'Clinic / Practice Name' },
-  { key: 'doctor_name', label: 'Doctor Full Name' },
-  { key: 'degrees', label: 'Degrees & Qualifications', placeholder: 'MBBS, MD' },
+  { key: 'clinic_name', label: 'Clinic / Practice Name', placeholder: 'বসিরবানিয়া চেম্বার' },
+  { key: 'doctor_name', label: 'Doctor Full Name', placeholder: 'ডাঃ গোলাম সারোয়ার' },
+  { key: 'degrees', label: 'Degrees & Qualifications', placeholder: 'MBBS, FCPS' },
   { key: 'specialty', label: 'Specialty', placeholder: 'General Physician' },
-  { key: 'reg_number', label: 'Medical Registration Number', placeholder: 'MCI-123456' },
-  { key: 'phone', label: 'Clinic Contact Phone' },
-  { key: 'address', label: 'Clinic Physical Address' },
+  { key: 'reg_number', label: 'Medical Registration Number', placeholder: 'BMDC-A-12345' },
+  { key: 'phone', label: 'Clinic Contact Phone', placeholder: '01700-000000' },
+  { key: 'address', label: 'Clinic Physical Address', placeholder: 'বসিরবানিয়া, পার্বতীপুর, দিনাজপুর' },
 ];
 
 export default function SettingsPage() {

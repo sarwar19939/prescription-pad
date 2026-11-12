@@ -22,6 +22,7 @@ import {
 
 import { SyncStatusBadge } from '@/components/sync-status-badge';
 import { db } from '@/db/localDb';
+import { seedInitialData } from '@/db/seed';
 import { getCachedSession, getCurrentTenantId, logoutDoctor } from '@/services/auth';
 import { ensureMedexSeeded } from '@/services/medexService';
 import { cn } from '@/lib/utils';
@@ -100,12 +101,17 @@ export function DashboardSidebar() {
   const pathname = usePathname();
   const router = useRouter();
   const consultHref = useConsultationHref();
+  const tenantId = getCurrentTenantId();
+  const tenant = useLiveQuery(() => db.tenants.get(tenantId), [tenantId]);
   const session = getCachedSession();
 
   const handleLogout = async () => {
     await logoutDoctor();
     router.push('/login');
   };
+
+  const doctorDisplayName = tenant?.doctor_name || session?.doctorName || 'ডাঃ গোলাম সারোয়ার';
+  const clinicDisplayName = tenant?.clinic_name || session?.clinicName || 'বসিরবানিয়া চেম্বার';
 
   return (
     <aside className="flex w-64 shrink-0 flex-col justify-between border-r border-slate-200/80 bg-white p-5">
@@ -140,10 +146,10 @@ export function DashboardSidebar() {
         <div className="flex items-center justify-between rounded-xl border border-slate-200/80 bg-slate-50 p-3">
           <div className="min-w-0 pr-2">
             <div className="truncate text-sm font-bold text-slate-900">
-              {session?.doctorName || 'Dr. Verma'}
+              {doctorDisplayName}
             </div>
             <div className="truncate text-xs font-medium text-slate-500">
-              {session?.clinicName || 'Demo Clinic'}
+              {clinicDisplayName}
             </div>
           </div>
           <button
@@ -165,6 +171,7 @@ export function DashboardHeader() {
 
   useEffect(() => {
     void ensureMedexSeeded(tenantId);
+    void seedInitialData();
   }, [tenantId]);
 
   return (

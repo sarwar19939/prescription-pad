@@ -23,12 +23,12 @@ import type {
 const DEFAULT_TENANT: Omit<Tenant, 'id' | 'created_at' | 'updated_at'> = {
   tenant_id: DEFAULT_TENANT_ID,
   sync_status: 'synced',
-  clinic_name: 'MedRecord Demo Clinic',
-  doctor_name: 'Dr. A. Verma',
-  degrees: 'MBBS, MD (Internal Medicine)',
-  specialty: 'General Physician',
-  phone: '+91-90000-00001',
-  address: '12 Clay Road, Kolkata 700001',
+  clinic_name: 'বসিরবানিয়া চেম্বার',
+  doctor_name: 'ডাঃ গোলাম সারোয়ার',
+  degrees: 'MBBS, FCPS',
+  specialty: 'জেনারেল ফিজিশিয়ান (General Physician)',
+  phone: '01700-000000',
+  address: 'বসিরবানিয়া, পার্বতীপুর, দিনাজপুর',
   subscription_plan: 'free',
   print_margin_top_mm: 12,
   print_margin_left_mm: 15,
@@ -58,8 +58,32 @@ export async function seedInitialData(): Promise<SeedSummary> {
     .equals(DEFAULT_TENANT_ID)
     .count();
 
-  if (existingTenant && existingPatients >= PATIENT_SEEDS.length) {
-    return snapshotCounts();
+  // If the default tenant already exists with old demo placeholder info, auto-migrate to Dr. Golam Sarowar
+  if (existingTenant) {
+    const isOldDemoTenant =
+      existingTenant.doctor_name === 'Dr. A. Verma' ||
+      existingTenant.doctor_name === 'Dr. Specialist Physician' ||
+      existingTenant.doctor_name === 'Dr. Verma' ||
+      existingTenant.address?.includes('Kolkata') ||
+      existingTenant.address?.includes('Clay Road') ||
+      existingTenant.clinic_name === 'MedRecord Demo Clinic' ||
+      !existingTenant.doctor_name;
+
+    if (isOldDemoTenant) {
+      await db.tenants.update(DEFAULT_TENANT_ID, {
+        doctor_name: 'ডাঃ গোলাম সারোয়ার',
+        clinic_name: 'বসিরবানিয়া চেম্বার',
+        address: 'বসিরবানিয়া, পার্বতীপুর, দিনাজপুর',
+        phone: existingTenant.phone?.includes('+91') ? '01700-000000' : existingTenant.phone || '01700-000000',
+        degrees: existingTenant.degrees || 'MBBS, FCPS',
+        specialty: existingTenant.specialty || 'জেনারেল ফিজিশিয়ান (General Physician)',
+        updated_at: new Date().toISOString(),
+      });
+    }
+
+    if (existingPatients >= PATIENT_SEEDS.length) {
+      return snapshotCounts();
+    }
   }
 
   const ts = nowIso();

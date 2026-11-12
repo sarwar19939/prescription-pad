@@ -9,9 +9,9 @@ import { ShieldCheck, Info } from 'lucide-react';
 import type { Tenant } from '@/types/schema';
 
 export function PrescriplySignatureBlock({ tenant }: { tenant?: Tenant | null }) {
-  const doctorName = tenant?.doctor_name || 'Dr. Specialist Physician';
-  const degrees = tenant?.degrees || 'MBBS, FCPS, MD';
-  const clinicName = tenant?.clinic_name || 'Care Medical Chamber';
+  const doctorName = tenant?.doctor_name || 'ডাঃ গোলাম সারোয়ার';
+  const degrees = tenant?.degrees || 'MBBS, FCPS';
+  const clinicName = tenant?.clinic_name || 'বসিরবানিয়া চেম্বার';
   const regNumber = tenant?.reg_number || 'A-BMDC-Verified';
   const specialNotes = tenant?.special_notes;
 

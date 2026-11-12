@@ -207,7 +207,7 @@ export function PrescriptionWatermarkSection({
                 type="text"
                 value={tenant.watermark_text || ''}
                 onChange={(e) => onPatch({ watermark_text: e.target.value })}
-                placeholder={tenant.clinic_name || 'Clinic Name'}
+                placeholder={tenant.clinic_name || 'বসিরবানিয়া চেম্বার'}
                 className="h-8 w-full max-w-sm rounded-md border border-slate-300 bg-white px-2.5 text-xs outline-none focus:border-indigo-600"
               />
             </div>

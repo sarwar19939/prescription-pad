@@ -21,13 +21,13 @@ export function PrescriplyPadHeader({
   encounter,
 }: PrescriplyPadHeaderProps) {
   const preprinted = tenant?.hide_header_for_print === true;
-  const clinicName = tenant?.clinic_name || 'Care Medical Chamber';
-  const doctorName = tenant?.doctor_name || 'Dr. Specialist Physician';
-  const degrees = tenant?.degrees || 'MBBS, BCS (Health), FCPS';
-  const specialty = tenant?.specialty || 'General Physician & Clinical Specialist';
+  const clinicName = tenant?.clinic_name || 'বসিরবানিয়া চেম্বার';
+  const doctorName = tenant?.doctor_name || 'ডাঃ গোলাম সারোয়ার';
+  const degrees = tenant?.degrees || 'MBBS, FCPS';
+  const specialty = tenant?.specialty || 'জেনারেল ফিজিশিয়ান (General Physician)';
   const regNumber = tenant?.reg_number || 'A-BMDC-Verified';
   const phone = tenant?.phone || '01700-000000';
-  const address = tenant?.address || 'Dhaka, Bangladesh';
+  const address = tenant?.address || 'বসিরবানিয়া, পার্বতীপুর, দিনাজপুর';
   const visitingHours = tenant?.visiting_hours;
   const logoUrl = tenant?.logo_url;
   const padStyle = tenant?.pad_layout_style || 'modern_teal';

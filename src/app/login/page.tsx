@@ -121,7 +121,7 @@ export default function LoginPage() {
                   <Label className="text-xs">Doctor Name</Label>
                   <Input
                     required
-                    placeholder="Dr. Jane Doe"
+                    placeholder="ডাঃ গোলাম সারোয়ার"
                     value={doctorName}
                     onChange={(e) => setDoctorName(e.target.value)}
                     className="mt-1 h-8 text-xs"
@@ -131,7 +131,7 @@ export default function LoginPage() {
                   <Label className="text-xs">Clinic / Practice Name</Label>
                   <Input
                     required
-                    placeholder="Care Clinic Kolkata"
+                    placeholder="বসিরবানিয়া চেম্বার, পার্বতীপুর"
                     value={clinicName}
                     onChange={(e) => setClinicName(e.target.value)}
                     className="mt-1 h-8 text-xs"
