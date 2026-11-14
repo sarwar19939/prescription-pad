@@ -7,17 +7,19 @@
  */
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
-import { useEffect, type ReactNode } from 'react';
+import { useEffect, useState, type ReactNode } from 'react';
 import { useLiveQuery } from 'dexie-react-hooks';
 import {
   ClipboardPlus,
   CreditCard,
   LayoutDashboard,
   LogOut,
+  Menu,
   Pill,
   Settings,
   Stethoscope,
   Users,
+  X,
 } from 'lucide-react';
 
 import { SyncStatusBadge } from '@/components/sync-status-badge';
@@ -114,7 +116,7 @@ export function DashboardSidebar() {
   const clinicDisplayName = tenant?.clinic_name || session?.clinicName || 'বসিরবানিয়া চেম্বার';
 
   return (
-    <aside className="flex w-64 shrink-0 flex-col justify-between border-r border-slate-200/80 bg-white p-5">
+    <aside className="hidden md:flex w-64 shrink-0 flex-col justify-between border-r border-slate-200/80 bg-white p-5">
       <div className="flex flex-col gap-6">
         <Link href="/patients" className="flex items-center gap-2.5 px-1 py-1 focus:outline-none">
           <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-teal-600 text-white shadow-xs">
@@ -168,20 +170,110 @@ export function DashboardSidebar() {
 
 export function DashboardHeader() {
   const tenantId = getCurrentTenantId();
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const pathname = usePathname();
+  const consultHref = useConsultationHref();
+  const tenant = useLiveQuery(() => db.tenants.get(tenantId), [tenantId]);
+  const session = getCachedSession();
+  const router = useRouter();
 
   useEffect(() => {
     void ensureMedexSeeded(tenantId);
     void seedInitialData();
   }, [tenantId]);
 
+  const handleLogout = async () => {
+    await logoutDoctor();
+    router.push('/login');
+  };
+
+  const doctorDisplayName = tenant?.doctor_name || session?.doctorName || 'ডাঃ গোলাম সারোয়ার';
+  const clinicDisplayName = tenant?.clinic_name || session?.clinicName || 'বসিরবানিয়া চেম্বার';
+
   return (
-    <header className="sticky top-0 z-40 flex h-16 items-center justify-between border-b border-slate-200/80 bg-white/95 px-8 backdrop-blur-md">
-      <div className="flex items-center gap-2">
-        <span className="text-base font-bold text-slate-900 tracking-tight">Clinical Suite</span>
-        <span className="text-slate-300">/</span>
-        <span className="text-sm font-medium text-slate-500">Practice Chamber</span>
-      </div>
-      <SyncStatusBadge />
-    </header>
+    <>
+      <header className="sticky top-0 z-40 flex h-14 sm:h-16 items-center justify-between border-b border-slate-200/80 bg-white/95 px-3 sm:px-6 md:px-8 backdrop-blur-md">
+        <div className="flex items-center gap-2.5">
+          <button
+            type="button"
+            onClick={() => setMobileMenuOpen(true)}
+            className="md:hidden flex h-9 w-9 items-center justify-center rounded-lg border border-slate-200 text-slate-700 hover:bg-slate-100"
+            aria-label="Open mobile menu"
+          >
+            <Menu className="h-5 w-5" />
+          </button>
+
+          <div className="flex items-center gap-1.5 sm:gap-2">
+            <span className="text-sm sm:text-base font-bold text-slate-900 tracking-tight">Clinical Suite</span>
+            <span className="text-slate-300">/</span>
+            <span className="text-xs sm:text-sm font-medium text-slate-500 truncate max-w-[120px] sm:max-w-none">
+              Practice Chamber
+            </span>
+          </div>
+        </div>
+        <SyncStatusBadge />
+      </header>
+
+      {/* Mobile Navigation Drawer */}
+      {mobileMenuOpen && (
+        <div className="fixed inset-0 z-50 flex md:hidden animate-in fade-in duration-200">
+          <div
+            className="fixed inset-0 bg-slate-900/50 backdrop-blur-xs"
+            onClick={() => setMobileMenuOpen(false)}
+          />
+          <div className="relative flex w-72 max-w-[85vw] flex-col justify-between bg-white p-5 shadow-2xl z-10">
+            <div className="flex flex-col gap-5">
+              <div className="flex items-center justify-between border-b border-slate-100 pb-3">
+                <div className="flex items-center gap-2">
+                  <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-teal-600 text-white">
+                    <Stethoscope className="h-5 w-5" />
+                  </div>
+                  <div>
+                    <span className="text-base font-bold text-slate-950 block leading-none">MedRecord</span>
+                    <span className="text-[10px] font-semibold text-teal-700 uppercase">EHR Mobile</span>
+                  </div>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setMobileMenuOpen(false)}
+                  className="rounded-lg p-1.5 text-slate-400 hover:bg-slate-100 hover:text-slate-700"
+                >
+                  <X className="h-5 w-5" />
+                </button>
+              </div>
+
+              <nav className="flex flex-col gap-1" onClick={() => setMobileMenuOpen(false)}>
+                {NAV_ITEMS.map((item) => (
+                  <NavItem
+                    key={item.label}
+                    label={item.label}
+                    href={item.href}
+                    icon={item.icon}
+                    active={isActiveHref(item.href, pathname)}
+                    consultHref={consultHref}
+                  />
+                ))}
+              </nav>
+            </div>
+
+            <div className="border-t border-slate-100 pt-3">
+              <div className="flex items-center justify-between rounded-xl border border-slate-200 bg-slate-50 p-2.5">
+                <div className="min-w-0 pr-2">
+                  <div className="truncate text-xs font-bold text-slate-900">{doctorDisplayName}</div>
+                  <div className="truncate text-[11px] text-slate-500">{clinicDisplayName}</div>
+                </div>
+                <button
+                  type="button"
+                  onClick={handleLogout}
+                  className="rounded-lg p-1.5 text-slate-400 hover:bg-slate-200 hover:text-slate-700"
+                >
+                  <LogOut className="h-4 w-4" />
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+    </>
   );
 }

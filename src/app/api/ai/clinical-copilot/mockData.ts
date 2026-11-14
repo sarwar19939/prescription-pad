@@ -1,32 +1,8 @@
 /**
- * Intelligent Mock Fallbacks for Development & Offline Demo.
+ * Intelligent Mock Fallbacks Hub for Development & Offline Mode.
  */
-export function mockLabAnalysis(payload: { content: string }) {
-  const text = payload?.content || '';
-  if (/sugar|glucose|hba1c/i.test(text)) {
-    return {
-      test_name: 'Glycemic Profile',
-      extracted_metrics: { 'HbA1c': '7.8 %', 'Fasting Blood Sugar': '142 mg/dL', 'Post-Prandial Blood Sugar': '210 mg/dL' },
-      abnormality_flags: ['High HbA1c (7.8%)', 'Elevated Fasting Glucose (142 mg/dL)'],
-      ai_summary: 'Suboptimal glycemic control indicating active diabetes progression. Pharmacotherapy review indicated.',
-    };
-  }
-  if (/creatinine|urea|egfr/i.test(text)) {
-    return {
-      test_name: 'Renal Function Test (RFT)',
-      extracted_metrics: { 'Serum Creatinine': '1.6 mg/dL', 'Blood Urea Nitrogen': '28 mg/dL', 'eGFR': '54 mL/min/1.73m²' },
-      abnormality_flags: ['Elevated Serum Creatinine (1.6 mg/dL)', 'Reduced eGFR (Stage 3a CKD)'],
-      ai_summary: 'Mild renal impairment observed. Monitor hydration and adjust dosages of renally-cleared medications.',
-    };
-  }
-  return {
-    test_name: 'Comprehensive Health Panel',
-    extracted_metrics: { 'Hemoglobin': '11.8 g/dL', 'Total Cholesterol': '225 mg/dL', 'Serum Creatinine': '1.1 mg/dL', 'HbA1c': '6.4 %' },
-    abnormality_flags: ['Borderline Total Cholesterol (225 mg/dL)', 'Pre-diabetic HbA1c (6.4%)'],
-    ai_summary: 'Borderline dyslipidemia and pre-diabetes noted. Recommend dietary lifestyle modifications.',
-  };
-}
-
+export { mockLabAnalysis } from './mockLabAnalysis';
+export { mockImageAnalysis } from './mockImageAnalysis';
 export { mockClinicalTrack } from './mockClinicalTrack';
 
 export function mockFullPrescription(diagnosis: string) {
@@ -78,19 +54,18 @@ export function mockFullPrescription(diagnosis: string) {
     };
   }
 
-  // 3. Peptic Ulcer Disease / GERD / Gastritis (Master The Chamber)
-  if (d.includes('pud') || d.includes('gerd') || d.includes('gastric') || d.includes('গ্যাস্ট্রিক') || d.includes('acidity') || d.includes('বুক জ্বালা')) {
+  // 3. Hypertension (উচ্চ রক্তচাপ) Protocol
+  if (d.includes('hypertension') || d.includes('htn') || d.includes('উচ্চ রক্তচাপ') || d.includes('high bp')) {
     return {
       diagnosis,
       medicines: [
-        { brand_name: 'Sergel', generic_name: 'Esomeprazole', dosage_form: 'Cap', strength: '20 mg', schedule: '1+0+1', meal_timing: 'Before Meal', duration: '14 Days', special_instructions: 'খাবারের ৩০ মিনিট পূর্বে খালি পেটে।' },
-        { brand_name: 'Motigut', generic_name: 'Domperidone', dosage_form: 'Tab', strength: '10 mg', schedule: '1+1+1', meal_timing: 'Before Meal', duration: '10 Days', special_instructions: 'খাবারের ১৫ মিনিট পূর্বে সেব্য।' },
-        { brand_name: 'Entacyd Plus', generic_name: 'Magaldrate + Simethicone', dosage_form: 'Syr', strength: '200 ml', schedule: '2 spoons TDS', meal_timing: 'After Meal', duration: '7 Days', special_instructions: 'খাবারের ১ ঘণ্টা পর এবং রাতে শোয়ার সময় ২ চামচ।' },
+        { brand_name: 'Camlodin', generic_name: 'Amlodipine', dosage_form: 'Tab', strength: '5 mg', schedule: '0+0+1', meal_timing: 'After Meal', duration: 'Continue', special_instructions: 'প্রতিদিন রাতে নির্দিষ্ট সময়ে নিয়মিত সেব্য।' },
+        { brand_name: 'Bislol', generic_name: 'Bisoprolol Fumarate', dosage_form: 'Tab', strength: '2.5 mg', schedule: '1+0+0', meal_timing: 'After Meal', duration: 'Continue', special_instructions: 'সকালে নাস্তার পর নিয়মিত সেব্য।' },
       ],
       advice: [
-        'খাওয়ার পরপরই শুয়ে পড়বেন না, অন্তত ২ ঘণ্টা পর ঘুমাতে যান।',
-        'চা, কফি, অতিরিক্ত ভাজাপোড়া ও মসলাযুক্ত খাবার বর্জন করুন।',
-        'রাতে ঘুমানোর সময় মাথার দিক সামান্য উঁচু রাখুন।',
+        'কাঁচা লবণ খাওয়া সম্পূর্ণ বন্ধ করুন এবং রান্নায় লবণের পরিমাণ সীমিত রাখুন।',
+        'প্রতিদিন অন্তত ৩০ মিনিট দ্রুত হাঁটার অভ্যাস গড়ে তুলুন।',
+        'প্রতি সপ্তাহে অন্তত একবার রক্তচাপ মেপে লিখে রাখুন।',
       ],
     };
   }
@@ -112,6 +87,37 @@ export function mockFullPrescription(diagnosis: string) {
     };
   }
 
+  // 5. Scabies Protocol (খোসপাঁচড়া)
+  if (d.includes('scabies') || d.includes('খোসপাঁচড়া')) {
+    return {
+      diagnosis,
+      medicines: [
+        { brand_name: 'Lorex 5% Cream', generic_name: 'Permethrin 5% w/w', dosage_form: 'Oint', strength: '5%', schedule: '0+0+1', meal_timing: 'Anytime', duration: '1 Day (Repeat in 7 days)', special_instructions: 'ঘাড় থেকে পায়ের পাতা পর্যন্ত মেখে ৮-১২ ঘণ্টা পর সাবান দিয়ে ধুয়ে ফেলবেন।' },
+        { brand_name: 'Bilastin', generic_name: 'Bilastine', dosage_form: 'Tab', strength: '20 mg', schedule: '0+0+1', meal_timing: 'Before Meal', duration: '10 Days', special_instructions: 'রাতে শোয়ার আগে তীব্র চুলকানি উপশমে।' },
+      ],
+      advice: [
+        'পরিবারের সকল সদস্যের একই রাতে একসাথে চিকিৎসা গ্রহণ করতে হবে।',
+        'ব্যবহৃত সকল জামাকাপড় ও বিছানার চাদর ফুটন্ত গরম পানিতে ধুয়ে রোদে শুকান।',
+      ],
+    };
+  }
+
+  // 6. Tinea Corporis / Ringworm Protocol (দাদ)
+  if (d.includes('tinea') || d.includes('ringworm') || d.includes('দাদ')) {
+    return {
+      diagnosis,
+      medicines: [
+        { brand_name: 'Exifin', generic_name: 'Terbinafine', dosage_form: 'Tab', strength: '250 mg', schedule: '1+0+0', meal_timing: 'After Meal', duration: '14-21 Days', special_instructions: 'প্রতিদিন দুপুরে খাবারের পর ১টি।' },
+        { brand_name: 'Lulizol Cream', generic_name: 'Luliconazole 1% Cream', dosage_form: 'Oint', strength: '1%', schedule: '0+0+1', meal_timing: 'Anytime', duration: '14-21 Days', special_instructions: 'ক্ষতস্থানের অন্তত ১ ইঞ্চি বাইরে পর্যন্ত হালকা মেখে দিন।' },
+        { brand_name: 'Alatrol', generic_name: 'Cetirizine', dosage_form: 'Tab', strength: '10 mg', schedule: '0+0+1', meal_timing: 'After Meal', duration: '7 Days', special_instructions: 'রাতে শোয়ার আগে চুলকানি কমাতে।' },
+      ],
+      advice: [
+        'ক্ষতস্থানে কোনো অবস্থাতেই স্টেরয়েড মলম লাগাবেন না।',
+        'ব্যক্তিগত তোয়ালে ও কাপড় ফুটন্ত গরম পানিতে ধুয়ে রোদে শুকান।',
+      ],
+    };
+  }
+
   // Standard OPD Chamber Fallback
   return {
     diagnosis,
@@ -122,68 +128,6 @@ export function mockFullPrescription(diagnosis: string) {
     advice: [
       'সময়মতো পুষ্টিকর খাবার গ্রহণ করুন ও পর্যাপ্ত বিশ্রাম নিন।',
       'প্রয়োজনে ৭ দিন পর পুনরায় চেম্বারে যোগাযোগ করুন।',
-    ],
-  };
-}
-
-export function mockImageAnalysis(payload: any) {
-  const notes = (payload?.clinicalNotes || '').toLowerCase();
-  const isAcne = notes.includes('acne') || notes.includes('ব্রণ') || notes.includes('pimple');
-
-  if (isAcne) {
-    return {
-      observed_features: [
-        'Inflammatory erythematous papules and open comedones',
-        'Facial distribution predominantly across cheeks and forehead',
-      ],
-      differential_diagnoses: [
-        'Acne Vulgaris (Grade II Moderate)',
-        'Rosacea (Papulopustular)',
-        'Folliculitis',
-      ],
-      primary_diagnosis: 'Acne Vulgaris',
-      recommended_workup: ['Clinical evaluation of severity grade'],
-      suggested_treatment: {
-        medicines: [
-          { brand_name: 'A-Ret Gel', generic_name: 'Tretinoin 0.05% Gel', dosage_form: 'Oint', strength: '0.05%', schedule: '0+0+1', meal_timing: 'Anytime', duration: '60 Days', special_instructions: 'রাতে ঘুমানোর পূর্বে মুখ ধুয়ে শুকিয়ে শুধু ব্রণের জায়গায় হালকা লাগাবেন।' },
-          { brand_name: 'Clinda Gel', generic_name: 'Clindamycin 1% Gel', dosage_form: 'Oint', strength: '1%', schedule: '1+0+0', meal_timing: 'Anytime', duration: '30 Days', special_instructions: 'সকালে গোসলের পর লাগাবেন।' },
-        ],
-        advice: [
-          'বারবার মুখে হাত দেওয়া বা ব্রণ খোঁটা সম্পূর্ণ বন্ধ করুন।',
-          'নন-কমেডোজেনিক মৃদু ফেসওয়াশ দিয়ে দিনে ২ বার মুখ পরিষ্কার করুন।',
-        ],
-      },
-      safety_warnings: ['রেটিনয়েড জেল ব্যবহারের পর রোদে যাওয়ার সময় সানস্ক্রিন ব্যবহার করুন।'],
-    };
-  }
-
-  return {
-    observed_features: [
-      'Annular erythematous scaly plaque with active raised borders and central clearing',
-      'Mild excoriation marks secondary to intense pruritus',
-    ],
-    differential_diagnoses: [
-      'Tinea Corporis / Ringworm (দাদ)',
-      'Nummular Eczema',
-      'Psoriasis (Plaque type)',
-      'Contact Dermatitis',
-    ],
-    primary_diagnosis: 'Tinea Corporis (দাদ)',
-    recommended_workup: ['10% KOH skin scraping examination for fungal hyphae'],
-    suggested_treatment: {
-      medicines: [
-        { brand_name: 'Exifin', generic_name: 'Terbinafine', dosage_form: 'Tab', strength: '250 mg', schedule: '1+0+0', meal_timing: 'After Meal', duration: '14-21 Days', special_instructions: 'প্রতিদিন দুপুরে খাবারের পর ১টি।' },
-        { brand_name: 'Lulizol Cream', generic_name: 'Luliconazole 1% Cream', dosage_form: 'Oint', strength: '1%', schedule: '0+0+1', meal_timing: 'Anytime', duration: '14-21 Days', special_instructions: 'ক্ষতস্থানের অন্তত ১ ইঞ্চি বাইরে পর্যন্ত হালকা মেখে দিন।' },
-        { brand_name: 'Alatrol', generic_name: 'Cetirizine', dosage_form: 'Tab', strength: '10 mg', schedule: '0+0+1', meal_timing: 'After Meal', duration: '7 Days', special_instructions: 'রাতে শোয়ার আগে চুলকানি কমাতে।' },
-      ],
-      advice: [
-        'ক্ষতস্থানে কোনো অবস্থাতেই স্টেরয়েড মলম (যেমন: ডার্মোমিক্স, পেভিসন, ক্লোবেটাসল) লাগাবেন না।',
-        'ব্যক্তিগত তোয়ালে, বিছানার চাদর ও কাপড় আলাদা রাখুন ও ফুটন্ত পানিতে ধুয়ে রোদে শুকান।',
-        'স্থানটি সবসময় শুকনো ও পরিষ্কার রাখুন।',
-      ],
-    },
-    safety_warnings: [
-      'স্টেরয়েডযুক্ত মলম ব্যবহারের ফলে ছত্রাক ছড়িয়ে গিয়ে Tinea Incognito হতে পারে—স্টেরয়েড সম্পূর্ণ নিষিদ্ধ।',
     ],
   };
 }

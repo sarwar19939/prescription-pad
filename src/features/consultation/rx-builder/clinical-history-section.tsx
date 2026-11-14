@@ -230,33 +230,32 @@ export function ClinicalHistorySection({
         />
       )}
 
-      {/* Top Regular Quick Selectors */}
-      <div className="flex flex-wrap gap-1 pt-0.5">
-        {TOP_HISTORY_ITEMS.map((item) => {
-          const active = isSelected(item.type, item.label);
-          return (
-            <button
-              key={item.label}
-              type="button"
-              onClick={() => handleChipClick(item.type, item.label)}
-              className={`rounded-md px-1.5 py-0.5 text-[10px] font-semibold border transition-all ${
-                active
-                  ? item.type === 'allergy'
-                    ? 'bg-rose-600 text-white border-rose-600 font-bold'
-                    : 'bg-teal-700 text-white border-teal-700 font-bold'
-                  : 'bg-white text-slate-700 border-slate-200 hover:border-teal-400 hover:bg-teal-50/50'
-              }`}
-            >
-              {active ? '✓ ' : '+ '}
-              {item.label}
-            </button>
-          );
-        })}
-      </div>
-
-      {/* Expanded 35+ Categorized History Drawer */}
+      {/* Expanded 35+ Categorized History Drawer (Hidden by default to keep UI clean and calm) */}
       {showAllCategories && (
-        <div className="rounded-xl border border-teal-200 bg-slate-50/70 p-2.5 space-y-2 text-xs animate-in fade-in duration-150">
+        <div className="rounded-xl border border-teal-200 bg-slate-50/80 p-2.5 space-y-2 text-xs animate-in fade-in duration-150">
+          <div className="flex flex-wrap gap-1 border-b border-slate-200 pb-1.5">
+            {TOP_HISTORY_ITEMS.map((item) => {
+              const active = isSelected(item.type, item.label);
+              return (
+                <button
+                  key={item.label}
+                  type="button"
+                  onClick={() => handleChipClick(item.type, item.label)}
+                  className={`rounded-md px-1.5 py-0.5 text-[10px] font-semibold border transition-all ${
+                    active
+                      ? item.type === 'allergy'
+                        ? 'bg-rose-600 text-white border-rose-600 font-bold'
+                        : 'bg-teal-700 text-white border-teal-700 font-bold'
+                      : 'bg-white text-slate-700 border-slate-200 hover:border-teal-400 hover:bg-teal-50'
+                  }`}
+                >
+                  {active ? '✓ ' : '+ '}
+                  {item.label}
+                </button>
+              );
+            })}
+          </div>
+
           <div className="flex flex-wrap gap-1 border-b border-slate-200 pb-1.5">
             {HISTORY_CATEGORIES.map((cat, idx) => (
               <button

@@ -69,6 +69,7 @@ export function RegisterPatientDialog({ open, onOpenChange, onRegistered }: Regi
     age: '',
     gender: '' as Gender | '',
     phone: '',
+    address: '',
     blood_group: '',
     chronic_conditions: [] as string[],
     allergies: [] as string[],
@@ -94,6 +95,7 @@ export function RegisterPatientDialog({ open, onOpenChange, onRegistered }: Regi
         age: Number.parseInt(form.age, 10),
         gender: form.gender as Gender,
         phone: form.phone.trim(),
+        address: form.address.trim(),
         blood_group: form.blood_group,
         chronic_conditions: form.chronic_conditions,
         allergies: form.allergies,
@@ -104,7 +106,7 @@ export function RegisterPatientDialog({ open, onOpenChange, onRegistered }: Regi
       };
       await db.patients.put(patient);
       onOpenChange(false);
-      setForm({ full_name: '', age: '', gender: '', phone: '', blood_group: '', chronic_conditions: [], allergies: [] });
+      setForm({ full_name: '', age: '', gender: '', phone: '', address: '', blood_group: '', chronic_conditions: [], allergies: [] });
       onRegistered?.(patient);
       if (startConsultation) router.push(`/consultation/${patient.id}`);
     } catch (e) {
@@ -169,7 +171,16 @@ export function RegisterPatientDialog({ open, onOpenChange, onRegistered }: Regi
               id="phone"
               value={form.phone}
               onChange={(e) => set('phone', e.target.value)}
-              placeholder="+91…"
+              placeholder="01700-000000"
+            />
+          </div>
+          <div className="grid gap-1.5">
+            <Label htmlFor="address">Address (ঠিকানা)</Label>
+            <Input
+              id="address"
+              value={form.address}
+              onChange={(e) => set('address', e.target.value)}
+              placeholder="e.g. পার্বতীপুর, দিনাজপুর"
             />
           </div>
           <div className="grid gap-1.5">

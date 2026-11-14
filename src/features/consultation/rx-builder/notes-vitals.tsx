@@ -13,7 +13,6 @@ import { TagInput } from '@/components/tag-input';
 import { Badge } from '@/components/ui/badge';
 import { analyzeVitals } from '@/services/vitalsService';
 import { ProtocolTemplatesDialog } from './protocol-templates-dialog';
-import { SuggestedProtocolBanner } from './suggested-protocol-banner';
 import type { Encounter, Patient, Vitals as VitalsT } from '@/types/schema';
 
 const COMPLAINT_SUGGESTIONS = [
@@ -279,12 +278,6 @@ export function NotesVitals({ encounter, patient }: { encounter: Encounter; pati
           </div>
         </div>
       </div>
-
-      {patient && (
-        <div className="mt-1">
-          <SuggestedProtocolBanner encounter={encounter} patient={patient} />
-        </div>
-      )}
     </section>
   );
 }

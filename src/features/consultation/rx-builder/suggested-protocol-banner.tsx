@@ -6,7 +6,7 @@
  * allowing 1-click generation of age- and weight-calibrated prescriptions.
  */
 import { useState } from 'react';
-import { Check, Sparkles, Wand2 } from 'lucide-react';
+import { Check, Sparkles, Wand2, X } from 'lucide-react';
 import {
   applyProtocolToEncounter,
   matchProtocolsForDiagnosis,
@@ -26,10 +26,12 @@ export function SuggestedProtocolBanner({
   patient,
 }: SuggestedProtocolBannerProps) {
   const [appliedInfo, setAppliedInfo] = useState<{ id: string; msg: string } | null>(null);
+  const [dismissedIds, setDismissedIds] = useState<Set<string>>(new Set());
   const [loading, setLoading] = useState(false);
 
   const matched = matchProtocolsForDiagnosis(encounter?.diagnosis || []);
-  if (matched.length === 0) return null;
+  const visibleProtocols = matched.filter((proto) => !dismissedIds.has(proto.id));
+  if (visibleProtocols.length === 0) return null;
 
   const handleApply = async (proto: DiseaseProtocolTemplate) => {
     setLoading(true);
@@ -40,7 +42,10 @@ export function SuggestedProtocolBanner({
           ? `${res.medicinesCount}টি নতুন ওষুধ যুক্ত হয়েছে!`
           : 'ওষুধগুলো ইতিমধ্যেই প্রেসক্রিপশনে বিদ্যমান রয়েছে';
       setAppliedInfo({ id: proto.id, msg });
-      setTimeout(() => setAppliedInfo(null), 3500);
+      setTimeout(() => {
+        setAppliedInfo(null);
+        setDismissedIds((prev) => new Set(prev).add(proto.id));
+      }, 2500);
     } finally {
       setLoading(false);
     }
@@ -48,7 +53,7 @@ export function SuggestedProtocolBanner({
 
   return (
     <div className="mb-3 space-y-2">
-      {matched.map((proto) => (
+      {visibleProtocols.map((proto) => (
         <div
           key={proto.id}
           className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-indigo-200 bg-gradient-to-r from-indigo-50/90 via-violet-50/70 to-teal-50/60 p-3.5 shadow-2xs transition-all"
@@ -72,7 +77,7 @@ export function SuggestedProtocolBanner({
             </div>
           </div>
 
-          <div className="flex items-center gap-2 shrink-0">
+          <div className="flex items-center gap-1.5 shrink-0">
             <Button
               type="button"
               size="sm"
@@ -92,6 +97,15 @@ export function SuggestedProtocolBanner({
                 </>
               )}
             </Button>
+
+            <button
+              type="button"
+              onClick={() => setDismissedIds((prev) => new Set(prev).add(proto.id))}
+              className="h-9 w-9 rounded-xl text-slate-400 hover:text-rose-600 hover:bg-rose-50 flex items-center justify-center transition-colors border border-slate-200/60 hover:border-rose-200 bg-white"
+              title="এই প্রোটোকল ব্যানারটি ডিলিট / বন্ধ করুন"
+            >
+              <X className="h-4 w-4" />
+            </button>
           </div>
         </div>
       ))}

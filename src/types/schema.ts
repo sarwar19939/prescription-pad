@@ -82,6 +82,8 @@ export interface Patient extends BaseRecord {
   chronic_conditions: string[];
   allergies: string[];
   medical_surgical_history: string;
+  address?: string;
+  drug_history?: string[];
 }
 
 /** A clinical visit (encounter) for a patient. */
@@ -94,6 +96,8 @@ export interface Encounter extends BaseRecord {
   diagnosis: string[];
   advice: string[];
   follow_up_date: string | null; // ISO 8601 date
+  follow_up_text?: string | null; // e.g. '৭ দিন পর', '১ সপ্তাহ পর', '১ মাস পর'
+  drug_history?: string[]; // Ongoing/past medication names
   ai_suggested_notes: string | null;
 }
 

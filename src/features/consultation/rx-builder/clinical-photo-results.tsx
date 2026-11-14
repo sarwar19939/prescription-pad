@@ -48,9 +48,21 @@ export function ClinicalPhotoResults({
             <Sparkles className="h-3.5 w-3.5 text-indigo-600" />
             নির্বাচিত মূল রোগ (Primary Diagnosis):
           </span>
-          <span className="rounded-full bg-indigo-600 text-white text-[10px] font-bold px-2.5 py-0.5">
-            Active Selection
-          </span>
+          {result.ai_provider === 'gemini' ? (
+            <span className="rounded-full bg-emerald-700 text-white text-[10px] font-bold px-2.5 py-0.5 flex items-center gap-1 shadow-xs">
+              <span className="h-1.5 w-1.5 rounded-full bg-emerald-200 animate-pulse" />
+              🌐 লাইভ অনলাইন AI (Google Gemini Vision)
+            </span>
+          ) : result.ai_provider === 'nvidia_nim' ? (
+            <span className="rounded-full bg-emerald-700 text-white text-[10px] font-bold px-2.5 py-0.5 flex items-center gap-1 shadow-xs">
+              <span className="h-1.5 w-1.5 rounded-full bg-emerald-200 animate-pulse" />
+              🌐 লাইভ অনলাইন AI (NVIDIA NIM Vision)
+            </span>
+          ) : (
+            <span className="rounded-full bg-amber-600 text-white text-[10px] font-bold px-2.5 py-0.5">
+              অফলাইন ব্যাকআপ প্রটোকল
+            </span>
+          )}
         </div>
         <p className="text-sm font-extrabold text-indigo-950">{primaryDiagnosis}</p>
       </div>

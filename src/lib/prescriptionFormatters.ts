@@ -5,7 +5,43 @@
  * - Classical Bengali Meal Timing (খাবারের ২০ মিনিট পূর্বে খালি পেটে / ভরা পেটে)
  * - Duration in days/months (৫ দিন, ৭ দিন, ১৪ দিন, চলবে)
  */
-import type { MealTiming, PrescriptionItem } from '@/types/schema';
+import type { DosageForm, MealTiming, PrescriptionItem } from '@/types/schema';
+
+const FORM_PREFIX_REGEX = /^(tablet|tab|capsule|cap|syrup|syr|injection|inj|ointment|oint|cream|gel|drop|drops|suppository|supp|sachet|inhaler)\.?\s+/i;
+
+/**
+ * Normalizes any free-form or AI dosage form into the standard BMDC short form:
+ * e.g. "Tablet" -> "Tab", "Capsule" -> "Cap", "Syrup" -> "Syr", "Injection" -> "Inj".
+ */
+export function normalizeDosageForm(form?: string | null): DosageForm {
+  if (!form) return 'Tab';
+  const f = form.trim().toLowerCase();
+  if (f.startsWith('cap')) return 'Cap';
+  if (f.startsWith('syr')) return 'Syr';
+  if (f.startsWith('inj')) return 'Inj';
+  if (f.startsWith('oint') || f.startsWith('cream') || f.startsWith('gel')) return 'Oint';
+  if (f.startsWith('drop')) return 'Drop';
+  if (f.startsWith('supp')) return 'Supp';
+  if (f.startsWith('sachet')) return 'Sachet';
+  if (f.startsWith('inhal')) return 'Inhaler';
+  return 'Tab';
+}
+
+/**
+ * Strips redundant dosage form prefixes from brand name to prevent duplicate labels like "Tablet. Tab. Bisocor":
+ * e.g. "Tab. Bisocor" -> "Bisocor"
+ * "Tablet Tab Bisocor" -> "Bisocor"
+ * "Tab Ecosprin" -> "Ecosprin"
+ * "Cap. Maxpro" -> "Maxpro"
+ */
+export function cleanBrandName(brandName?: string | null): string {
+  if (!brandName) return '';
+  let clean = brandName.trim();
+  while (FORM_PREFIX_REGEX.test(clean)) {
+    clean = clean.replace(FORM_PREFIX_REGEX, '').trim();
+  }
+  return clean;
+}
 
 const EN_TO_BN_DIGITS: Record<string, string> = {
   '0': '০',
@@ -52,20 +88,20 @@ export function formatSubcontinentSchedule(schedule?: string | null): string {
 export function formatSubcontinentMealTiming(timing?: MealTiming | string | null): string {
   if (!timing) return '';
   const t = timing.trim().toLowerCase();
-  if (t === 'before meal' || t.includes('before')) {
-    return 'খাবারের ২০ মিনিট পূর্বে (খালি পেটে)';
+  if (t === 'before meal' || t.includes('before') || t.includes('খালি পেট') || t.includes('পূর্বে')) {
+    return 'খাবারের পূর্বে';
   }
-  if (t === 'after meal' || t.includes('after')) {
-    return 'খাবারের পরে (ভরা পেটে)';
+  if (t === 'after meal' || t.includes('after') || t.includes('ভরা পেট') || t.includes('পরে')) {
+    return 'খাবারের পরে';
   }
-  if (t === 'with meal' || t.includes('with')) {
+  if (t === 'with meal' || t.includes('with') || t.includes('সাথে')) {
     return 'খাবারের সাথে';
   }
-  if (t.includes('night') || t.includes('bedtime') || t.includes('sleep')) {
-    return 'রাতে ঘুমানোর পূর্বে';
+  if (t.includes('night') || t.includes('bedtime') || t.includes('sleep') || t.includes('রাতে')) {
+    return 'রাতে শোবার আগে';
   }
   if (t === 'anytime' || t.includes('any')) {
-    return 'যেকোনো সময় / প্রয়োজন অনুযায়ী';
+    return 'যেকোনো সময়';
   }
   return timing;
 }
@@ -104,10 +140,11 @@ export function formatSubcontinentRxLine(item: Partial<PrescriptionItem>): {
   dosageDetails: string;
   taperingLines?: string[];
 } {
-  const form = item.dosage_form || 'Tab';
-  const brand = item.brand_name || 'Medicine';
-  const strength = item.strength ? `(${item.strength})` : '';
-  const title = `${form}. ${brand} ${strength}`.trim();
+  const form = normalizeDosageForm(item.dosage_form);
+  const brand = cleanBrandName(item.brand_name) || item.brand_name || 'Medicine';
+  const hasStrengthInBrand = item.strength && brand.toLowerCase().includes(item.strength.toLowerCase());
+  const strengthPart = item.strength && !hasStrengthInBrand ? item.strength : '';
+  const title = `${form}. ${brand}${strengthPart ? ' ' + strengthPart : ''}`.trim();
 
   let taperingLines: string[] | undefined;
   if (item.tapering_steps && item.tapering_steps.length > 0) {
@@ -129,4 +166,51 @@ export function formatSubcontinentRxLine(item: Partial<PrescriptionItem>): {
   const dosageDetails = parts.join(' — ');
 
   return { title, dosageDetails, taperingLines };
+}
+
+/**
+ * Strips AI vision observations, automated lab OCR lines, and AI diagnostic notes
+ * from clinical findings so that the printed prescription and manual O/E field
+ * contain ONLY the physician's manually entered physical examination findings.
+ */
+export function stripAiGeneratedFindings(text?: string | null): string {
+  if (!text) return '';
+  return text
+    .split('\n')
+    .map((line) => line.trim())
+    .filter((line) => {
+      if (!line) return false;
+      // Filter out AI photo vision notes: e.g. "AI Findings (Onychomycosis): ..."
+      if (/^AI Findings\b/i.test(line)) return false;
+      if (/^\[AI Vision\b/i.test(line)) return false;
+      if (/^AI Exam\b/i.test(line)) return false;
+      if (/^AI Diagnostic\b/i.test(line)) return false;
+      // Filter out automated investigation report tags: e.g. "[12-Lead Electrocardiogram]: ..."
+      if (/^\[.+\]:\s*.+/i.test(line)) return false;
+      return true;
+    })
+    .join('\n')
+    .trim();
+}
+
+/**
+ * Extracts solely the AI-generated findings from a text blob so they can be
+ * preserved in `encounter.ai_suggested_notes` for AI Co-Pilot decision support.
+ */
+export function extractAiGeneratedFindings(text?: string | null): string {
+  if (!text) return '';
+  return text
+    .split('\n')
+    .map((line) => line.trim())
+    .filter((line) => {
+      if (!line) return false;
+      if (/^AI Findings\b/i.test(line)) return true;
+      if (/^\[AI Vision\b/i.test(line)) return true;
+      if (/^AI Exam\b/i.test(line)) return true;
+      if (/^AI Diagnostic\b/i.test(line)) return true;
+      if (/^\[.+\]:\s*.+/i.test(line)) return true;
+      return false;
+    })
+    .join('\n')
+    .trim();
 }

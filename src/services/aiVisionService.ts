@@ -22,7 +22,7 @@ export interface ClinicalVisionResult {
 export async function analyzeClinicalPhoto(
   base64DataUrl: string,
   clinicalNotes = '',
-  patientContext?: { age: number; gender: string; duration?: string },
+  patientContext?: { age: number; gender: string; duration?: string; fileName?: string },
 ): Promise<ClinicalVisionResult> {
   const mimeTypeMatch = base64DataUrl.match(/^data:([^;]+);base64,/);
   const mimeType = mimeTypeMatch ? mimeTypeMatch[1] : 'image/jpeg';
@@ -37,6 +37,7 @@ export async function analyzeClinicalPhoto(
       payload: {
         image: rawBase64,
         mimeType,
+        fileName: patientContext?.fileName,
         clinicalNotes,
         patientContext,
         geminiApiKey: aiCfg.ai_api_key,

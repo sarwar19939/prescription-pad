@@ -11,18 +11,10 @@ import { Loader2, ShieldAlert, Sparkles, Stethoscope } from 'lucide-react';
 
 import { db } from '@/db/localDb';
 import { generateUUID } from '@/lib/uuid';
+import { cleanBrandName, normalizeDosageForm } from '@/lib/prescriptionFormatters';
 import { ensureTodayEncounter } from '../copy-rx';
-import {
-  suggestClinicalTrack,
-  type AIProvider,
-  type ClinicalTrackResult,
-  type SuggestedMedication,
-} from '@/services/aiClinicalCopilot';
-import {
-  applyFullPrescriptionToEncounter,
-  generateFullPrescription,
-  type FullPrescriptionPackage,
-} from '@/services/aiPrescriptionService';
+import { suggestClinicalTrack, type AIProvider, type ClinicalTrackResult, type SuggestedMedication } from '@/services/aiClinicalCopilot';
+import { applyFullPrescriptionToEncounter, generateFullPrescription, type FullPrescriptionPackage } from '@/services/aiPrescriptionService';
 import type { Encounter, Patient } from '@/types/schema';
 import { Button } from '@/components/ui/button';
 import { SlideOverDrawer } from '@/components/ui/motion';
@@ -55,16 +47,11 @@ export function AICopilotDrawer({
   const [packageLoading, setPackageLoading] = useState(false);
 
   const pastEncounters = useLiveQuery(
-    async () => (await db.encounters.where('patient_id').equals(patient.id).toArray())
-      .filter((e) => e.id !== activeEncounter?.id),
+    async () => (await db.encounters.where('patient_id').equals(patient.id).toArray()).filter((e) => e.id !== activeEncounter?.id),
     [patient.id, activeEncounter?.id],
     [],
   );
-  const labReports = useLiveQuery(
-    () => db.investigation_reports.where('patient_id').equals(patient.id).toArray(),
-    [patient.id],
-    [],
-  );
+  const labReports = useLiveQuery(() => db.investigation_reports.where('patient_id').equals(patient.id).toArray(), [patient.id], []);
   const currentRxItems = useLiveQuery(
     async () => (activeEncounter ? db.prescription_items.where('encounter_id').equals(activeEncounter.id).toArray() : []),
     [activeEncounter?.id],
@@ -109,9 +96,7 @@ export function AICopilotDrawer({
     const current = encounter.diagnosis || [];
     if (!current.includes(diag)) {
       await db.encounters.update(encounter.id, {
-        diagnosis: [...current, diag],
-        updated_at: new Date().toISOString(),
-        sync_status: 'pending',
+        diagnosis: [...current, diag], updated_at: new Date().toISOString(), sync_status: 'pending',
       });
     }
     await handleGenerateFullPackage(diag);
@@ -123,13 +108,13 @@ export function AICopilotDrawer({
     try {
       const complaints = activeEncounter?.chief_complaints || [];
       const vitals = (activeEncounter?.vitals || {}) as Record<string, string>;
-      const clinicalFindings = activeEncounter?.clinical_findings || '';
+      const combinedFindings = [activeEncounter?.clinical_findings, activeEncounter?.ai_suggested_notes].filter(Boolean).join('\n');
       const activeDiagnoses = confirmedDiagnoses;
       const currentMedicines = currentRxItems.map((m) => `${m.brand_name} (${m.generic_name})`);
       const answers = answersOverride || doctorAnswers;
 
       const track = await suggestClinicalTrack(patient, pastEncounters, labReports, complaints, vitals, {
-        clinicalFindings,
+        clinicalFindings: combinedFindings,
         activeDiagnoses,
         currentMedicines,
         doctorAnswers: answers,
@@ -157,19 +142,22 @@ export function AICopilotDrawer({
     try {
       const encounter = activeEncounter || (await ensureTodayEncounter(patient));
       const ts = new Date().toISOString();
+      const rawBrand = med.suggested_brand || med.generic_name;
+      const cleanBrand = cleanBrandName(rawBrand) || rawBrand;
+      const cleanForm = normalizeDosageForm(med.dosage_form);
       await db.prescription_items.add({
         id: generateUUID(),
         tenant_id: patient.tenant_id,
         patient_id: patient.id,
         encounter_id: encounter.id,
-        brand_name: med.suggested_brand || med.generic_name,
+        brand_name: cleanBrand,
         generic_name: med.generic_name,
-        dosage_form: 'Tab',
+        dosage_form: cleanForm,
         strength: med.strength || 'Standard',
         schedule: med.schedule || '1+0+1',
         meal_timing: 'After Meal',
         duration: med.duration || '7 Days',
-        special_instructions: med.rationale || '',
+        special_instructions: '',
         created_at: ts,
         updated_at: ts,
         sync_status: 'pending',
@@ -177,6 +165,44 @@ export function AICopilotDrawer({
       setAddedMeds((prev) => new Set(prev).add(med.generic_name));
     } catch (err) {
       alert(`Could not add medication: ${err instanceof Error ? err.message : String(err)}`);
+    }
+  };
+
+  const handleAddSelectedMeds = async (meds: SuggestedMedication[]) => {
+    if (meds.length === 0) return;
+    try {
+      const encounter = activeEncounter || (await ensureTodayEncounter(patient));
+      const ts = new Date().toISOString();
+      const itemsToAdd = meds.map((med) => {
+        const rawBrand = med.suggested_brand || med.generic_name;
+        const cleanBrand = cleanBrandName(rawBrand) || rawBrand;
+        const cleanForm = normalizeDosageForm(med.dosage_form);
+        return {
+          id: generateUUID(),
+          tenant_id: patient.tenant_id,
+          patient_id: patient.id,
+          encounter_id: encounter.id,
+          brand_name: cleanBrand,
+          generic_name: med.generic_name,
+          dosage_form: cleanForm,
+          strength: med.strength || 'Standard',
+          schedule: med.schedule || '1+0+1',
+          meal_timing: 'After Meal' as const,
+          duration: med.duration || '7 Days',
+          special_instructions: '',
+          created_at: ts,
+          updated_at: ts,
+          sync_status: 'pending' as const,
+        };
+      });
+      await db.prescription_items.bulkAdd(itemsToAdd);
+      setAddedMeds((prev) => {
+        const next = new Set(prev);
+        meds.forEach((m) => next.add(m.generic_name));
+        return next;
+      });
+    } catch (err) {
+      alert(`Could not add medications: ${err instanceof Error ? err.message : String(err)}`);
     }
   };
 
@@ -257,6 +283,7 @@ export function AICopilotDrawer({
             addedMeds={addedMeds}
             patient={patient}
             onAddToRx={handleAddToRx}
+            onAddSelectedMeds={handleAddSelectedMeds}
             onConfirmDiagnosis={handleConfirmDiagnosis}
             fullPackage={fullPackage}
             onApplyFullPackage={handleApplyFullPackage}

@@ -11,6 +11,7 @@ import { useLiveQuery } from 'dexie-react-hooks';
 import { CheckCircle2, FileText, Loader2, Printer, Save, Sparkles } from 'lucide-react';
 
 import { db } from '@/db/localDb';
+import { cn } from '@/lib/utils';
 import { ensureTodayEncounter, findTodayEncounter } from '../copy-rx';
 import { PrescriplyPadHeader } from './prescriply-pad-header';
 import { PrescriplyClinicalSidebar } from './prescriply-clinical-sidebar';
@@ -24,6 +25,7 @@ import { Button } from '@/components/ui/button';
 export function EncounterPad({ patient }: { patient: Patient }) {
   const [readyEncounterId, setReadyEncounterId] = useState<string | null>(null);
   const [finalized, setFinalized] = useState(false);
+  const [mobileTab, setMobileTab] = useState<'sidebar' | 'rx' | 'all'>('rx');
 
   // Guarantees an active draft encounter for today (idempotent).
   useEffect(() => {
@@ -101,16 +103,38 @@ export function EncounterPad({ patient }: { patient: Patient }) {
           </span>
         </div>
 
-        <div className="flex items-center gap-2">
+        <div className="flex flex-wrap items-center gap-2">
           {finalized && (
             <span className="flex items-center gap-1.5 text-xs font-semibold text-teal-700 bg-teal-50 border border-teal-200 px-3 py-1 rounded-xl">
               <CheckCircle2 className="h-4 w-4 text-teal-600" aria-hidden /> সংরক্ষিত
             </span>
           )}
+
+          {/* Pre-printed Pad toggle: hide header for pre-printed pads */}
+          <label
+            className="flex items-center gap-1.5 text-xs font-semibold text-slate-700 bg-slate-50 border border-slate-300 px-2.5 py-1.5 rounded-xl cursor-pointer hover:bg-slate-100 transition-colors"
+            title="টিক দিলে প্রেসক্রিপশন প্রিন্ট করার সময় চেম্বার/ডাক্তারের হেডার প্রিন্ট হবে না, শুধুমাত্র প্রেসক্রিপশন বডি প্রিন্ট হবে (আপনার ছাপা প্যাডের জন্য)"
+          >
+            <input
+              type="checkbox"
+              className="h-3.5 w-3.5 rounded accent-teal-600 cursor-pointer"
+              checked={tenant?.hide_header_for_print === true}
+              onChange={async (e) => {
+                if (!tenant) return;
+                await db.tenants.update(tenant.id, {
+                  hide_header_for_print: e.target.checked,
+                  updated_at: new Date().toISOString(),
+                  sync_status: 'pending',
+                });
+              }}
+            />
+            <span>ছাপা প্যাডে প্রিন্ট (হেডার ছাড়া)</span>
+          </label>
+
           <Button
             size="sm"
             onClick={() => void finalize()}
-            className="h-9 px-4 rounded-xl font-semibold text-xs bg-teal-600 hover:bg-teal-700 text-white shadow-xs"
+            className="h-9 px-3 sm:px-4 rounded-xl font-semibold text-xs bg-teal-600 hover:bg-teal-700 text-white shadow-xs"
           >
             <Save className="h-4 w-4 mr-1.5" /> সংরক্ষণ করুন
           </Button>
@@ -118,15 +142,16 @@ export function EncounterPad({ patient }: { patient: Patient }) {
             size="sm"
             variant="outline"
             onClick={() => window.print()}
-            className="h-9 px-4 rounded-xl font-semibold text-xs border-slate-300 text-slate-700 hover:text-teal-700 hover:border-teal-500"
+            className="h-9 px-3 sm:px-4 rounded-xl font-semibold text-xs border-teal-300 bg-teal-50/70 text-teal-900 hover:bg-teal-100 shadow-2xs"
+            title="প্রিন্ট করতে বা PDF হিসেবে সেভ করে শেয়ার করতে ক্লিক করুন"
           >
-            <Printer className="h-4 w-4 mr-1.5" /> প্রিন্ট প্রেসক্রিপশন
+            <Printer className="h-4 w-4 mr-1.5 text-teal-700" /> প্রিন্ট / PDF সংরক্ষণ
           </Button>
         </div>
       </div>
 
       {/* Unified Digital Prescription Pad Sheet (A4 Style Canvas) */}
-      <div className="relative overflow-hidden rounded-2xl border border-slate-200/90 bg-white p-5 sm:p-7 shadow-sm max-w-5xl mx-auto w-full space-y-6 print:hidden">
+      <div className="relative overflow-hidden rounded-2xl border border-slate-200/90 bg-white p-3 sm:p-7 shadow-sm max-w-5xl mx-auto w-full space-y-4 sm:space-y-6 print:hidden">
         {/* On-screen Watermark (জলছাপ) Layer */}
         {tenant?.watermark_enabled && (
           <div
@@ -163,10 +188,45 @@ export function EncounterPad({ patient }: { patient: Patient }) {
           <PrescriplyPadHeader tenant={tenant} patient={patient} encounter={encounter} />
         </div>
 
+        {/* Mobile View Switcher Tab (Hidden on desktop lg) */}
+        <div className="lg:hidden relative z-10 flex items-center p-1 rounded-xl bg-slate-100 border border-slate-200 text-xs font-bold gap-1">
+          <button
+            type="button"
+            onClick={() => setMobileTab('sidebar')}
+            className={cn(
+              'flex-1 py-2 text-center rounded-lg transition-all',
+              mobileTab === 'sidebar' ? 'bg-white text-teal-800 shadow-xs' : 'text-slate-600'
+            )}
+          >
+            📋 লক্ষণ ও পরীক্ষা
+          </button>
+          <button
+            type="button"
+            onClick={() => setMobileTab('rx')}
+            className={cn(
+              'flex-1 py-2 text-center rounded-lg transition-all',
+              mobileTab === 'rx' ? 'bg-white text-teal-800 shadow-xs' : 'text-slate-600'
+            )}
+          >
+            ℞ ওষুধ ও পরামর্শ ({items?.length || 0})
+          </button>
+          <button
+            type="button"
+            onClick={() => setMobileTab('all')}
+            className={cn(
+              'px-2.5 py-2 text-center rounded-lg transition-all',
+              mobileTab === 'all' ? 'bg-white text-teal-800 shadow-xs' : 'text-slate-600'
+            )}
+            title="সব একসাথে দেখুন"
+          >
+            সব
+          </button>
+        </div>
+
         {/* 2. Authentic Two-Column Clinical Pad Layout */}
         <div className="relative z-10 grid grid-cols-1 lg:grid-cols-[33%_67%] gap-6 text-slate-900">
           {/* Left Column (33%): Clinical Assessment (C/C, O/E, Vitals, History, Dx, Ix) */}
-          <div className="lg:border-r lg:border-dashed lg:border-slate-300 lg:pr-5">
+          <div className={cn('lg:border-r lg:border-dashed lg:border-slate-300 lg:pr-5', mobileTab === 'rx' ? 'hidden lg:block' : 'block')}>
             <PrescriplyClinicalSidebar
               encounter={encounter}
               patient={patient}
@@ -175,7 +235,7 @@ export function EncounterPad({ patient }: { patient: Patient }) {
           </div>
 
           {/* Right Column (67%): ℞ Prescription Canvas, Medicines, Advice, Follow-up */}
-          <div className="lg:pl-2 space-y-6">
+          <div className={cn('lg:pl-2 space-y-6', mobileTab === 'sidebar' ? 'hidden lg:block' : 'block')}>
             <RxPad patient={patient} encounterId={encounter.id} />
             <div className="pt-4 border-t border-slate-100">
               <AdviceSection encounter={encounter} />

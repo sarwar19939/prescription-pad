@@ -47,13 +47,13 @@ export function TagInput({ value = [], onChange, placeholder, danger }: TagInput
         <Badge
           key={tag}
           variant={danger ? 'destructive' : 'secondary'}
-          className="gap-1.5 text-sm py-1 px-2.5 rounded-lg font-medium"
+          className="gap-1.5 text-xs sm:text-sm py-1 px-2.5 rounded-lg font-medium whitespace-normal break-words max-w-full inline-flex items-start text-left"
         >
-          {tag}
+          <span className="flex-1 break-words">{tag}</span>
           <button
             type="button"
             aria-label={`Remove ${tag}`}
-            className="rounded-sm hover:opacity-75 transition-opacity"
+            className="rounded-sm hover:opacity-75 transition-opacity shrink-0 mt-0.5"
             onClick={(e) => {
               e.stopPropagation();
               onChange(safeValue.filter((t) => t !== tag));

@@ -23,12 +23,15 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { AIFullPrescriptionCard } from './ai-full-prescription-card';
 import { AICopilotQuestions } from './ai-copilot-questions';
+import { PrescriptionAuditCard } from './prescription-audit-card';
+import { SuggestedMedsSection } from './suggested-meds-section';
 
 interface AICopilotResultsProps {
   results: ClinicalTrackResult;
   addedMeds: Set<string>;
   patient: Patient;
   onAddToRx: (med: SuggestedMedication) => void;
+  onAddSelectedMeds?: (meds: SuggestedMedication[]) => Promise<void>;
   onConfirmDiagnosis?: (diag: string) => void;
   fullPackage?: FullPrescriptionPackage | null;
   onApplyFullPackage?: (pkg: FullPrescriptionPackage) => Promise<{ addedCount: number; skippedCount: number }>;
@@ -43,6 +46,7 @@ export function AICopilotResults({
   addedMeds,
   patient,
   onAddToRx,
+  onAddSelectedMeds,
   onConfirmDiagnosis,
   fullPackage,
   onApplyFullPackage,
@@ -70,6 +74,13 @@ export function AICopilotResults({
           <p className="leading-relaxed font-medium">{results.clinical_summary}</p>
         </div>
       )}
+
+      {/* Prescription Contradiction & Safety Audit Card */}
+      <PrescriptionAuditCard
+        status={results.prescription_audit_status}
+        summary={results.audit_summary}
+        contradictions={results.contradictions_and_errors}
+      />
 
       {/* 1. Most Probable Diagnosis Primary Card */}
       {primaryProbable && (
@@ -161,7 +172,7 @@ export function AICopilotResults({
                     className="rounded-lg bg-indigo-50 px-2.5 py-1 text-[11px] font-bold text-indigo-700 hover:bg-indigo-600 hover:text-white transition-all flex items-center gap-1"
                   >
                     <Wand2 className="h-3 w-3" />
-                    কনফার্ম
+                    + যোগ করুন
                   </button>
                 )}
               </div>
@@ -179,63 +190,13 @@ export function AICopilotResults({
         />
       )}
 
-      {/* 6. Suggested Medications with 1-Click Add */}
-      <div>
-        <span className="text-xs font-bold uppercase tracking-wider text-slate-600 block mb-2">
-          সাজেস্টেড সহায়ক ঔষধ তালিকা
-        </span>
-        <div className="space-y-2">
-          {results.suggested_medications?.map((med, i) => {
-            const added = addedMeds.has(med.generic_name);
-            return (
-              <div
-                key={i}
-                className="rounded-xl border border-slate-200 bg-white p-3 shadow-2xs hover:border-teal-300 transition-colors"
-              >
-                <div className="flex items-start justify-between gap-3">
-                  <div>
-                    <div className="text-sm font-bold text-slate-950">
-                      {med.suggested_brand ? `${med.suggested_brand} (${med.generic_name})` : med.generic_name}
-                    </div>
-                    <div className="font-mono text-xs font-semibold text-slate-600 mt-0.5">
-                      {med.strength} · {med.schedule} · {med.duration}
-                    </div>
-                  </div>
-
-                  <Button
-                    size="sm"
-                    variant={added ? 'secondary' : 'default'}
-                    onClick={() => onAddToRx(med)}
-                    disabled={added}
-                    className={
-                      added
-                        ? 'h-8 px-2.5 text-xs bg-teal-50 text-teal-800 font-semibold'
-                        : 'h-8 px-2.5 text-xs bg-teal-600 hover:bg-teal-700 text-white font-semibold'
-                    }
-                  >
-                    {added ? (
-                      <>
-                        <Check className="h-3.5 w-3.5 mr-1 text-teal-600" /> যুক্ত হয়েছে
-                      </>
-                    ) : (
-                      <>
-                        <PlusCircle className="h-3.5 w-3.5 mr-1" /> ১-ক্লিক অ্যাড
-                      </>
-                    )}
-                  </Button>
-                </div>
-
-                {med.rationale && (
-                  <p className="mt-2 text-xs text-slate-600 bg-slate-50 p-2 rounded-lg border border-slate-100 leading-relaxed">
-                    <strong className="text-slate-800 font-semibold">কারণ: </strong>
-                    {med.rationale}
-                  </p>
-                )}
-              </div>
-            );
-          })}
-        </div>
-      </div>
+      {/* 6. Suggested Medications with Doctor Permission Checkboxes */}
+      <SuggestedMedsSection
+        medications={results.suggested_medications || []}
+        addedMeds={addedMeds}
+        onAddToRx={onAddToRx}
+        onAddSelectedMeds={onAddSelectedMeds}
+      />
 
       {/* 7. Recommended Investigations */}
       {results.recommended_investigations?.length > 0 && (

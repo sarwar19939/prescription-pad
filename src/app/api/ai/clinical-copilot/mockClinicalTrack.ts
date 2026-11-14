@@ -3,21 +3,95 @@
  * Dynamically interviews doctor with clarifying questions, adapts differentials based on answers,
  * and confirms treatment protocols for pre-existing or doctor-selected diagnoses.
  */
-import type { SuggestedMedication } from '@/services/aiClinicalCopilot';
+import type { PrescriptionContradiction, SuggestedMedication } from '@/services/aiClinicalCopilot';
+import { DISEASE_PROTOCOL_TEMPLATES } from '@/services/protocolTemplatesData';
 import { FEVER_TRACK, GASTRIC_TRACK, GASTRO_TRACK, type CategoryTrackData } from './clinicalTracksData';
+import { auditPrescriptionContradictions } from './prescriptionAuditEngine';
 
 export function mockClinicalTrack(context: any) {
   const complaints: string[] = context?.current_complaints || [];
   const allergies: string[] = context?.allergies || [];
   const conditions: string[] = context?.chronic_conditions || [];
+  const drugHistory: string[] = context?.drug_history || [];
+  const currentMeds: string[] = context?.current_medicines || context?.currentMedicines || [];
   const findings: string = context?.clinicalFindings || '';
   const activeDiagnoses: string[] = context?.activeDiagnoses || context?.active_diagnoses || [];
   const answers: Record<string, string> = context?.doctor_answers || {};
+  const patientAge: number = Number(context?.age) || 35;
 
   const text = `${complaints.join(' ')} ${conditions.join(' ')} ${findings} ${activeDiagnoses.join(' ')}`.toLowerCase();
+  const medsText = currentMeds.join(' ').toLowerCase();
+  const dhText = drugHistory.join(' ').toLowerCase();
 
-  // 1. Determine disease domain
-  let track: CategoryTrackData = GASTRO_TRACK;
+  // 1. Audit Prescription for Contradictions & Medical Errors
+  const { contradictions, auditStatus, auditSummary } = auditPrescriptionContradictions({
+    complaints,
+    conditions,
+    allergies,
+    drugHistory,
+    currentMeds,
+    patientAge,
+  });
+
+  const warnings: string[] = [];
+  allergies.forEach((a) => warnings.push(`Patient has known allergy to: ${a}. Verify drug safety before dispensing.`));
+
+  // Case 0: Empty Context — No complaints, No diagnosis, No findings
+  if (complaints.length === 0 && activeDiagnoses.length === 0 && !findings.trim()) {
+    return {
+      probable_diagnosis: '',
+      differential_diagnoses: [],
+      suggested_medications: [],
+      recommended_investigations: [],
+      safety_warnings: warnings,
+      prescription_audit_status: auditStatus,
+      audit_summary: auditSummary,
+      contradictions_and_errors: contradictions,
+      clinical_questions: [],
+      clinical_summary: 'রোগীর কোনো উপসর্গ বা রোগ নির্ণয় এখনো প্রদান করা হয়নি। চিফ কমপ্লেইন বা ডায়াগনোসিস যুক্ত করলে AI সহায়তা প্রদান করবে।',
+      is_confirmed_mode: false,
+    };
+  }
+
+  // Case 1: Confirmed Diagnosis provided by Doctor
+  if (activeDiagnoses.length > 0) {
+    const diagLower = activeDiagnoses[0].toLowerCase().trim();
+    const matchedProto = DISEASE_PROTOCOL_TEMPLATES.find((p) =>
+      p.diagnosisMatch.some((k) => diagLower.includes(k.toLowerCase()) || k.toLowerCase().includes(diagLower)),
+    );
+
+    if (matchedProto) {
+      const isPediatric = patientAge < 12;
+      const protoMeds: SuggestedMedication[] = matchedProto.medicines.map((m) => {
+        const usePed = isPediatric && m.pediatric ? m.pediatric : m.adult;
+        return {
+          generic_name: m.generic_name,
+          suggested_brand: m.brand_name,
+          dosage_form: usePed.dosage_form,
+          strength: usePed.strength,
+          schedule: usePed.schedule,
+          duration: usePed.duration,
+          rationale: `${matchedProto.titleBn} ক্লিনিক্যাল প্রটোকল অনুযায়ী নির্দেশিত।`,
+        };
+      });
+
+      return {
+        probable_diagnosis: activeDiagnoses[0],
+        differential_diagnoses: activeDiagnoses,
+        suggested_medications: protoMeds,
+        recommended_investigations: [],
+        safety_warnings: warnings,
+        prescription_audit_status: auditStatus,
+        audit_summary: auditSummary,
+        contradictions_and_errors: contradictions,
+        clinical_questions: [],
+        clinical_summary: `ডাক্তার কর্তৃক নিশ্চিতকৃত রোগ: "${activeDiagnoses[0]}" এর ক্লিনিক্যাল প্রটোকল প্রস্তুত করা হয়েছে।`,
+        is_confirmed_mode: true,
+      };
+    }
+  }
+
+  // Case 2: Symptom matching
   const isGastro =
     text.includes('vomit') ||
     text.includes('diarrhea') ||
@@ -59,22 +133,38 @@ export function mockClinicalTrack(context: any) {
       text.includes('টক ঢেকুর') ||
       text.includes('গ্যাস'));
 
+  if (!isGastro && !isFever && !isGastric) {
+    return {
+      probable_diagnosis: activeDiagnoses[0] || (complaints[0] ? `Suspected ${complaints[0]}` : ''),
+      differential_diagnoses: activeDiagnoses.length > 0 ? activeDiagnoses : complaints.slice(0, 3),
+      suggested_medications: [],
+      recommended_investigations: [],
+      safety_warnings: warnings,
+      prescription_audit_status: auditStatus,
+      audit_summary: auditSummary,
+      contradictions_and_errors: contradictions,
+      clinical_questions: [],
+      clinical_summary: complaints.length > 0
+        ? `রোগীর প্রধান উপসর্গ (${complaints.join(', ')}) বিশ্লেষণ করা হয়েছে।`
+        : 'রোগীর তথ্য পর্যালোচনা সম্পন্ন।',
+      is_confirmed_mode: activeDiagnoses.length > 0,
+    };
+  }
+
+  let track: CategoryTrackData = GASTRO_TRACK;
   if (isGastro) {
     track = GASTRO_TRACK;
   } else if (isFever) {
     track = FEVER_TRACK;
   } else if (isGastric) {
     track = GASTRIC_TRACK;
-  } else {
-    track = GASTRO_TRACK;
   }
 
-  // 2. Doctor pre-existing diagnosis handling
+  // Doctor pre-existing diagnosis handling
   const isConfirmedMode = activeDiagnoses.length > 0;
   let probableDiagnosis = isConfirmedMode ? activeDiagnoses[0] : track.defaultProbable;
   let differentials = [...track.differentials];
   const medications: SuggestedMedication[] = [...track.medications];
-  const warnings = [...track.warnings];
 
   allergies.forEach((a) => warnings.push(`Patient has known allergy to: ${a}. Verify drug safety before dispensing.`));
 
@@ -149,6 +239,9 @@ export function mockClinicalTrack(context: any) {
     suggested_medications: medications,
     recommended_investigations: track.investigations,
     safety_warnings: warnings,
+    prescription_audit_status: auditStatus,
+    audit_summary: auditSummary,
+    contradictions_and_errors: contradictions,
     clinical_questions: track.questions,
     clinical_summary: summary,
     is_confirmed_mode: isConfirmedMode,

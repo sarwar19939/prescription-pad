@@ -8,6 +8,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { ChevronDown, ChevronUp, RotateCcw, Sparkles, Stethoscope } from 'lucide-react';
 import { db } from '@/db/localDb';
+import { extractAiGeneratedFindings, stripAiGeneratedFindings } from '@/lib/prescriptionFormatters';
 import { analyzeVitals } from '@/services/vitalsService';
 import type { Encounter, Vitals as VitalsT } from '@/types/schema';
 import { ALL_NORMAL_OE_TEXT, OE_CATEGORIES } from './clinical-presets';
@@ -60,8 +61,19 @@ export function ClinicalOeSection({ encounter }: { encounter: Encounter }) {
   }, [encounter.id, encounter.vitals]);
 
   useEffect(() => {
-    setLocalOe(encounter.clinical_findings || '');
-  }, [encounter.id, encounter.clinical_findings]);
+    const raw = encounter.clinical_findings || '';
+    const clean = stripAiGeneratedFindings(raw);
+    const aiExtracted = extractAiGeneratedFindings(raw);
+    if (aiExtracted && !encounter.ai_suggested_notes?.includes(aiExtracted)) {
+      const mergedAi = [encounter.ai_suggested_notes, aiExtracted].filter(Boolean).join('\n');
+      void db.encounters.update(encounter.id, {
+        clinical_findings: clean,
+        ai_suggested_notes: mergedAi,
+        updated_at: new Date().toISOString(),
+      });
+    }
+    setLocalOe(clean);
+  }, [encounter.id, encounter.clinical_findings, encounter.ai_suggested_notes]);
 
   const saveVitalsDebounced = (nextVitals: VitalsT) => {
     if (vitalsTimer.current) clearTimeout(vitalsTimer.current);
@@ -161,12 +173,11 @@ export function ClinicalOeSection({ encounter }: { encounter: Encounter }) {
               <RotateCcw className="h-2.5 w-2.5" /> মুছুন
             </button>
           )}
-          <button
-            type="button"
-            onClick={applyAllNormal}
-            className="text-[10px] font-bold text-emerald-800 bg-emerald-50 hover:bg-emerald-100 border border-emerald-300 px-2 py-0.5 rounded-md flex items-center gap-1 transition-colors shadow-2xs"
-          >
-            <Sparkles className="h-3 w-3 text-emerald-600" /> ★ All Normal (সব স্বাভাবিক)
+          <button type="button" onClick={applyAllNormal} className="text-[10px] font-bold text-emerald-800 bg-emerald-50 hover:bg-emerald-100 border border-emerald-300 px-2 py-0.5 rounded-md flex items-center gap-1 transition-colors shadow-2xs">
+            <Sparkles className="h-3 w-3 text-emerald-600" /> ★ All Normal
+          </button>
+          <button type="button" onClick={() => setShowAllOe(!showAllOe)} className="text-[10px] font-bold text-teal-800 bg-teal-50 hover:bg-teal-100 px-2 py-0.5 rounded border border-teal-200 flex items-center gap-0.5 transition-colors">
+            {showAllOe ? <>সংক্ষেপ <ChevronUp className="h-3 w-3" /></> : <>+ অপশন <ChevronDown className="h-3 w-3" /></>}
           </button>
         </div>
       </div>
@@ -218,35 +229,24 @@ export function ClinicalOeSection({ encounter }: { encounter: Encounter }) {
         />
       </div>
 
-      {/* Top Regular O/E Chips */}
-      <div className="flex flex-wrap items-center gap-1 pt-0.5">
-        {TOP_OE_CHIPS.map((p) => {
-          const active = isOeActive(p);
-          return (
-            <button
-              key={p}
-              type="button"
-              onClick={() => toggleOePreset(p)}
-              className={`rounded px-1.5 py-0.5 text-[10px] font-semibold border transition-all ${
-                active ? 'bg-teal-700 text-white border-teal-700 font-bold shadow-2xs' : 'bg-slate-100 hover:bg-teal-50 hover:border-teal-300 border-slate-200 text-slate-700'
-              }`}
-            >
-              {active ? '✓ ' : '+ '}
-              {p}
-            </button>
-          );
-        })}
-        <button
-          type="button"
-          onClick={() => setShowAllOe(!showAllOe)}
-          className="text-[10px] font-bold text-teal-700 hover:text-teal-900 bg-teal-50 px-2 py-0.5 rounded border border-teal-200 flex items-center gap-0.5"
-        >
-          {showAllOe ? <ChevronUp className="h-3 w-3" /> : <>+ ৪০+ O/E <ChevronDown className="h-3 w-3" /></>}
-        </button>
-      </div>
-
+      {/* Collapsible O/E Presets Drawer (Hidden by default to keep UI clean and noise-free) */}
       {showAllOe && (
-        <div className="rounded-xl border border-teal-200 bg-slate-50/70 p-2.5 space-y-2 text-xs animate-in fade-in duration-150">
+        <div className="rounded-xl border border-teal-200 bg-slate-50/80 p-2.5 space-y-2 text-xs animate-in fade-in duration-150">
+          <div className="flex flex-wrap items-center gap-1 border-b border-slate-200 pb-1.5">
+            {TOP_OE_CHIPS.map((p) => (
+              <button
+                key={p}
+                type="button"
+                onClick={() => toggleOePreset(p)}
+                className={`rounded px-1.5 py-0.5 text-[10px] font-semibold border transition-all ${
+                  isOeActive(p) ? 'bg-teal-700 text-white border-teal-700 font-bold shadow-2xs' : 'bg-white hover:bg-teal-50 hover:border-teal-300 border-slate-200 text-slate-700'
+                }`}
+              >
+                {isOeActive(p) ? '✓ ' : '+ '}{p}
+              </button>
+            ))}
+          </div>
+
           <div className="flex gap-1 border-b border-slate-200 pb-1.5">
             {OE_CATEGORIES.map((cat, idx) => (
               <button
@@ -262,22 +262,18 @@ export function ClinicalOeSection({ encounter }: { encounter: Encounter }) {
             ))}
           </div>
           <div className="flex flex-wrap gap-1">
-            {OE_CATEGORIES[selectedOeTab].items.map((p) => {
-              const active = isOeActive(p);
-              return (
-                <button
-                  key={p}
-                  type="button"
-                  onClick={() => toggleOePreset(p)}
-                  className={`rounded px-1.5 py-0.5 text-[10px] font-semibold border transition-all ${
-                    active ? 'bg-teal-700 text-white border-teal-700 font-bold shadow-2xs' : 'bg-white text-slate-700 border-slate-200 hover:border-teal-500 hover:bg-teal-50'
-                  }`}
-                >
-                  {active ? '✓ ' : '+ '}
-                  {p}
-                </button>
-              );
-            })}
+            {OE_CATEGORIES[selectedOeTab].items.map((p) => (
+              <button
+                key={p}
+                type="button"
+                onClick={() => toggleOePreset(p)}
+                className={`rounded px-1.5 py-0.5 text-[10px] font-semibold border transition-all ${
+                  isOeActive(p) ? 'bg-teal-700 text-white border-teal-700 font-bold shadow-2xs' : 'bg-white text-slate-700 border-slate-200 hover:border-teal-500 hover:bg-teal-50'
+                }`}
+              >
+                {isOeActive(p) ? '✓ ' : '+ '}{p}
+              </button>
+            ))}
           </div>
         </div>
       )}

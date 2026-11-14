@@ -9,6 +9,7 @@ import { useState } from 'react';
 import { Camera, FileImage, Loader2, Sparkles, Upload, X } from 'lucide-react';
 
 import { db } from '@/db/localDb';
+import { stripAiGeneratedFindings } from '@/lib/prescriptionFormatters';
 import { analyzeClinicalPhoto, type ClinicalVisionResult } from '@/services/aiVisionService';
 import type { Encounter, Patient } from '@/types/schema';
 import { Button } from '@/components/ui/button';
@@ -30,6 +31,7 @@ interface ClinicalPhotoDialogProps {
 export function ClinicalPhotoDialog({ encounter, patient }: ClinicalPhotoDialogProps) {
   const [open, setOpen] = useState(false);
   const [imagePreview, setImagePreview] = useState<string | null>(null);
+  const [imageFileName, setImageFileName] = useState('');
   const [clinicalNotes, setClinicalNotes] = useState('');
   const [analyzing, setAnalyzing] = useState(false);
   const [result, setResult] = useState<ClinicalVisionResult | null>(null);
@@ -40,6 +42,7 @@ export function ClinicalPhotoDialog({ encounter, patient }: ClinicalPhotoDialogP
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
+    setImageFileName(file.name);
     const reader = new FileReader();
     reader.onload = () => {
       setImagePreview(reader.result as string);
@@ -56,6 +59,7 @@ export function ClinicalPhotoDialog({ encounter, patient }: ClinicalPhotoDialogP
       const res = await analyzeClinicalPhoto(imagePreview, clinicalNotes, {
         age: patient.age,
         gender: patient.gender,
+        fileName: imageFileName,
       });
       setResult(res);
       setPrimaryDiagnosis(res.primary_diagnosis);
@@ -77,25 +81,31 @@ export function ClinicalPhotoDialog({ encounter, patient }: ClinicalPhotoDialogP
   };
 
   const handleApplyToRx = async () => {
-    if (!result) return;
+    if (!result || !primaryDiagnosis) return;
     const ts = new Date().toISOString();
 
     const currentDiags = encounter.diagnosis || [];
-    const mergedDiags = Array.from(new Set([primaryDiagnosis, ...currentDiags, ...differentialDiagnoses])).filter(Boolean);
+    // Strictly add ONLY the primary diagnosis chosen by the doctor
+    const updatedDiags = currentDiags.includes(primaryDiagnosis)
+      ? currentDiags
+      : [...currentDiags, primaryDiagnosis];
 
-    // Save morphological findings into clinical findings
+    // Save morphological findings into AI background notes (not manual doctor O/E)
     const findingsNote = result.observed_features?.length
-      ? `Skin/Lesion Exam: ${result.observed_features.join(', ')}`
+      ? `AI Findings (${primaryDiagnosis}): ${result.observed_features.join(', ')}`
       : '';
-    const updatedFindings = [encounter.clinical_findings, findingsNote].filter(Boolean).join('\n');
+    const cleanFindings = stripAiGeneratedFindings(encounter.clinical_findings);
+    const existingAiNotes = encounter.ai_suggested_notes || '';
+    const updatedAiNotes = [existingAiNotes, findingsNote].filter(Boolean).join('\n');
 
     const existingAdvice = encounter.advice || [];
     const newAdvice = result.suggested_treatment?.advice || [];
     const mergedAdvice = Array.from(new Set([...existingAdvice, ...newAdvice]));
 
     await db.encounters.update(encounter.id, {
-      diagnosis: mergedDiags.slice(0, 3),
-      clinical_findings: updatedFindings,
+      diagnosis: updatedDiags,
+      clinical_findings: cleanFindings,
+      ai_suggested_notes: updatedAiNotes,
       advice: mergedAdvice,
       updated_at: ts,
       sync_status: 'pending',

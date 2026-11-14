@@ -33,8 +33,17 @@ export function matchProtocolsForDiagnosis(diagnoses?: string[] | null): Disease
     for (const proto of DISEASE_PROTOCOL_TEMPLATES) {
       if (seenIds.has(proto.id)) continue;
       const hasMatch = proto.diagnosisMatch.some((key) => {
-        const k = key.toLowerCase();
-        return diag === k || diag.includes(k) || (diag.length >= 4 && k.includes(diag));
+        const k = key.toLowerCase().trim();
+        if (!k) return false;
+
+        // Strict boundary: Short abbreviations (<=3 chars like "ra", "oa", "dm", "sle", "uti")
+        // MUST only match as an exact whole word to prevent "rash" matching "ra" (Rheumatoid Arthritis)
+        if (k.length <= 3) {
+          const wordRegex = new RegExp(`(^|[^a-z0-9])${k}([^a-z0-9]|$)`, 'i');
+          return wordRegex.test(diag);
+        }
+
+        return diag === k || diag.includes(k) || (diag.length >= 5 && k.includes(diag));
       });
       if (hasMatch) {
         matched.push(proto);

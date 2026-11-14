@@ -5,6 +5,7 @@
  */
 import { db } from '@/db/localDb';
 import { generateUUID } from '@/lib/uuid';
+import { cleanBrandName, normalizeDosageForm } from '@/lib/prescriptionFormatters';
 import { matchProtocolsForDiagnosis } from '@/services/clinicalProtocolsService';
 import { getActiveTenantAiConfig } from './auth';
 import type { DosageForm, MealTiming, Patient, PrescriptionItem, Vitals } from '@/types/schema';
@@ -107,9 +108,14 @@ export async function generateFullPrescription(
     if (res.ok) {
       const data = await res.json();
       if (Array.isArray(data.medicines) && data.medicines.length > 0) {
+        const sanitizedMeds = data.medicines.map((m: any) => ({
+          ...m,
+          brand_name: cleanBrandName(m.brand_name || m.generic_name) || m.brand_name,
+          dosage_form: normalizeDosageForm(m.dosage_form),
+        }));
         return {
           diagnosis: data.diagnosis || cleanDiag,
-          medicines: data.medicines,
+          medicines: sanitizedMeds,
           advice: Array.isArray(data.advice) ? data.advice : [],
           source: 'ai_copilot',
         };
@@ -173,7 +179,10 @@ export async function applyFullPrescriptionToEncounter(
   let skipped = 0;
 
   for (const m of pkg.medicines) {
-    const key = `${m.brand_name.toLowerCase().trim()}|${m.dosage_form.toLowerCase().trim()}`;
+    const rawBrand = m.brand_name || m.generic_name;
+    const cleanBrand = cleanBrandName(rawBrand) || rawBrand;
+    const cleanForm = normalizeDosageForm(m.dosage_form);
+    const key = `${cleanBrand.toLowerCase().trim()}|${cleanForm.toLowerCase().trim()}`;
     if (existingKeys.has(key)) {
       skipped++;
       continue;
@@ -183,9 +192,9 @@ export async function applyFullPrescriptionToEncounter(
       tenant_id: patient.tenant_id,
       encounter_id: encounterId,
       patient_id: patient.id,
-      brand_name: m.brand_name,
+      brand_name: cleanBrand,
       generic_name: m.generic_name,
-      dosage_form: m.dosage_form,
+      dosage_form: cleanForm,
       strength: m.strength,
       schedule: m.schedule,
       meal_timing: m.meal_timing,

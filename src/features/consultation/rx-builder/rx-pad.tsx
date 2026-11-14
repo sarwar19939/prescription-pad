@@ -13,6 +13,7 @@ import { db } from '@/db/localDb';
 import { generateUUID } from '@/lib/uuid';
 import { calculateSmartDose } from '@/services/dosingEngine';
 import { getDrugGuideline } from '@/services/drugGuidelinesService';
+import { toBengaliNumerals } from '@/lib/prescriptionFormatters';
 import { MedicineSearch } from './medicine-search';
 import { ProtocolTemplatesDialog } from './protocol-templates-dialog';
 import { SaveAsTemplateDialog } from './save-as-template-dialog';
@@ -70,7 +71,7 @@ export function RxPad({ patient, encounterId }: { patient: Patient; encounterId:
 
     const initialInstructions = smart.hasAdjustment && smart.special_instructions
       ? smart.special_instructions
-      : (guide ? `${guide.whenToTake}` : '');
+      : '';
 
     const row: PrescriptionItem = {
       id: generateUUID(),
@@ -84,7 +85,7 @@ export function RxPad({ patient, encounterId }: { patient: Patient; encounterId:
       schedule: initialSchedule,
       meal_timing: initialMealTiming,
       duration: smart.hasAdjustment && smart.duration ? smart.duration : '7 Days',
-      special_instructions: initialInstructions,
+      special_instructions: '',
       created_at: ts,
       updated_at: ts,
       sync_status: 'pending',
@@ -139,39 +140,13 @@ export function RxPad({ patient, encounterId }: { patient: Patient; encounterId:
         </div>
       </div>
 
-      <MedicineSearch
-        value={search}
-        onChange={setSearch}
-        onPick={(med) => {
-          if ('freeText' in med) {
-            setCustomMedInitial(search.trim());
-            setCustomMedOpen(true);
-          } else {
-            void addItem(med);
-          }
-        }}
-        onCustomClick={(query) => {
-          setCustomMedInitial(query);
-          setCustomMedOpen(true);
-        }}
-        placeholder="Search by brand (Napa, Seclo, Maxpro...) or generic (Paracetamol)..."
-      />
-
       {items === undefined && (
         <div className="flex h-24 items-center justify-center">
           <Loader2 className="h-6 w-6 animate-spin text-slate-400" aria-hidden />
         </div>
       )}
 
-      {items !== undefined && items.length === 0 && (
-        <div className="rounded-2xl border border-dashed border-slate-300 bg-white p-6 text-center text-sm text-slate-500 space-y-1">
-          <p className="font-semibold text-slate-700">No medications prescribed yet.</p>
-          <p className="text-xs text-slate-400">
-            ওপরের সার্চবারে ওষুধের নাম লিখুন অথবা "+ নতুন ওষুধ / প্রিপারেশন" বাটনে ক্লিক করে লিস্টের বাইরের যেকোনো ওষুধ যোগ করুন।
-          </p>
-        </div>
-      )}
-
+      {/* 1. Prescribed Medicines List */}
       <AnimatedList className="flex flex-col gap-3">
         {(items ?? []).map((item, i) => (
           <AnimatedListItem key={item.id}>
@@ -185,6 +160,42 @@ export function RxPad({ patient, encounterId }: { patient: Patient; encounterId:
           </AnimatedListItem>
         ))}
       </AnimatedList>
+
+      {/* 2. Active Next Medicine Search Row (Always placed below already prescribed medicines) */}
+      <div className="rounded-2xl border-2 border-teal-300/80 bg-teal-50/25 p-3.5 shadow-2xs transition-all focus-within:border-teal-500 focus-within:ring-2 focus-within:ring-teal-500/20">
+        <div className="mb-2 flex items-center justify-between text-xs">
+          <div className="flex items-center gap-2 font-bold text-teal-950">
+            <span className="flex h-6 w-6 items-center justify-center rounded-lg bg-teal-700 text-xs font-bold text-white font-mono shadow-xs">
+              {toBengaliNumerals((items?.length || 0) + 1)}
+            </span>
+            <span>
+              {(items?.length || 0) === 0
+                ? 'প্রথম ওষুধ নির্বাচন বা সার্চ করুন:'
+                : `${toBengaliNumerals((items?.length || 0) + 1)} নম্বর ওষুধ নির্বাচন বা সার্চ করুন:`}
+            </span>
+          </div>
+          <span className="text-[11px] font-medium text-slate-400">
+            ব্র্যান্ড বা জেনেরিক নাম লিখে Enter চাপুন
+          </span>
+        </div>
+        <MedicineSearch
+          value={search}
+          onChange={setSearch}
+          onPick={(med) => {
+            if ('freeText' in med) {
+              setCustomMedInitial(search.trim());
+              setCustomMedOpen(true);
+            } else {
+              void addItem(med);
+            }
+          }}
+          onCustomClick={(query) => {
+            setCustomMedInitial(query);
+            setCustomMedOpen(true);
+          }}
+          placeholder="ওষুধের ব্র্যান্ড (যেমন: Napa, Seclo, Maxpro...) বা জেনেরিক (যেমন: Paracetamol) লিখুন..."
+        />
+      </div>
 
       {/* Add Custom Medicine Modal */}
       {customMedOpen && (

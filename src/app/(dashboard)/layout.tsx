@@ -16,12 +16,12 @@ export default function DashboardLayout({ children }: ComponentProps<'div'>) {
         <Suspense fallback={<header className="sticky top-0 z-40 h-16 border-b border-slate-200/80 bg-white" />}>
           <DashboardHeader />
         </Suspense>
-        <main className="min-w-0 flex-1 bg-slate-50 p-6 md:p-8">{children}</main>
+        <main className="min-w-0 flex-1 bg-slate-50 p-2 sm:p-4 md:p-8">{children}</main>
       </div>
     </div>
   );
 }
 
 function SidebarFallback() {
-  return <aside className="w-64 shrink-0 border-r border-slate-200/80 bg-white" />;
+  return <aside className="hidden md:block w-64 shrink-0 border-r border-slate-200/80 bg-white" />;
 }

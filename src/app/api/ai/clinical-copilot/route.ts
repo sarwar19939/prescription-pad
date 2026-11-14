@@ -3,6 +3,11 @@ import { mockClinicalTrack, mockFullPrescription, mockImageAnalysis, mockLabAnal
 import { mockAmbientScribe } from './mockScribe';
 import { callGeminiImageAnalysis, callNvidiaImageAnalysis } from './visionHelper';
 import { callGeminiAmbientScribe, callNvidiaAmbientScribe } from './scribeHelper';
+import {
+  BD_CLINICAL_SYSTEM_INSTRUCTION,
+  COPILOT_AUDIT_SYSTEM_INSTRUCTION,
+  MEDICAL_INVESTIGATION_SYSTEM_INSTRUCTION,
+} from './clinicalPrompts';
 
 interface RequestBody {
   action: 'analyze_lab' | 'suggest_track' | 'full_prescription' | 'analyze_image' | 'ambient_scribe';
@@ -12,17 +17,6 @@ interface RequestBody {
 const GEMINI_MODEL = process.env.GEMINI_MODEL || 'gemini-flash-latest';
 const NVIDIA_BASE_URL = 'https://integrate.api.nvidia.com/v1/chat/completions';
 const DEFAULT_NVIDIA_MODEL = process.env.NVIDIA_MODEL || 'meta/llama-3.3-70b-instruct';
-
-const BD_CLINICAL_SYSTEM_INSTRUCTION = `You are an expert AI Clinical Decision Support co-pilot for BMDC registered doctors in Bangladesh.
-Follow "Master The Chamber" clinical and prescription guidelines (DGHS / icddr,b / BIRDEM):
-1. Mandatory Gastric Protection: Whenever prescribing NSAIDs (Naproxen, Aceclofenac, Ketorolac), Steroids, or multiple oral antibiotics, ALWAYS co-prescribe a PPI (Cap. Sergel / Maxpro 20mg 1+0+1, 20-30 min before meals).
-2. Prokinetic & Antacid Pairing: For GERD, Dyspepsia, Gastritis, pair PPI with Domperidone (Tab. Motigut 10mg 1+1+1 before meals) and Antacid (Susp. Entacyd Plus).
-3. Diarrhea / Gastroenteritis: icddr,b protocol — Oral Saline-N (1 glass per loose stool) + Baby Zinc (20mg daily for 14 days) + Probiotic (Enterogermina / Prebact) + Domperidone (Tab. Motigut 10mg) for nausea/vomiting.
-4. Dengue / Viral Fever: DGHS Protocol — Paracetamol (Tab. Napa Extend 665mg 1+1+1 or SOS) + ORS Saline + Cap. Maxpro 20mg + Tab. Ceevit 250mg. STRICTLY NO NSAIDs or Steroids.
-5. Respiratory / Allergic Cough: Tab. Montene-FX (Montelukast + Fexofenadine 10/120mg 0+0+1) + Syr. Ambrox (1+1+1) for chest congestion.
-6. Enteric Fever: Prioritize Azithromycin or Cefixime due to ciprofloxacin resistance.
-7. Prescribing Notation: Use Bangladesh chamber schedules (1+0+1, 1+1+1, 0+0+1, 1+0+0, SOS), standard meal timings (Before Meal, After Meal, With Meal), durations (5 Days, 7 Days, 14 Days, 1 Month), and top BD brands (Square, Incepta, Beximco, Renata, Healthcare, SK+F).
-Return STRICT JSON ONLY conforming to the requested schema.`;
 
 export async function POST(req: Request) {
   try {
@@ -89,13 +83,13 @@ export async function POST(req: Request) {
 
     // 3. Resilient Offline Mock / Rule Engine Fallback
     if (action === 'analyze_lab') {
-      return NextResponse.json(mockLabAnalysis(payload));
+      return NextResponse.json({ ...mockLabAnalysis(payload), ai_provider: 'offline_rules' });
     } else if (action === 'suggest_track') {
       return NextResponse.json(mockClinicalTrack(payload));
     } else if (action === 'full_prescription') {
       return NextResponse.json(mockFullPrescription(payload.diagnosis || ''));
     } else if (action === 'analyze_image') {
-      return NextResponse.json(mockImageAnalysis(payload));
+      return NextResponse.json({ ...mockImageAnalysis(payload), ai_provider: 'offline_rules' });
     } else if (action === 'ambient_scribe') {
       return NextResponse.json(mockAmbientScribe(payload));
     }
@@ -109,28 +103,13 @@ export async function POST(req: Request) {
 
 function safeParseNvidiaJson(json: any) {
   const choice = json.choices?.[0]?.message;
-  const content = typeof choice?.content === 'string' ? choice.content.trim() : '';
-  const reasoning = typeof choice?.reasoning_content === 'string' ? choice.reasoning_content.trim() : '';
-  const text = content || reasoning;
+  const text = (typeof choice?.content === 'string' ? choice.content.trim() : '') || (typeof choice?.reasoning_content === 'string' ? choice.reasoning_content.trim() : '');
   if (!text) throw new Error('Empty response from NVIDIA NIM');
-
   const codeMatch = text.match(/```(?:json)?\s*([\s\S]*?)```/i);
-  if (codeMatch) {
-    try {
-      return JSON.parse(codeMatch[1].trim());
-    } catch {}
-  }
-
-  try {
-    return JSON.parse(text);
-  } catch {}
-
-  const first = text.indexOf('{');
-  const last = text.lastIndexOf('}');
-  if (first !== -1 && last !== -1 && last > first) {
-    return JSON.parse(text.substring(first, last + 1));
-  }
-
+  if (codeMatch) { try { return JSON.parse(codeMatch[1].trim()); } catch {} }
+  try { return JSON.parse(text); } catch {}
+  const first = text.indexOf('{'); const last = text.lastIndexOf('}');
+  if (first !== -1 && last !== -1 && last > first) { return JSON.parse(text.substring(first, last + 1)); }
   throw new Error('NVIDIA NIM response does not contain valid structured JSON');
 }
 
@@ -170,17 +149,9 @@ async function callNvidiaChat(apiKey: string, prompt: string, systemInstruction:
 }
 
 async function callNvidiaSuggestTrack(apiKey: string, context: any) {
-  const prompt = `Analyze this comprehensive patient clinical summary (vitals, complaints, examination findings, current medicines, lab trends, doctor answers) and suggest an evidence-based clinical track.
-${JSON.stringify(context, null, 2)}
-Return STRICT JSON: {
-  "differential_diagnoses": string[],
-  "suggested_medications": Array<{ "generic_name": string, "suggested_brand": string, "strength": string, "schedule": string, "duration": string, "rationale": string }>,
-  "recommended_investigations": string[],
-  "safety_warnings": string[],
-  "clinical_questions": Array<{ "id": string, "question": string, "options": string[], "hint": string }>,
-  "clinical_summary": string
-}`;
-  return callNvidiaChat(apiKey, prompt, BD_CLINICAL_SYSTEM_INSTRUCTION);
+  const prompt = `Analyze this comprehensive patient clinical summary (vitals, complaints, drug history, examination findings, current prescribed medicines, lab trends, doctor answers) and audit for errors & suggest medications:
+${JSON.stringify(context, null, 2)}`;
+  return callNvidiaChat(apiKey, prompt, COPILOT_AUDIT_SYSTEM_INSTRUCTION);
 }
 
 async function callNvidiaFullPrescription(apiKey: string, payload: any) {
@@ -190,46 +161,125 @@ Return STRICT JSON: { "diagnosis": string, "medicines": Array<{ brand_name, gene
   return callNvidiaChat(apiKey, prompt, BD_CLINICAL_SYSTEM_INSTRUCTION);
 }
 
-async function callNvidiaLabAnalysis(apiKey: string, payload: { content: string }) {
-  const prompt = `Analyze this lab report and identify biomarkers: ${payload.content}
-Return STRICT JSON: { "test_name": string, "extracted_metrics": Record<string, string | number>, "abnormality_flags": string[], "ai_summary": string }`;
-  return callNvidiaChat(apiKey, prompt, BD_CLINICAL_SYSTEM_INSTRUCTION);
+async function callNvidiaLabAnalysis(apiKey: string, payload: { content: string; mimeType?: string; testName?: string; reportType?: string; fileName?: string }) {
+  const isImage = (payload.content || '').startsWith('data:image/') || payload.mimeType?.startsWith('image/');
+  if (isImage) {
+    const cleanBase64 = (payload.content || '').replace(/^data:[^;]+;base64,/, '');
+    const mimeType = payload.mimeType || 'image/jpeg';
+    const dataUrl = `data:${mimeType};base64,${cleanBase64}`;
+    const hint = [payload.testName, payload.fileName, payload.reportType].filter(Boolean).join(' - ');
+    const prompt = `Analyze this medical investigation image (${hint || '12-Lead ECG, MRI film/report, X-ray, or printed lab report sheet'}) and provide full structured interpretation.`;
+
+    const controller = new AbortController();
+    const timer = setTimeout(() => controller.abort(), 12000);
+    try {
+      const res = await fetch(NVIDIA_BASE_URL, {
+        method: 'POST',
+        signal: controller.signal,
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${apiKey}`,
+        },
+        body: JSON.stringify({
+          model: process.env.NVIDIA_VISION_MODEL || 'nvidia/nemotron-3.5-super-vl-120b-a12b',
+          messages: [
+            { role: 'system', content: MEDICAL_INVESTIGATION_SYSTEM_INSTRUCTION },
+            {
+              role: 'user',
+              content: [
+                { type: 'text', text: prompt },
+                { type: 'image_url', image_url: { url: dataUrl } },
+              ],
+            },
+          ],
+          temperature: 0.2,
+          max_tokens: 1800,
+        }),
+      });
+      if (!res.ok) throw new Error(`NVIDIA NIM Vision returned ${res.status}`);
+      const json = await res.json();
+      return safeParseNvidiaJson(json);
+    } finally {
+      clearTimeout(timer);
+    }
+  }
+
+  const prompt = `Analyze this lab / medical investigation report (${payload.testName || 'Investigation'}):
+${payload.content}`;
+  return callNvidiaChat(apiKey, prompt, MEDICAL_INVESTIGATION_SYSTEM_INSTRUCTION);
 }
 
 async function callGemini(apiKey: string, contents: any[], systemInstruction: string) {
-  const url = `https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_MODEL}:generateContent?key=${apiKey}`;
-  const controller = new AbortController();
-  const timer = setTimeout(() => controller.abort(), 9000);
-  try {
-    const res = await fetch(url, {
-      method: 'POST',
-      signal: controller.signal,
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        contents,
-        systemInstruction: { parts: [{ text: systemInstruction }] },
-        generationConfig: { responseMimeType: 'application/json', temperature: 0.2 },
-      }),
-    });
-    if (!res.ok) throw new Error(`Gemini API returned ${res.status}: ${await res.text()}`);
-    const json = await res.json();
-    const text = json.candidates?.[0]?.content?.parts?.[0]?.text;
-    if (!text) throw new Error('Empty response from Gemini API');
-    return JSON.parse(text);
-  } finally {
-    clearTimeout(timer);
+  const modelCandidates = Array.from(new Set([GEMINI_MODEL, 'gemini-flash-lite-latest', 'gemini-flash-latest', 'gemini-pro-latest'])).filter(Boolean);
+  let lastError: Error | null = null;
+
+  for (const model of modelCandidates) {
+    const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`;
+    const controller = new AbortController();
+    const timer = setTimeout(() => controller.abort(), 16000);
+    try {
+      const res = await fetch(url, {
+        method: 'POST',
+        signal: controller.signal,
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          contents,
+          systemInstruction: { parts: [{ text: systemInstruction }] },
+          generationConfig: { responseMimeType: 'application/json', temperature: 0.2 },
+        }),
+      });
+      if (!res.ok) {
+        if (res.status === 429 || res.status === 404) {
+          lastError = new Error(`Gemini model ${model} returned ${res.status}`);
+          continue;
+        }
+        throw new Error(`Gemini API returned ${res.status}: ${await res.text()}`);
+      }
+      const json = await res.json();
+      const text = json.candidates?.[0]?.content?.parts?.[0]?.text;
+      if (!text) throw new Error('Empty response from Gemini API');
+      return JSON.parse(text);
+    } catch (err) {
+      lastError = err instanceof Error ? err : new Error(String(err));
+    } finally {
+      clearTimeout(timer);
+    }
   }
+
+  throw lastError || new Error('All Gemini models failed');
 }
 
-async function callGeminiLabAnalysis(apiKey: string, payload: { content: string }) {
-  const system = `Extract biomarkers from lab report. Return JSON with test_name, extracted_metrics, abnormality_flags, ai_summary.`;
-  return callGemini(apiKey, [{ role: 'user', parts: [{ text: `Lab Data:\n${payload.content}` }] }], system);
+async function callGeminiLabAnalysis(apiKey: string, payload: { content: string; mimeType?: string; testName?: string; reportType?: string; fileName?: string }) {
+  const isImage = (payload.content || '').startsWith('data:image/') || payload.mimeType?.startsWith('image/');
+  if (isImage) {
+    const cleanBase64 = (payload.content || '').replace(/^data:[^;]+;base64,/, '');
+    const mimeType = payload.mimeType || 'image/jpeg';
+    const hint = [payload.testName, payload.fileName, payload.reportType].filter(Boolean).join(' - ');
+    const contents = [
+      {
+        role: 'user',
+        parts: [
+          { inlineData: { mimeType, data: cleanBase64 } },
+          { text: `Analyze this medical investigation image (${hint || '12-Lead ECG tracing, MRI/CT scan or report, X-ray, or printed laboratory test sheet'}). Provide full structured interpretation.` },
+        ],
+      },
+    ];
+    return callGemini(apiKey, contents, MEDICAL_INVESTIGATION_SYSTEM_INSTRUCTION);
+  }
+
+  const contents = [
+    {
+      role: 'user',
+      parts: [{ text: `Medical Test / Report Data (${payload.testName || 'Lab Investigation'}):\n${payload.content}` }],
+    },
+  ];
+  return callGemini(apiKey, contents, MEDICAL_INVESTIGATION_SYSTEM_INSTRUCTION);
 }
 
 async function callGeminiSuggestTrack(apiKey: string, context: any) {
-  const prompt = `Patient Clinical Context (Complaints, Vitals, Findings, Current Meds, Labs, Doctor Answers):\n${JSON.stringify(context, null, 2)}\n
-Provide: differential_diagnoses, suggested_medications (generic, brand, strength, schedule, duration, rationale), recommended_investigations, safety_warnings, clinical_questions (id, question, options, hint for missing info), clinical_summary.`;
-  return callGemini(apiKey, [{ role: 'user', parts: [{ text: prompt }] }], BD_CLINICAL_SYSTEM_INSTRUCTION);
+  const prompt = `Patient Clinical Context (Complaints, Vitals, Drug History, Findings, Current Prescribed Meds, Labs, Doctor Answers):\n${JSON.stringify(context, null, 2)}\n
+Perform a comprehensive prescription error audit, detect any contradictions, and suggest evidence-based medications.`;
+  return callGemini(apiKey, [{ role: 'user', parts: [{ text: prompt }] }], COPILOT_AUDIT_SYSTEM_INSTRUCTION);
 }
 
 async function callGeminiFullPrescription(apiKey: string, payload: any) {

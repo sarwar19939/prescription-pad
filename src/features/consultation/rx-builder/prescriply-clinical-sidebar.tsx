@@ -9,16 +9,17 @@
  * 4. Dx: 1-Click Common Diagnoses, 168+ Protocol Templates & Clinical Photo Vision
  * 5. Ix: 25+ 1-Click Investigations & AI OCR Lab Report Uploads
  */
-import { Sparkles } from 'lucide-react';
+import { useState } from 'react';
+import { ChevronDown, ChevronUp, Sparkles } from 'lucide-react';
 import { db } from '@/db/localDb';
 import { TagInput } from '@/components/tag-input';
 import type { Encounter, InvestigationReport, Patient } from '@/types/schema';
 import { ClinicalCcSection } from './clinical-cc-section';
+import { ClinicalDrugHistorySection } from './clinical-drug-history-section';
 import { ClinicalHistorySection } from './clinical-history-section';
 import { ClinicalOeSection } from './clinical-oe-section';
 import { ClinicalInvestigationsSection } from './clinical-investigations-section';
 import { ProtocolTemplatesDialog } from './protocol-templates-dialog';
-import { SuggestedProtocolBanner } from './suggested-protocol-banner';
 import { ClinicalPhotoDialog } from './clinical-photo-dialog';
 
 const COMMON_DIAGNOSIS_PRESETS = [
@@ -45,6 +46,8 @@ export function PrescriplyClinicalSidebar({
   patient: Patient;
   reports?: InvestigationReport[];
 }) {
+  const [showDxPresets, setShowDxPresets] = useState(false);
+
   const writeEncounterField = (patch: Partial<Encounter>) => {
     void db.encounters.update(encounter.id, {
       ...patch,
@@ -58,13 +61,16 @@ export function PrescriplyClinicalSidebar({
       {/* 1. Chief Complaints (C/C) Section */}
       <ClinicalCcSection encounter={encounter} patient={patient} />
 
-      {/* 2. Patient History & Allergies Section */}
+      {/* 2. Drug History (চলমান ও পূর্বের ওষুধ) Section — directly below C/C */}
+      <ClinicalDrugHistorySection encounter={encounter} patient={patient} />
+
+      {/* 3. Patient History & Allergies Section */}
       <ClinicalHistorySection patient={patient} encounter={encounter} />
 
-      {/* 3. Physical Examination (O/E) & Vitals Section */}
+      {/* 4. Physical Examination (O/E) & Vitals Section */}
       <ClinicalOeSection encounter={encounter} />
 
-      {/* 4. Diagnosis (Dx) & Clinical Protocols */}
+      {/* 5. Diagnosis (Dx) & Clinical Protocols */}
       <div className="space-y-1.5 pt-1 border-t border-slate-200">
         <div className="flex items-center justify-between flex-wrap gap-1">
           <span className="font-bold uppercase tracking-wider text-slate-800 flex items-center gap-1">
@@ -72,7 +78,14 @@ export function PrescriplyClinicalSidebar({
           </span>
           <div className="flex items-center gap-1">
             <ClinicalPhotoDialog encounter={encounter} patient={patient} />
-            <ProtocolTemplatesDialog encounter={encounter} patient={patient} compact triggerLabel="রোগভিত্তিক টেমপ্লেট" />
+            <ProtocolTemplatesDialog encounter={encounter} patient={patient} compact triggerLabel="টেমপ্লেট" />
+            <button
+              type="button"
+              onClick={() => setShowDxPresets(!showDxPresets)}
+              className="text-[10px] font-bold text-teal-800 bg-teal-50 hover:bg-teal-100 px-2 py-0.5 rounded border border-teal-200 flex items-center gap-0.5 transition-colors"
+            >
+              {showDxPresets ? <>সংক্ষেপ <ChevronUp className="h-3 w-3" /></> : <>+ অপশন <ChevronDown className="h-3 w-3" /></>}
+            </button>
           </div>
         </div>
 
@@ -82,38 +95,38 @@ export function PrescriplyClinicalSidebar({
           placeholder="Diagnosis + Enter (e.g. Dengue, Scabies)"
         />
 
-        <div className="flex flex-wrap gap-1">
-          {COMMON_DIAGNOSIS_PRESETS.map((diag) => {
-            const current = encounter.diagnosis || [];
-            const has = current.some((d) => d.toLowerCase() === diag.toLowerCase());
-            return (
-              <button
-                key={diag}
-                type="button"
-                onClick={() =>
-                  writeEncounterField({
-                    diagnosis: has
-                      ? current.filter((d) => d.toLowerCase() !== diag.toLowerCase())
-                      : [...current, diag],
-                  })
-                }
-                className={`rounded px-1.5 py-0.5 text-[11px] font-semibold border transition-all ${
-                  has
-                    ? 'bg-teal-600 text-white border-teal-600'
-                    : 'bg-slate-50 text-slate-700 border-slate-200 hover:border-teal-400'
-                }`}
-              >
-                {has ? '✓ ' : '+ '}
-                {diag}
-              </button>
-            );
-          })}
-        </div>
-
-        <SuggestedProtocolBanner encounter={encounter} patient={patient} />
+        {showDxPresets && (
+          <div className="flex flex-wrap gap-1 p-2 rounded-xl bg-slate-50 border border-teal-200 animate-in fade-in duration-150">
+            {COMMON_DIAGNOSIS_PRESETS.map((diag) => {
+              const current = encounter.diagnosis || [];
+              const has = current.some((d) => d.toLowerCase() === diag.toLowerCase());
+              return (
+                <button
+                  key={diag}
+                  type="button"
+                  onClick={() =>
+                    writeEncounterField({
+                      diagnosis: has
+                        ? current.filter((d) => d.toLowerCase() !== diag.toLowerCase())
+                        : [...current, diag],
+                    })
+                  }
+                  className={`rounded px-1.5 py-0.5 text-[10px] font-semibold border transition-all ${
+                    has
+                      ? 'bg-teal-600 text-white border-teal-600'
+                      : 'bg-white text-slate-700 border-slate-200 hover:border-teal-400'
+                  }`}
+                >
+                  {has ? '✓ ' : '+ '}
+                  {diag}
+                </button>
+              );
+            })}
+          </div>
+        )}
       </div>
 
-      {/* 5. Investigations (Ix / পরীক্ষা-নিরীক্ষা ও রিপোর্ট আপলোড) */}
+      {/* 6. Investigations (Ix / পরীক্ষা-নিরীক্ষা ও রিপোর্ট আপলোড) */}
       <ClinicalInvestigationsSection
         patient={patient}
         encounter={encounter}

@@ -8,17 +8,33 @@ import { getActiveTenantAiConfig } from './auth';
 export type AIProvider = 'cloud' | 'local';
 
 export interface LabAnalysisResult {
+  report_type?: 'ecg' | 'mri' | 'ct' | 'xray' | 'lab_report' | 'other';
   test_name: string;
+  clinical_impression?: string;
+  key_findings?: string[];
   extracted_metrics: Record<string, string | number>;
   abnormality_flags: string[];
+  suggested_diagnosis?: string;
+  recommended_actions?: string[];
   ai_summary: string;
+  ai_provider?: string;
+}
+
+export interface PrescriptionContradiction {
+  severity: 'critical' | 'warning' | 'advisory';
+  medicine: string;
+  issue: string;
+  clinical_danger: string;
+  recommendation: string;
 }
 
 export interface SuggestedMedication {
   generic_name: string;
   suggested_brand: string;
+  dosage_form?: string;
   strength: string;
   schedule: string;
+  meal_timing?: string;
   duration: string;
   rationale: string;
 }
@@ -36,6 +52,9 @@ export interface ClinicalTrackResult {
   suggested_medications: SuggestedMedication[];
   recommended_investigations: string[];
   safety_warnings: string[];
+  prescription_audit_status?: 'clean' | 'warnings_found';
+  audit_summary?: string;
+  contradictions_and_errors?: PrescriptionContradiction[];
   clinical_questions?: ClinicalQuestion[];
   clinical_summary?: string;
   is_confirmed_mode?: boolean;
@@ -44,9 +63,11 @@ export interface ClinicalTrackResult {
 export interface AnonymizedPatientContext {
   age: number;
   gender: string;
+  weight?: string;
   blood_group?: string;
   chronic_conditions: string[];
   allergies: string[];
+  drug_history?: string[];
   medical_surgical_history?: string;
   current_complaints: string[];
   current_vitals: Record<string, string>;
@@ -72,9 +93,11 @@ export function sanitizePatientContext(
   return {
     age: patient.age,
     gender: patient.gender,
+    weight: currentVitals.weight || undefined,
     blood_group: patient.blood_group,
     chronic_conditions: [...patient.chronic_conditions],
     allergies: [...patient.allergies],
+    drug_history: patient.drug_history ? [...patient.drug_history] : undefined,
     medical_surgical_history: patient.medical_surgical_history || undefined,
     current_complaints: [...currentComplaints],
     current_vitals: { ...currentVitals },
@@ -98,6 +121,9 @@ export async function analyzeLabReport(
     ollamaBaseUrl?: string;
     geminiApiKey?: string;
     nvidiaApiKey?: string;
+    testName?: string;
+    reportType?: string;
+    fileName?: string;
   },
 ): Promise<LabAnalysisResult> {
   const aiCfg = await getActiveTenantAiConfig();
@@ -115,6 +141,9 @@ export async function analyzeLabReport(
       payload: {
         content: imageBase64OrText,
         mimeType: options?.mimeType || 'text/plain',
+        testName: options?.testName,
+        reportType: options?.reportType,
+        fileName: options?.fileName,
         geminiApiKey: options?.geminiApiKey || aiCfg.ai_api_key,
         nvidiaApiKey: options?.nvidiaApiKey || aiCfg.nvidia_api_key,
       },

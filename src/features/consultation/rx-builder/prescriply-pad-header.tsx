@@ -103,8 +103,8 @@ export function PrescriplyPadHeader({
       )}
 
       {/* 2. Patient Demographic Strip */}
-      <div className="mt-3 grid grid-cols-2 sm:grid-cols-4 md:grid-cols-6 gap-2.5 rounded-xl bg-slate-50 border border-slate-200/80 px-3.5 py-2.5 text-xs text-slate-800 font-medium">
-        <div className="col-span-2 flex items-center gap-2">
+      <div className="mt-3 grid grid-cols-2 sm:grid-cols-3 md:grid-cols-6 gap-2.5 rounded-xl bg-slate-50 border border-slate-200/80 px-3.5 py-2.5 text-xs text-slate-800 font-medium">
+        <div className="flex items-center gap-1.5 truncate">
           <User className="h-3.5 w-3.5 text-teal-600 shrink-0" />
           <span className="font-semibold text-slate-500">নাম:</span>
           <span className="font-bold text-slate-950 truncate">{patient.full_name}</span>
@@ -118,31 +118,32 @@ export function PrescriplyPadHeader({
         </div>
 
         <div>
+          <span className="font-semibold text-slate-500">ওজন:</span>{' '}
+          <span className="font-bold text-teal-900 font-mono">
+            {encounter?.vitals?.weight ? `${encounter.vitals.weight} kg` : '—'}
+          </span>
+        </div>
+
+        <div className="truncate">
+          <span className="font-semibold text-slate-500">ঠিকানা:</span>{' '}
+          <span className="font-bold text-slate-900 truncate" title={patient.address || '—'}>
+            {patient.address || '—'}
+          </span>
+        </div>
+
+        <div>
           <span className="font-semibold text-slate-500">তারিখ:</span>{' '}
           <span className="font-bold text-slate-900 font-mono">{visitDateFormatted}</span>
         </div>
 
-        <div>
-          <span className="font-semibold text-slate-500">আইডি:</span>{' '}
-          <span className="font-bold text-teal-800 font-mono">{patient.patient_code}</span>
-        </div>
-
-        <div className="flex items-center gap-2">
-          {encounter?.vitals?.bp ? (
-            <span>
-              <span className="font-semibold text-slate-500">BP:</span>{' '}
-              <span className="font-bold text-slate-900 font-mono">{encounter.vitals.bp}</span>
-            </span>
-          ) : (
-            <span>
-              <span className="font-semibold text-slate-500">Blood:</span>{' '}
-              <span className="font-bold text-slate-900">{patient.blood_group || '—'}</span>
-            </span>
-          )}
-          {encounter?.vitals?.weight && (
-            <span>
-              <span className="font-semibold text-slate-500">Wt:</span>{' '}
-              <span className="font-bold text-slate-900 font-mono">{encounter.vitals.weight}kg</span>
+        <div className="flex items-center justify-between gap-1">
+          <div>
+            <span className="font-semibold text-slate-500">আইডি:</span>{' '}
+            <span className="font-bold text-teal-800 font-mono">{patient.patient_code}</span>
+          </div>
+          {encounter?.vitals?.bp && (
+            <span className="font-mono text-[11px] font-bold text-slate-700 bg-white px-1.5 py-0.5 rounded border border-slate-200">
+              {encounter.vitals.bp}
             </span>
           )}
         </div>
