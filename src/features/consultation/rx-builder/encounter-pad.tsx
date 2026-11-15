@@ -254,12 +254,24 @@ export function EncounterPad({ patient }: { patient: Patient }) {
           </div>
 
           {/* Right Column: ℞ Prescription Canvas, Medicines, Advice, Follow-up */}
-          <div className={cn('lg:pl-2 space-y-6', mobileTab === 'sidebar' ? 'hidden lg:block' : 'block')}>
-            <RxPad patient={patient} encounterId={encounter.id} />
-            <div className="pt-4 border-t border-slate-100">
-              <AdviceSection encounter={encounter} />
+          <div
+            className={cn(
+              'lg:pl-2 flex flex-col justify-between min-h-[500px] lg:min-h-[720px]',
+              mobileTab === 'sidebar' ? 'hidden lg:flex' : 'flex'
+            )}
+          >
+            <div>
+              <RxPad patient={patient} encounterId={encounter.id} />
             </div>
-            <PrescriplySignatureBlock tenant={tenant} />
+
+            {/* Flexible blank space between medicines and advice */}
+            <div className="flex-1 min-h-[40px]" />
+
+            {/* Bottom section: Advice positioned just above doctor's signature */}
+            <div className="mt-auto pt-6 border-t border-slate-100">
+              <AdviceSection encounter={encounter} />
+              <PrescriplySignatureBlock tenant={tenant} />
+            </div>
           </div>
         </div>
       </div>

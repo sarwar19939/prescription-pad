@@ -140,8 +140,9 @@ export function PrintableRx({ tenant, patient, encounter, items, reports }: Prin
           <PrintList heading="Diagnosis (Dx)" values={encounter.diagnosis} theme={theme} />
         </div>
 
-        {/* Right Column: ℞, Items, Advice, Follow-up, Signature */}
+        {/* Right Column: ℞, Items, Space for Manual Rx, Advice, Space for Manual Advice, Signature */}
         <div className="flex flex-col justify-between min-h-[640px]">
+          {/* Top section: ℞ Symbol & Prescribed Medicines */}
           <div>
             <div className={`mb-1.5 font-serif text-3xl font-bold leading-none ${theme.rxColorClass}`}>℞</div>
             <ol className="mb-3 flex flex-col gap-2.5">
@@ -170,9 +171,15 @@ export function PrintableRx({ tenant, patient, encounter, items, reports }: Prin
               })}
               {items.length === 0 && <li className="text-neutral-400 italic">(No medicines prescribed)</li>}
             </ol>
+          </div>
 
+          {/* Flexible breathing room between medicines and advice for manual handwritten medicines */}
+          <div className="flex-1 min-h-[50px]" aria-hidden="true" />
+
+          {/* Bottom section: Advice & Follow-up (positioned just above signature), Manual Advice space, and Signature */}
+          <div className="mt-auto">
             {encounter.advice.length > 0 && (
-              <div className="mb-3 pt-2 border-t border-slate-200">
+              <div className="mb-2 pt-2 border-t border-slate-200">
                 <div className={`font-bold mb-1 ${theme.accentColorClass}`}>Advice / পরামর্শ:</div>
                 <ul className="list-disc pl-4 space-y-0.5 text-slate-800">
                   {encounter.advice.map((a) => <li key={a} className="leading-snug">{a}</li>)}
@@ -181,7 +188,7 @@ export function PrintableRx({ tenant, patient, encounter, items, reports }: Prin
             )}
 
             {(encounter.follow_up_text || encounter.follow_up_date) && (
-              <div className={`mb-4 text-[11px] font-bold text-neutral-900 border-l-2 ${theme.borderClass} pl-2 py-0.5 bg-slate-50 rounded-r`}>
+              <div className={`mb-2 text-[11px] font-bold text-neutral-900 border-l-2 ${theme.borderClass} pl-2 py-0.5 bg-slate-50 rounded-r`}>
                 Next Visit / Follow-up:{' '}
                 {encounter.follow_up_text || format(new Date(encounter.follow_up_date! + 'T00:00:00'), 'dd/MM/yyyy')}
                 {encounter.follow_up_text && encounter.follow_up_date && !encounter.follow_up_text.includes(encounter.follow_up_date) && (
@@ -192,19 +199,22 @@ export function PrintableRx({ tenant, patient, encounter, items, reports }: Prin
               </div>
             )}
 
+            {/* Blank room right above signature for doctor to write 1-2 extra advice notes by hand */}
+            <div className="min-h-[30px]" aria-hidden="true" />
+
             {specialNotes && (
-              <div className="mt-4 pt-1.5 border-t border-dotted border-neutral-300 text-[10px] text-neutral-600 italic">
+              <div className="mb-2 pt-1 border-t border-dotted border-neutral-300 text-[10px] text-neutral-600 italic">
                 * {specialNotes}
               </div>
             )}
-          </div>
 
-          {/* Signature Block */}
-          <div className="mt-auto pt-8 self-end text-right">
-            <div className={`w-52 border-t-2 ${theme.borderClass} pt-1.5 text-center`}>
-              <div className={`text-[12.5px] font-bold ${theme.titleColorClass}`}>{tenant.doctor_name}</div>
-              <div className="text-[10px] text-neutral-700 font-medium">
-                {tenant.specialty || tenant.degrees || 'চিকিৎসক'}
+            {/* Signature Block */}
+            <div className="pt-2 flex justify-end text-right">
+              <div className={`w-52 border-t-2 ${theme.borderClass} pt-1.5 text-center`}>
+                <div className={`text-[12.5px] font-bold ${theme.titleColorClass}`}>{tenant.doctor_name}</div>
+                <div className="text-[10px] text-neutral-700 font-medium">
+                  {tenant.specialty || tenant.degrees || 'চিকিৎসক'}
+                </div>
               </div>
             </div>
           </div>
