@@ -64,18 +64,62 @@ export function toBengaliNumerals(input: string | number): string {
 }
 
 /**
- * Formats patient age in standard English clinical notation (Years and Months):
+ * Formats patient age in standard English clinical notation (Years, Months, and Days):
  * e.g. age 42, months 5 -> "42 Y 5 M"
  * age 0, months 7 -> "7 Months"
- * age 35, months undefined -> "35 Y"
+ * age 0, days 15 -> "15 Days"
+ * age 35 -> "35 Y"
  */
-export function formatPatientAge(age?: number | null, months?: number | null): string {
+export function formatPatientAge(
+  age?: number | null,
+  months?: number | null,
+  days?: number | null,
+  unit?: 'years' | 'months' | 'days' | string
+): string {
+  if (unit === 'days' || (typeof days === 'number' && days > 0 && (!age || age === 0) && (!months || months === 0))) {
+    const d = days ?? age ?? 0;
+    return `${d} Days`;
+  }
+  if (unit === 'months' || (typeof months === 'number' && months > 0 && (!age || age === 0))) {
+    const m = months ?? age ?? 0;
+    return `${m} Months`;
+  }
   const y = typeof age === 'number' ? age : 0;
   const m = typeof months === 'number' && months > 0 ? months : 0;
+  const d = typeof days === 'number' && days > 0 ? days : 0;
   if (y > 0 && m > 0) return `${y} Y ${m} M`;
   if (y > 0) return `${y} Y`;
   if (m > 0) return `${m} Months`;
+  if (d > 0) return `${d} Days`;
   return `${y} Y`;
+}
+
+/**
+ * Formats patient age in Bengali notation:
+ * e.g. "৫ বছর", "৫ মাস", "৫ দিন"
+ */
+export function formatPatientAgeBn(
+  age?: number | null,
+  months?: number | null,
+  days?: number | null,
+  unit?: 'years' | 'months' | 'days' | string
+): string {
+  if (unit === 'days' || (typeof days === 'number' && days > 0 && (!age || age === 0) && (!months || months === 0))) {
+    const d = days ?? age ?? 0;
+    return `${toBengaliNumerals(d)} দিন`;
+  }
+  if (unit === 'months' || (typeof months === 'number' && months > 0 && (!age || age === 0))) {
+    const m = months ?? age ?? 0;
+    return `${toBengaliNumerals(m)} মাস`;
+  }
+  const y = typeof age === 'number' ? age : 0;
+  const m = typeof months === 'number' && months > 0 ? months : 0;
+  const d = typeof days === 'number' && days > 0 ? days : 0;
+  if (y > 0 && m > 0) return `${toBengaliNumerals(y)} বছর ${toBengaliNumerals(m)} মাস`;
+  if (y > 0) return `${toBengaliNumerals(y)} বছর`;
+  if (m > 0) return `${toBengaliNumerals(m)} মাস`;
+  if (d > 0) return `${toBengaliNumerals(d)} দিন`;
+  return `${toBengaliNumerals(y)} বছর`;
 }
 
 /**

@@ -10,7 +10,7 @@
  */
 import { useRef, useState } from 'react';
 import { Droplets, Image as ImageIcon, Sparkles, Trash2, Upload } from 'lucide-react';
-import type { Tenant } from '@/types/schema';
+import type { Tenant, WatermarkPlacement } from '@/types/schema';
 import { Button } from '@/components/ui/button';
 
 interface PrescriptionWatermarkSectionProps {
@@ -34,12 +34,20 @@ const WATERMARK_TYPES = [
   { id: 'text', label: 'ক্লিনিক নাম / টেক্সট' },
 ] as const;
 
+const WATERMARK_PLACEMENTS: Array<{ id: WatermarkPlacement; label: string; desc: string }> = [
+  { id: 'center', label: 'মাঝখানে (Center)', desc: 'প্রেসক্রিপশন বডির কেন্দ্রস্থলে' },
+  { id: 'full_page', label: 'ফুল প্রেসক্রিপশন', desc: 'সম্পূর্ণ পাতা জুড়ে বিস্তৃত' },
+  { id: 'rx_side', label: 'শুধুমাত্র ওষুধের সাইডে', desc: 'ডানপাশের ℞ কলামে' },
+  { id: 'clinical_side', label: 'শুধুমাত্র ক্লিনিক্যাল সাইডে', desc: 'বামপাশের C/C ও O/E কলামে' },
+];
+
 export function PrescriptionWatermarkSection({ tenant, onPatch }: PrescriptionWatermarkSectionProps) {
   const watermarkInputRef = useRef<HTMLInputElement>(null);
   const [uploading, setUploading] = useState(false);
 
   const watermarkEnabled = tenant.watermark_enabled ?? false;
   const watermarkType = tenant.watermark_type || 'custom_image';
+  const watermarkPlacement = tenant.watermark_placement || 'center';
   const watermarkOpacity = tenant.watermark_opacity ?? 0.07;
   const watermarkImageUrl = tenant.watermark_image_url;
   const watermarkColorMode = tenant.watermark_color_mode || 'color';
@@ -126,7 +134,29 @@ export function PrescriptionWatermarkSection({ tenant, onPatch }: PrescriptionWa
             </div>
           </div>
 
-          {/* 2. Watermark Type Selector */}
+          {/* 2. Watermark Placement (অবস্থান) */}
+          <div>
+            <span className="font-bold text-slate-700 block mb-1.5">জলছাপের অবস্থান (প্লেসমেন্ট):</span>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+              {WATERMARK_PLACEMENTS.map((p) => (
+                <button
+                  key={p.id}
+                  type="button"
+                  onClick={() => onPatch({ watermark_placement: p.id })}
+                  className={`p-2 rounded-lg border text-left transition-all ${
+                    watermarkPlacement === p.id
+                      ? 'bg-white border-indigo-500 font-bold text-indigo-950 shadow-2xs ring-1 ring-indigo-400'
+                      : 'bg-white/60 border-slate-200 hover:bg-white text-slate-700'
+                  }`}
+                >
+                  <div className="text-xs">{p.label}</div>
+                  <div className="text-[10px] text-slate-500 font-normal leading-tight">{p.desc}</div>
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {/* 3. Watermark Type Selector */}
           <div>
             <span className="font-bold text-slate-700 block mb-1.5">জলছাপের উৎস বেছে নিন:</span>
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">

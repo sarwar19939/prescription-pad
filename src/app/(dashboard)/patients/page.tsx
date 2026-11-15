@@ -19,6 +19,7 @@ import {
 
 import { db } from '@/db/localDb';
 import { getCurrentTenantId } from '@/services/auth';
+import { formatPatientAge } from '@/lib/prescriptionFormatters';
 import type { Patient } from '@/types/schema';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -135,7 +136,9 @@ export default function PatientsPage() {
                     {p.full_name}
                   </Link>
                 </td>
-                <td className="px-5 py-3.5 text-slate-600 font-medium">{p.age} yrs · {p.gender}</td>
+                <td className="px-5 py-3.5 text-slate-600 font-medium">
+                  {formatPatientAge(p.age, p.age_months, p.age_days, p.age_unit)} · {p.gender}
+                </td>
                 <td className="px-5 py-3.5 font-mono text-slate-600 font-medium">{p.phone}</td>
                 <td className="px-5 py-3.5">
                   <div className="flex max-w-xs flex-wrap gap-1.5">

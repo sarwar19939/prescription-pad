@@ -20,7 +20,7 @@ export function PatientBanner({
       <div className="flex flex-wrap items-center gap-x-3 gap-y-1.5">
         <h2 className="text-base sm:text-xl font-bold tracking-tight text-slate-900">{patient.full_name}</h2>
         <span className="text-xs sm:text-base font-medium text-slate-600">
-          {formatPatientAge(patient.age, patient.age_months)} · {patient.gender === 'male' ? 'M' : patient.gender === 'female' ? 'F' : patient.gender}
+          {formatPatientAge(patient.age, patient.age_months, patient.age_days, patient.age_unit)} · {patient.gender === 'male' ? 'M' : patient.gender === 'female' ? 'F' : patient.gender}
         </span>
         <Badge variant="secondary" className="bg-slate-100 text-slate-800 text-xs sm:text-sm font-semibold px-2 py-0.5">
           {patient.blood_group || '—'}

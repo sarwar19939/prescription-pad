@@ -43,6 +43,9 @@ export type ColumnRatio = '25_75' | '30_70' | '35_65' | '40_60';
 export type PadFontSize = 'compact' | 'standard' | 'large';
 export type NameFontSize = 'normal' | 'large' | 'xl';
 export type LogoSize = 'sm' | 'md' | 'lg' | 'xl';
+export type LogoPosition = 'left' | 'center' | 'right';
+export type WatermarkPlacement = 'full_page' | 'center' | 'rx_side' | 'clinical_side';
+export type AgeUnit = 'years' | 'months' | 'days';
 export type DegreesDisplayMode = 'paragraph' | 'inline' | 'badges';
 
 /** Clinical vitals captured at a visit. */
@@ -85,9 +88,11 @@ export interface Tenant extends BaseRecord {
   degrees_display_mode?: DegreesDisplayMode;
   logo_url?: string;
   logo_size?: LogoSize;
+  logo_position?: LogoPosition;
   logo_grayscale?: boolean;
   watermark_enabled?: boolean;
   watermark_type?: 'custom_image' | 'logo' | 'text';
+  watermark_placement?: WatermarkPlacement;
   watermark_image_url?: string;
   watermark_text?: string;
   watermark_opacity?: number;
@@ -102,8 +107,10 @@ export interface Tenant extends BaseRecord {
 export interface Patient extends BaseRecord {
   patient_code: string;
   full_name: string;
-  age: number; // in years
-  age_months?: number; // 0-11 months (optional)
+  age: number; // in years (0 if infant/days/months)
+  age_months?: number; // 0-11 months or total months
+  age_days?: number; // days if newborn/pediatric
+  age_unit?: AgeUnit; // 'years' | 'months' | 'days'
   gender: Gender;
   phone: string;
   blood_group: string;

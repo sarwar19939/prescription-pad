@@ -50,6 +50,69 @@ export function PrescriplyPadHeader({
   const doctorNameSizeClass = getNameSizeClasses(tenant?.doctor_name_size);
   const clinicNameSizeClass = getClinicNameSizeClasses(tenant?.clinic_name_size);
   const logoGrayscaleClass = tenant?.logo_grayscale ? 'grayscale' : '';
+  const logoPosition = tenant?.logo_position || 'left';
+
+  const renderLogo = (extraClasses = '') => {
+    if (!logoUrl) return null;
+    return (
+      <img
+        src={logoUrl}
+        alt="Clinic Logo"
+        className={`${logoSizeClass} object-contain rounded shrink-0 ${logoGrayscaleClass} ${extraClasses}`}
+      />
+    );
+  };
+
+  const renderDoctorInfo = () => (
+    <div className="flex-1 min-w-0">
+      <div className="flex items-center gap-2 flex-wrap">
+        <h1 className={`font-black tracking-tight ${theme.titleColorClass} ${doctorNameSizeClass}`}>
+          {doctorName}
+        </h1>
+        <span className="inline-flex items-center gap-1 rounded-full bg-emerald-50 border border-emerald-200 px-2 py-0.5 text-[10px] font-bold text-emerald-800 shrink-0">
+          <ShieldCheck className="h-3 w-3 text-emerald-600" /> BM&amp;DC
+        </span>
+      </div>
+
+      {/* Degrees Paragraph Wrapping */}
+      <div className="mt-1 space-y-0.5 max-w-xl">
+        {degreeLines.map((line, idx) => (
+          <p
+            key={idx}
+            className={`text-xs sm:text-[13px] font-semibold ${theme.accentColorClass} leading-snug whitespace-pre-wrap break-words`}
+          >
+            {line}
+          </p>
+        ))}
+      </div>
+
+      <p className="text-xs sm:text-sm font-medium text-slate-800 mt-1">
+        {specialty}
+      </p>
+      <p className="text-[11px] font-mono text-slate-500 mt-0.5">
+        BM&amp;DC Reg. No: <span className="font-bold text-slate-700">{regNumber}</span>
+      </p>
+    </div>
+  );
+
+  const renderClinicInfo = () => (
+    <div className="sm:text-right shrink-0 max-w-sm">
+      <h2 className={`font-bold tracking-tight ${theme.titleColorClass} ${clinicNameSizeClass}`}>
+        {clinicName}
+      </h2>
+      <p className="text-xs text-slate-600 mt-0.5 leading-snug">{address}</p>
+      {visitingHours && (
+        <p className="text-[11px] text-slate-600 flex items-center sm:justify-end gap-1 mt-1 font-medium">
+          <Clock className="h-3 w-3 text-teal-600" /> Visiting Hours: {visitingHours}
+        </p>
+      )}
+      {phone && (
+        <p className="text-xs font-semibold text-slate-700 mt-0.5">
+          Phone: {phone}
+        </p>
+      )}
+    </div>
+  );
 
   return (
     <div className={`border-b-2 ${theme.borderClass} pb-3`}>
@@ -59,13 +122,7 @@ export function PrescriplyPadHeader({
           {headerAlign === 'centered' ? (
             /* Centered Header Layout */
             <div className="flex flex-col items-center text-center gap-2">
-              {logoUrl && (
-                <img
-                  src={logoUrl}
-                  alt="Clinic Logo"
-                  className={`${logoSizeClass} object-contain rounded shrink-0 mb-1 ${logoGrayscaleClass}`}
-                />
-              )}
+              {renderLogo('mb-1')}
               <h2 className={`font-bold tracking-tight ${theme.titleColorClass} ${clinicNameSizeClass}`}>
                 {clinicName}
               </h2>
@@ -95,58 +152,23 @@ export function PrescriplyPadHeader({
           ) : (
             /* Split / Left Header Layout (Classic & Modern Chamber Standard) */
             <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4">
+              {/* Doctor Details (Left) */}
               <div className="flex items-start gap-3.5 flex-1 min-w-0">
-                {logoUrl && (
-                  <img
-                    src={logoUrl}
-                    alt="Clinic Logo"
-                    className={`${logoSizeClass} object-contain rounded shrink-0 mt-0.5 ${logoGrayscaleClass}`}
-                  />
-                )}
-                <div className="flex-1 min-w-0">
-                  <div className="flex items-center gap-2 flex-wrap">
-                    <h1 className={`font-black tracking-tight ${theme.titleColorClass} ${doctorNameSizeClass}`}>
-                      {doctorName}
-                    </h1>
-                    <span className="inline-flex items-center gap-1 rounded-full bg-emerald-50 border border-emerald-200 px-2 py-0.5 text-[10px] font-bold text-emerald-800 shrink-0">
-                      <ShieldCheck className="h-3 w-3 text-emerald-600" /> BM&amp;DC
-                    </span>
-                  </div>
-
-                  {/* Degrees Paragraph Wrapping */}
-                  <div className="mt-1 space-y-0.5 max-w-xl">
-                    {degreeLines.map((line, idx) => (
-                      <p
-                        key={idx}
-                        className={`text-xs sm:text-[13px] font-semibold ${theme.accentColorClass} leading-snug whitespace-pre-wrap break-words`}
-                      >
-                        {line}
-                      </p>
-                    ))}
-                  </div>
-
-                  <p className="text-xs sm:text-sm font-medium text-slate-800 mt-1">
-                    {specialty}
-                  </p>
-                  <p className="text-[11px] font-mono text-slate-500 mt-0.5">
-                    BM&amp;DC Reg. No: <span className="font-bold text-slate-700">{regNumber}</span>
-                  </p>
-                </div>
+                {logoPosition === 'left' && renderLogo('mt-0.5')}
+                {renderDoctorInfo()}
               </div>
 
-              <div className="sm:text-right shrink-0 max-w-sm">
-                <h2 className={`font-bold tracking-tight ${theme.titleColorClass} ${clinicNameSizeClass}`}>
-                  {clinicName}
-                </h2>
-                <p className="text-xs text-slate-600 mt-0.5 leading-snug">{address}</p>
-                {visitingHours && (
-                  <p className="text-[11px] text-slate-600 flex items-center sm:justify-end gap-1 mt-1 font-medium">
-                    <Clock className="h-3 w-3 text-teal-600" /> Visiting Hours: {visitingHours}
-                  </p>
-                )}
-                <p className="text-xs font-semibold text-slate-800 mt-1 flex items-center sm:justify-end gap-1">
-                  <Phone className="h-3 w-3 text-teal-600" /> Phone: {phone}
-                </p>
+              {/* Logo in Center */}
+              {logoPosition === 'center' && logoUrl && (
+                <div className="hidden sm:flex flex-col items-center justify-center shrink-0 px-2 self-center">
+                  {renderLogo()}
+                </div>
+              )}
+
+              {/* Clinic Info (Right) + Optional Right Logo */}
+              <div className="flex items-start gap-3.5 shrink-0 max-w-sm sm:justify-end">
+                {renderClinicInfo()}
+                {logoPosition === 'right' && renderLogo('mt-0.5')}
               </div>
             </div>
           )}
@@ -164,7 +186,7 @@ export function PrescriplyPadHeader({
         <div>
           <span className="font-semibold text-slate-600">Age/Sex:</span>{' '}
           <span className="font-bold text-slate-900">
-            {formatPatientAge(patient.age, patient.age_months)} / {patient.gender === 'male' ? 'M' : patient.gender === 'female' ? 'F' : patient.gender}
+            {formatPatientAge(patient.age, patient.age_months, patient.age_days, patient.age_unit)} / {patient.gender === 'male' ? 'M' : patient.gender === 'female' ? 'F' : patient.gender}
           </span>
         </div>
 

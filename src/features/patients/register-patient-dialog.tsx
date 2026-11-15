@@ -11,7 +11,7 @@ import { Loader2 } from 'lucide-react';
 import { db } from '@/db/localDb';
 import { generateUUID } from '@/lib/uuid';
 import { getCurrentTenantId } from '@/services/auth';
-import type { Gender, Patient } from '@/types/schema';
+import type { AgeUnit, Gender, Patient } from '@/types/schema';
 import { TagInput } from '@/components/tag-input';
 import { Button } from '@/components/ui/button';
 import {
@@ -66,8 +66,8 @@ export function RegisterPatientDialog({ open, onOpenChange, onRegistered }: Regi
   const [error, setError] = useState<string | null>(null);
   const [form, setForm] = useState({
     full_name: '',
-    age: '',
-    age_months: '',
+    age_value: '',
+    age_unit: 'years' as AgeUnit,
     gender: '' as Gender | '',
     phone: '',
     address: '',
@@ -80,7 +80,7 @@ export function RegisterPatientDialog({ open, onOpenChange, onRegistered }: Regi
     setForm((f) => ({ ...f, [key]: value }));
 
   const invalid =
-    form.full_name.trim() === '' || form.age === '' || form.gender === '';
+    form.full_name.trim() === '' || form.age_value.trim() === '' || form.gender === '';
 
   const save = async (startConsultation: boolean) => {
     setSaving(true);
@@ -88,13 +88,30 @@ export function RegisterPatientDialog({ open, onOpenChange, onRegistered }: Regi
     try {
       const ts = stamp();
       const tenantId = getCurrentTenantId();
+      const rawAge = Number.parseInt(form.age_value, 10) || 0;
+      let age = 0;
+      let age_months: number | undefined = undefined;
+      let age_days: number | undefined = undefined;
+
+      if (form.age_unit === 'years') {
+        age = rawAge;
+      } else if (form.age_unit === 'months') {
+        age = 0;
+        age_months = rawAge;
+      } else if (form.age_unit === 'days') {
+        age = 0;
+        age_days = rawAge;
+      }
+
       const patient: Patient = {
         id: generateUUID(),
         tenant_id: tenantId,
         patient_code: await nextPatientCode(tenantId),
         full_name: form.full_name.trim(),
-        age: Number.parseInt(form.age, 10) || 0,
-        age_months: form.age_months ? Number.parseInt(form.age_months, 10) : undefined,
+        age,
+        age_months,
+        age_days,
+        age_unit: form.age_unit,
         gender: form.gender as Gender,
         phone: form.phone.trim(),
         address: form.address.trim(),
@@ -108,7 +125,17 @@ export function RegisterPatientDialog({ open, onOpenChange, onRegistered }: Regi
       };
       await db.patients.put(patient);
       onOpenChange(false);
-      setForm({ full_name: '', age: '', age_months: '', gender: '', phone: '', address: '', blood_group: '', chronic_conditions: [], allergies: [] });
+      setForm({
+        full_name: '',
+        age_value: '',
+        age_unit: 'years',
+        gender: '',
+        phone: '',
+        address: '',
+        blood_group: '',
+        chronic_conditions: [],
+        allergies: [],
+      });
       onRegistered?.(patient);
       if (startConsultation) router.push(`/consultation/${patient.id}`);
     } catch (e) {
@@ -140,30 +167,32 @@ export function RegisterPatientDialog({ open, onOpenChange, onRegistered }: Regi
               autoFocus
             />
           </div>
-          <div className="grid grid-cols-2 gap-2">
-            <div className="grid gap-1.5">
-              <Label htmlFor="age">Age (Years) *</Label>
+          <div className="grid gap-1.5">
+            <Label htmlFor="age_value">বয়স (Age) *</Label>
+            <div className="flex items-center gap-2">
               <Input
-                id="age"
+                id="age_value"
                 type="number"
                 min={0}
-                max={149}
-                value={form.age}
-                onChange={(e) => set('age', e.target.value)}
-                placeholder="e.g. 42"
+                max={150}
+                value={form.age_value}
+                onChange={(e) => set('age_value', e.target.value)}
+                placeholder="যেমন: ৫"
+                className="flex-1 font-semibold"
               />
-            </div>
-            <div className="grid gap-1.5">
-              <Label htmlFor="age_months">Months (০-১১ মাস)</Label>
-              <Input
-                id="age_months"
-                type="number"
-                min={0}
-                max={11}
-                value={form.age_months}
-                onChange={(e) => set('age_months', e.target.value)}
-                placeholder="e.g. 6"
-              />
+              <Select
+                value={form.age_unit}
+                onValueChange={(v) => set('age_unit', v as AgeUnit)}
+              >
+                <SelectTrigger className="w-32 shrink-0 bg-slate-50 border-slate-300 font-medium">
+                  <SelectValue placeholder="একক" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="years">বছর (Years)</SelectItem>
+                  <SelectItem value="months">মাস (Months)</SelectItem>
+                  <SelectItem value="days">দিন (Days)</SelectItem>
+                </SelectContent>
+              </Select>
             </div>
           </div>
           <div className="grid gap-1.5">

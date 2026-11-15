@@ -19,6 +19,7 @@ import {
 import { getColumnGridClass, getPadTheme } from '@/lib/prescriptionTheme';
 import type { Encounter, InvestigationReport, Patient, PrescriptionItem, Tenant } from '@/types/schema';
 import { PrintableRxHeader } from './PrintableRxHeader';
+import { RxWatermark } from './RxWatermark';
 
 interface PrintableRxProps {
   tenant: Tenant;
@@ -34,114 +35,92 @@ const VITAL_LABELS: Array<[keyof Encounter['vitals'], string]> = [
 
 export function PrintableRx({ tenant, patient, encounter, items, reports }: PrintableRxProps) {
   const preprinted = tenant.hide_header_for_print === true;
-  const topPad = preprinted ? (tenant.print_margin_top_mm || 45) : 6;
-  const logoUrl = tenant.logo_url;
-  const watermarkOpacity = tenant.watermark_opacity ?? 0.07;
+  const topPad = preprinted ? (tenant.print_margin_top_mm || 45) : 5;
+  const leftPad = tenant.print_margin_left_mm ?? 10;
   const specialNotes = tenant.special_notes;
   const isMonochrome = tenant.print_color_mode === 'monochrome';
   const theme = getPadTheme(tenant.pad_layout_style);
   const gridClass = getColumnGridClass(tenant.column_ratio);
-  const watermarkGrayscaleClass = tenant.watermark_color_mode === 'grayscale' ? 'grayscale' : '';
 
   const manualOe = stripAiGeneratedFindings(encounter.clinical_findings);
 
   return (
     <div
-      className={`print-sheet relative bg-white text-slate-900 ${isMonochrome ? 'monochrome-print' : ''}`}
+      className={`print-sheet relative flex flex-col justify-between h-[296mm] max-h-[296mm] box-border bg-white text-slate-900 overflow-hidden ${
+        isMonochrome ? 'monochrome-print' : ''
+      }`}
       style={{
         paddingTop: `${topPad}mm`,
-        paddingLeft: `${tenant.print_margin_left_mm}mm`,
-        paddingRight: '10mm',
+        paddingBottom: '6mm',
+        paddingLeft: `${leftPad}mm`,
+        paddingRight: '8mm',
       }}
     >
-      {/* Watermark (জলছাপ) Layer */}
-      {tenant.watermark_enabled && (
-        <div
-          aria-hidden
-          className="pointer-events-none select-none absolute inset-0 flex items-center justify-center overflow-hidden z-0"
-        >
-          {tenant.watermark_type === 'custom_image' && tenant.watermark_image_url ? (
-            <img
-              src={tenant.watermark_image_url}
-              alt=""
-              className={`max-w-[380px] max-h-[380px] object-contain ${watermarkGrayscaleClass}`}
-              style={{ opacity: watermarkOpacity }}
-            />
-          ) : tenant.watermark_type === 'logo' && logoUrl ? (
-            <img
-              src={logoUrl}
-              alt=""
-              className={`max-w-[360px] max-h-[360px] object-contain ${watermarkGrayscaleClass}`}
-              style={{ opacity: watermarkOpacity }}
-            />
-          ) : (
-            <span
-              className="text-6xl font-black uppercase tracking-widest rotate-[-25deg] whitespace-nowrap"
-              style={{
-                opacity: watermarkOpacity,
-                color: tenant.watermark_color || theme.hex,
-              }}
-            >
-              {tenant.watermark_text || tenant.clinic_name}
-            </span>
-          )}
-        </div>
-      )}
+      {/* Watermark (জলছাপ) Layers for Full Page or Center Placements */}
+      <RxWatermark tenant={tenant} theme={theme} targetPlacement="full_page" />
+      <RxWatermark tenant={tenant} theme={theme} targetPlacement="center" />
 
       {/* Header and Patient Bar Component */}
       <PrintableRxHeader tenant={tenant} patient={patient} encounter={encounter} theme={theme} />
 
       {/* Two Columns Layout (Width Controlled by Column Ratio) */}
-      <div className={`relative z-10 mt-3 grid ${gridClass} gap-4 text-[11px] leading-relaxed flex-1`}>
+      <div className={`relative z-10 mt-2.5 grid ${gridClass} gap-3 text-[11px] leading-relaxed flex-1 min-h-0 overflow-hidden`}>
         {/* Left Column: Assessment (C/C, O/E, Vitals, History, Dx, Ix) */}
-        <div className={`border-r border-dashed ${theme.dividerClass} pr-3 flex flex-col`}>
-          <PrintList heading="C/C (Chief Complaints)" values={encounter.chief_complaints} theme={theme} />
+        <div className={`relative border-r border-dashed ${theme.dividerClass} pr-2.5 flex flex-col justify-between overflow-hidden`}>
+          {/* Watermark specifically placed on Clinical Side */}
+          <RxWatermark tenant={tenant} theme={theme} targetPlacement="clinical_side" isColumnScope />
 
-          {((encounter.drug_history && encounter.drug_history.length > 0) || (patient.drug_history && patient.drug_history.length > 0)) && (
-            <div className="mb-2">
-              <div className={`font-bold ${theme.accentColorClass}`}>Drug History</div>
-              <ul className="list-disc pl-4 text-slate-800">
-                {(encounter.drug_history || patient.drug_history || []).map((dh) => <li key={dh}>{dh}</li>)}
-              </ul>
-            </div>
-          )}
+          <div className="space-y-1.5 overflow-hidden">
+            <PrintList heading="C/C (Chief Complaints)" values={encounter.chief_complaints} theme={theme} />
 
-          <PrintList heading="Vitals" theme={theme}>
-            {VITAL_LABELS.filter(([k]) => k !== 'weight' && encounter.vitals[k]).map(([k, label]) => (
-              <div key={k}>{label}: <strong>{encounter.vitals[k]}</strong></div>
-            ))}
-          </PrintList>
-
-          {(patient.chronic_conditions?.length > 0 || patient.allergies?.length > 0 || patient.medical_surgical_history) && (
-            <div className="mb-1.5">
-              <div className={`font-bold ${theme.accentColorClass}`}>H/O (Past History)</div>
-              {patient.chronic_conditions?.length > 0 && <div>• Illness: {patient.chronic_conditions.join(', ')}</div>}
-              {patient.allergies?.length > 0 && <div className="font-bold text-rose-700">• Allergy: {patient.allergies.join(', ')}</div>}
-              {patient.medical_surgical_history && <div>• Notes: {patient.medical_surgical_history}</div>}
-            </div>
-          )}
-
-          {manualOe && (
-            <div className="mb-1.5">
-              <div className={`font-bold ${theme.accentColorClass}`}>O/E (On Examination)</div>
-              <p className="whitespace-pre-line text-slate-800">{manualOe}</p>
-            </div>
-          )}
-
-          <PrintList heading="Investigations (Lab Tests)" theme={theme}>
-            {reports.map((r) => (
-              <div key={r.id}>
-                • {r.test_name}{r.abnormality_flags.length > 0 ? ` (${r.abnormality_flags.join(', ')})` : ''}
+            {((encounter.drug_history && encounter.drug_history.length > 0) || (patient.drug_history && patient.drug_history.length > 0)) && (
+              <div className="mb-1.5">
+                <div className={`font-bold ${theme.accentColorClass}`}>Drug History</div>
+                <ul className="list-disc pl-4 text-slate-800">
+                  {(encounter.drug_history || patient.drug_history || []).map((dh) => <li key={dh}>{dh}</li>)}
+                </ul>
               </div>
-            ))}
-            {reports.length === 0 && <div className="text-neutral-400">—</div>}
-          </PrintList>
+            )}
 
-          <PrintList heading="Diagnosis (Dx)" values={encounter.diagnosis} theme={theme} />
+            <PrintList heading="Vitals" theme={theme}>
+              {VITAL_LABELS.filter(([k]) => k !== 'weight' && encounter.vitals[k]).map(([k, label]) => (
+                <div key={k}>{label}: <strong>{encounter.vitals[k]}</strong></div>
+              ))}
+            </PrintList>
+
+            {(patient.chronic_conditions?.length > 0 || patient.allergies?.length > 0 || patient.medical_surgical_history) && (
+              <div className="mb-1">
+                <div className={`font-bold ${theme.accentColorClass}`}>H/O (Past History)</div>
+                {patient.chronic_conditions?.length > 0 && <div>• Illness: {patient.chronic_conditions.join(', ')}</div>}
+                {patient.allergies?.length > 0 && <div className="font-bold text-rose-700">• Allergy: {patient.allergies.join(', ')}</div>}
+                {patient.medical_surgical_history && <div>• Notes: {patient.medical_surgical_history}</div>}
+              </div>
+            )}
+
+            {manualOe && (
+              <div className="mb-1">
+                <div className={`font-bold ${theme.accentColorClass}`}>O/E (On Examination)</div>
+                <p className="whitespace-pre-line text-slate-800">{manualOe}</p>
+              </div>
+            )}
+
+            <PrintList heading="Investigations (Lab Tests)" theme={theme}>
+              {reports.map((r) => (
+                <div key={r.id}>
+                  • {r.test_name}{r.abnormality_flags.length > 0 ? ` (${r.abnormality_flags.join(', ')})` : ''}
+                </div>
+              ))}
+              {reports.length === 0 && <div className="text-neutral-400">—</div>}
+            </PrintList>
+
+            <PrintList heading="Diagnosis (Dx)" values={encounter.diagnosis} theme={theme} />
+          </div>
         </div>
 
         {/* Right Column: ℞, Items, Space for Manual Rx, Advice, Space for Manual Advice, Signature */}
-        <div className="flex flex-col justify-between min-h-[640px]">
+        <div className="relative flex flex-col justify-between h-full min-h-0 pl-1 overflow-hidden">
+          {/* Watermark specifically placed on Rx / Medicine Side */}
+          <RxWatermark tenant={tenant} theme={theme} targetPlacement="rx_side" isColumnScope />
           {/* Top section: ℞ Symbol & Prescribed Medicines */}
           <div>
             <div className={`mb-1.5 font-serif text-3xl font-bold leading-none ${theme.rxColorClass}`}>℞</div>
@@ -173,14 +152,14 @@ export function PrintableRx({ tenant, patient, encounter, items, reports }: Prin
             </ol>
           </div>
 
-          {/* Flexible breathing room between medicines and advice for manual handwritten medicines */}
-          <div className="flex-1 min-h-[50px]" aria-hidden="true" />
+          {/* Flexible breathing room between medicines and advice */}
+          <div className="flex-1 min-h-[14px]" aria-hidden="true" />
 
           {/* Bottom section: Advice & Follow-up (positioned just above signature), Manual Advice space, and Signature */}
           <div className="mt-auto">
             {encounter.advice.length > 0 && (
-              <div className="mb-2 pt-2 border-t border-slate-200">
-                <div className={`font-bold mb-1 ${theme.accentColorClass}`}>Advice / পরামর্শ:</div>
+              <div className="mb-1.5 pt-1.5 border-t border-slate-200">
+                <div className={`font-bold mb-0.5 ${theme.accentColorClass}`}>Advice / পরামর্শ:</div>
                 <ul className="list-disc pl-4 space-y-0.5 text-slate-800">
                   {encounter.advice.map((a) => <li key={a} className="leading-snug">{a}</li>)}
                 </ul>
@@ -188,7 +167,7 @@ export function PrintableRx({ tenant, patient, encounter, items, reports }: Prin
             )}
 
             {(encounter.follow_up_text || encounter.follow_up_date) && (
-              <div className={`mb-2 text-[11px] font-bold text-neutral-900 border-l-2 ${theme.borderClass} pl-2 py-0.5 bg-slate-50 rounded-r`}>
+              <div className={`mb-1.5 text-[11px] font-bold text-neutral-900 border-l-2 ${theme.borderClass} pl-2 py-0.5 bg-slate-50 rounded-r`}>
                 Next Visit / Follow-up:{' '}
                 {encounter.follow_up_text || format(new Date(encounter.follow_up_date! + 'T00:00:00'), 'dd/MM/yyyy')}
                 {encounter.follow_up_text && encounter.follow_up_date && !encounter.follow_up_text.includes(encounter.follow_up_date) && (
@@ -199,8 +178,8 @@ export function PrintableRx({ tenant, patient, encounter, items, reports }: Prin
               </div>
             )}
 
-            {/* Blank room right above signature for doctor to write 1-2 extra advice notes by hand */}
-            <div className="min-h-[30px]" aria-hidden="true" />
+            {/* Blank room right above signature for doctor to write note by hand */}
+            <div className="min-h-[8px]" aria-hidden="true" />
 
             {specialNotes && (
               <div className="mb-2 pt-1 border-t border-dotted border-neutral-300 text-[10px] text-neutral-600 italic">

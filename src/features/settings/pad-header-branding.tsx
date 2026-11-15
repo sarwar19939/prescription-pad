@@ -6,7 +6,7 @@
  */
 import { useRef, useState } from 'react';
 import { AlignCenter, AlignJustify, AlignLeft, Image as ImageIcon, Sparkles, Trash2, Upload } from 'lucide-react';
-import type { HeaderAlignment, LogoSize, Tenant } from '@/types/schema';
+import type { HeaderAlignment, LogoPosition, LogoSize, Tenant } from '@/types/schema';
 import { Button } from '@/components/ui/button';
 
 interface PadHeaderBrandingProps {
@@ -21,6 +21,7 @@ export function PadHeaderBranding({ tenant, onPatch }: PadHeaderBrandingProps) {
   const logoUrl = tenant.logo_url;
   const logoSize = tenant.logo_size || 'md';
   const logoGrayscale = tenant.logo_grayscale ?? false;
+  const logoPosition = tenant.logo_position || 'left';
   const headerAlign = tenant.header_alignment || 'split';
 
   const handleLogoFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -164,45 +165,87 @@ export function PadHeaderBranding({ tenant, onPatch }: PadHeaderBrandingProps) {
 
             {/* Logo Color & Size Controls */}
             {logoUrl && (
-              <div className="flex flex-wrap items-center gap-3 pt-1 border-t border-slate-200 text-xs">
-                {/* Logo Color Mode */}
-                <div className="flex items-center gap-1.5">
-                  <span className="font-semibold text-slate-700">লোগোর রঙ:</span>
-                  <button
-                    type="button"
-                    onClick={() => onPatch({ logo_grayscale: false })}
-                    className={`px-2 py-0.5 rounded text-[11px] font-bold ${
-                      !logoGrayscale ? 'bg-teal-700 text-white' : 'bg-slate-200 text-slate-700'
-                    }`}
-                  >
-                    🌈 কালারফুল
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => onPatch({ logo_grayscale: true })}
-                    className={`px-2 py-0.5 rounded text-[11px] font-bold ${
-                      logoGrayscale ? 'bg-slate-800 text-white' : 'bg-slate-200 text-slate-700'
-                    }`}
-                  >
-                    ⬛ সাদাকালো
-                  </button>
+              <>
+                <div className="flex flex-wrap items-center gap-3 pt-1 border-t border-slate-200 text-xs">
+                  {/* Logo Color Mode */}
+                  <div className="flex items-center gap-1.5">
+                    <span className="font-semibold text-slate-700">লোগোর রঙ:</span>
+                    <button
+                      type="button"
+                      onClick={() => onPatch({ logo_grayscale: false })}
+                      className={`px-2 py-0.5 rounded text-[11px] font-bold ${
+                        !logoGrayscale ? 'bg-teal-700 text-white' : 'bg-slate-200 text-slate-700'
+                      }`}
+                    >
+                      🌈 কালারফুল
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => onPatch({ logo_grayscale: true })}
+                      className={`px-2 py-0.5 rounded text-[11px] font-bold ${
+                        logoGrayscale ? 'bg-slate-800 text-white' : 'bg-slate-200 text-slate-700'
+                      }`}
+                    >
+                      ⬛ সাদাকালো
+                    </button>
+                  </div>
+
+                  {/* Logo Size */}
+                  <div className="flex items-center gap-1.5">
+                    <span className="font-semibold text-slate-700">সাইজ:</span>
+                    <select
+                      value={logoSize}
+                      onChange={(e) => onPatch({ logo_size: e.target.value as LogoSize })}
+                      className="h-7 rounded border border-slate-300 bg-white px-1.5 text-xs font-medium"
+                    >
+                      <option value="sm">ছোট (Small)</option>
+                      <option value="md">মাঝারি (Medium)</option>
+                      <option value="lg">বড় (Large)</option>
+                      <option value="xl">অতিরিক্ত বড় (XL)</option>
+                    </select>
+                  </div>
                 </div>
 
-                {/* Logo Size */}
-                <div className="flex items-center gap-1.5">
-                  <span className="font-semibold text-slate-700">সাইজ:</span>
-                  <select
-                    value={logoSize}
-                    onChange={(e) => onPatch({ logo_size: e.target.value as LogoSize })}
-                    className="h-7 rounded border border-slate-300 bg-white px-1.5 text-xs font-medium"
-                  >
-                    <option value="sm">ছোট (Small)</option>
-                    <option value="md">মাঝারি (Medium)</option>
-                    <option value="lg">বড় (Large)</option>
-                    <option value="xl">অতিরিক্ত বড় (XL)</option>
-                  </select>
+                {/* Logo Position: Left, Center, Right */}
+                <div className="pt-2 border-t border-slate-200">
+                  <span className="font-semibold text-slate-700 block mb-1.5">লোগোর অবস্থান (পজিশন):</span>
+                  <div className="grid grid-cols-3 gap-2">
+                    <button
+                      type="button"
+                      onClick={() => onPatch({ logo_position: 'left' })}
+                      className={`py-1 px-2 rounded-lg border text-center transition-all ${
+                        logoPosition === 'left'
+                          ? 'border-teal-600 bg-teal-50 text-teal-950 font-bold shadow-2xs'
+                          : 'border-slate-200 bg-white hover:bg-slate-50 text-slate-700'
+                      }`}
+                    >
+                      ⬅️ বামপাশে (Left)
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => onPatch({ logo_position: 'center' })}
+                      className={`py-1 px-2 rounded-lg border text-center transition-all ${
+                        logoPosition === 'center'
+                          ? 'border-teal-600 bg-teal-50 text-teal-950 font-bold shadow-2xs'
+                          : 'border-slate-200 bg-white hover:bg-slate-50 text-slate-700'
+                      }`}
+                    >
+                      ⏺️ মাঝখানে (Center)
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => onPatch({ logo_position: 'right' })}
+                      className={`py-1 px-2 rounded-lg border text-center transition-all ${
+                        logoPosition === 'right'
+                          ? 'border-teal-600 bg-teal-50 text-teal-950 font-bold shadow-2xs'
+                          : 'border-slate-200 bg-white hover:bg-slate-50 text-slate-700'
+                      }`}
+                    >
+                      ➡️ ডানপাশে (Right)
+                    </button>
+                  </div>
                 </div>
-              </div>
+              </>
             )}
           </div>
         </div>

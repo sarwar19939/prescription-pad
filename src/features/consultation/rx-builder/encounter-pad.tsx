@@ -19,6 +19,7 @@ import { AdviceSection } from './advice-section';
 import { RxPad } from './rx-pad';
 import { PrescriplySignatureBlock } from './prescriply-signature-block';
 import { PrintableRx } from '@/components/prescription/PrintableRx';
+import { RxWatermark } from '@/components/prescription/RxWatermark';
 import { getDesktopColumnGridClass, getPadTheme } from '@/lib/prescriptionTheme';
 import type { Patient } from '@/types/schema';
 import { Button } from '@/components/ui/button';
@@ -153,42 +154,12 @@ export function EncounterPad({ patient }: { patient: Patient }) {
 
       {/* Unified Digital Prescription Pad Sheet (A4 Style Canvas) */}
       <div className="relative overflow-hidden rounded-2xl border border-slate-200/90 bg-white p-3 sm:p-7 shadow-sm max-w-5xl mx-auto w-full space-y-4 sm:space-y-6 print:hidden">
-        {/* On-screen Watermark (জলছাপ) Layer */}
-        {tenant?.watermark_enabled && (
-          <div
-            aria-hidden
-            className="pointer-events-none select-none absolute inset-0 flex items-center justify-center overflow-hidden z-0"
-          >
-            {tenant.watermark_type === 'custom_image' && tenant.watermark_image_url ? (
-              <img
-                src={tenant.watermark_image_url}
-                alt=""
-                className={`max-w-[340px] max-h-[340px] object-contain ${
-                  tenant.watermark_color_mode === 'grayscale' ? 'grayscale' : ''
-                }`}
-                style={{ opacity: tenant.watermark_opacity ?? 0.07 }}
-              />
-            ) : tenant.watermark_type === 'logo' && tenant.logo_url ? (
-              <img
-                src={tenant.logo_url}
-                alt=""
-                className={`max-w-[320px] max-h-[320px] object-contain ${
-                  tenant.watermark_color_mode === 'grayscale' ? 'grayscale' : ''
-                }`}
-                style={{ opacity: tenant.watermark_opacity ?? 0.07 }}
-              />
-            ) : (
-              <span
-                className="text-4xl sm:text-6xl font-black uppercase tracking-widest rotate-[-25deg] whitespace-nowrap"
-                style={{
-                  opacity: tenant.watermark_opacity ?? 0.05,
-                  color: tenant.watermark_color || getPadTheme(tenant?.pad_layout_style).hex,
-                }}
-              >
-                {tenant.watermark_text || tenant.clinic_name}
-              </span>
-            )}
-          </div>
+        {/* On-screen Watermark (জলছাপ) Layers */}
+        {tenant && (
+          <>
+            <RxWatermark tenant={tenant} targetPlacement="full_page" />
+            <RxWatermark tenant={tenant} targetPlacement="center" />
+          </>
         )}
 
         {/* 1. Letterhead & Patient Bar */}
@@ -241,11 +212,12 @@ export function EncounterPad({ patient }: { patient: Patient }) {
           {/* Left Column: Clinical Assessment (C/C, O/E, Vitals, History, Dx, Ix) */}
           <div
             className={cn(
-              'lg:border-r lg:border-dashed lg:pr-5',
+              'relative lg:border-r lg:border-dashed lg:pr-5 overflow-hidden',
               getPadTheme(tenant?.pad_layout_style).dividerClass,
               mobileTab === 'rx' ? 'hidden lg:block' : 'block'
             )}
           >
+            {tenant && <RxWatermark tenant={tenant} targetPlacement="clinical_side" isColumnScope />}
             <PrescriplyClinicalSidebar
               encounter={encounter}
               patient={patient}
@@ -256,10 +228,11 @@ export function EncounterPad({ patient }: { patient: Patient }) {
           {/* Right Column: ℞ Prescription Canvas, Medicines, Advice, Follow-up */}
           <div
             className={cn(
-              'lg:pl-2 flex flex-col justify-between min-h-[500px] lg:min-h-[720px]',
+              'relative lg:pl-2 flex flex-col justify-between min-h-[500px] lg:min-h-[720px] overflow-hidden',
               mobileTab === 'sidebar' ? 'hidden lg:flex' : 'flex'
             )}
           >
+            {tenant && <RxWatermark tenant={tenant} targetPlacement="rx_side" isColumnScope />}
             <div>
               <RxPad patient={patient} encounterId={encounter.id} />
             </div>
