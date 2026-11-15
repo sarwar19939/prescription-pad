@@ -46,6 +46,7 @@ export type LogoSize = 'sm' | 'md' | 'lg' | 'xl';
 export type LogoPosition = 'left' | 'center' | 'right';
 export type WatermarkPlacement = 'full_page' | 'center' | 'rx_side' | 'clinical_side';
 export type AgeUnit = 'years' | 'months' | 'days';
+export type PaperSizePreset = 'a4' | 'a5' | 'letter' | 'custom';
 export type DegreesDisplayMode = 'paragraph' | 'inline' | 'badges';
 
 /** Clinical vitals captured at a visit. */
@@ -70,10 +71,17 @@ export interface Tenant extends BaseRecord {
   phone: string;
   address: string;
   subscription_plan: SubscriptionPlan;
+  paper_size_preset?: PaperSizePreset;
+  custom_paper_width_mm?: number;
+  custom_paper_height_mm?: number;
   print_margin_top_mm: number;
+  print_margin_bottom_mm?: number;
   print_margin_left_mm: number;
-  /** Phase 3: skip letterhead on print (for pre-printed pads). */
+  print_margin_right_mm?: number;
+  /** Skip letterhead on print (for pre-printed stationery). */
   hide_header_for_print?: boolean;
+  /** Skip signature & footer notes on print (for pre-printed stationery footer). */
+  hide_footer_for_print?: boolean;
   reg_number?: string;
   ai_provider?: 'cloud' | 'local';
   ai_api_key?: string;

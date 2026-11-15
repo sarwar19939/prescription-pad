@@ -18,6 +18,7 @@ import { Button } from '@/components/ui/button';
 import { Separator } from '@/components/ui/separator';
 import { BackupRestoreCard } from '@/features/settings/backup-restore-card';
 import { PrescriptionPadSetupCard } from '@/features/settings/prescription-pad-setup-card';
+import { PrintCalibrationCard } from '@/features/settings/print-calibration-card';
 
 const CLINICAL_FIELDS: Array<{ key: keyof Tenant; label: string; placeholder?: string }> = [
   { key: 'clinic_name', label: 'Clinic / Practice Name', placeholder: 'বসিরবানিয়া চেম্বার' },
@@ -104,53 +105,8 @@ export default function SettingsPage() {
       {/* 2. Prescription Pad Theme, Logo & Watermark Setup */}
       <PrescriptionPadSetupCard tenant={tenant} onPatch={patch} />
 
-      {/* 3. Print Margin Calibration */}
-      <div className="rounded-lg border border-neutral-200 bg-white p-4 shadow-2xs">
-        <h2 className="text-sm font-semibold uppercase tracking-wide text-neutral-600">
-          Prescription Print Calibration (Pre-Printed Pads)
-        </h2>
-        <div className="mt-3 flex flex-col gap-3">
-          <div className="flex gap-6">
-            <label className="flex flex-col gap-1 text-xs text-neutral-600">
-              Top margin offset (mm)
-              <input
-                type="number"
-                min={0}
-                max={120}
-                className="w-36 rounded-md border border-neutral-300 px-2 py-1.5 text-sm outline-none focus:border-emerald-600"
-                value={tenant.print_margin_top_mm}
-                onChange={(e) => patch({ print_margin_top_mm: Number(e.target.value) || 0 })}
-              />
-            </label>
-            <label className="flex flex-col gap-1 text-xs text-neutral-600">
-              Left margin offset (mm)
-              <input
-                type="number"
-                min={0}
-                max={80}
-                className="w-36 rounded-md border border-neutral-300 px-2 py-1.5 text-sm outline-none focus:border-emerald-600"
-                value={tenant.print_margin_left_mm}
-                onChange={(e) => patch({ print_margin_left_mm: Number(e.target.value) || 0 })}
-              />
-            </label>
-          </div>
-          <Separator />
-          <label className="flex cursor-pointer items-start gap-2 text-sm">
-            <input
-              type="checkbox"
-              className="mt-1 h-4 w-4 accent-emerald-700"
-              checked={tenant.hide_header_for_print === true}
-              onChange={(e) => patch({ hide_header_for_print: e.target.checked })}
-            />
-            <span>
-              <span className="font-medium text-neutral-800">Hide Letterhead Header on Print</span>
-              <span className="block text-xs text-neutral-500">
-                Skips digital header and uses top margin offset for stationery with pre-printed doctor headers.
-              </span>
-            </span>
-          </label>
-        </div>
-      </div>
+      {/* 3. Prescription Paper Size & Print Calibration (Pre-printed Pads) */}
+      <PrintCalibrationCard tenant={tenant} onPatch={patch} />
 
       {/* 3. AI Clinical Co-Pilot Config */}
       <div className="rounded-lg border border-neutral-200 bg-white p-4 shadow-2xs">

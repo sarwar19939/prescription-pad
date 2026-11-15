@@ -5,6 +5,7 @@ import type {
   NameFontSize,
   PadFontSize,
   PadLayoutStyle,
+  PaperSizePreset,
   Tenant,
 } from '@/types/schema';
 
@@ -215,4 +216,32 @@ export function formatDegreesList(degrees?: string | null): string[] {
   }
   // Default single paragraph
   return [degrees.trim()];
+}
+
+export interface PaperDimensions {
+  widthMm: number;
+  heightMm: number;
+  label: string;
+  cssSize: string;
+}
+
+export function getPaperDimensions(
+  preset?: PaperSizePreset | null,
+  customWidth?: number | null,
+  customHeight?: number | null
+): PaperDimensions {
+  switch (preset) {
+    case 'a5':
+      return { widthMm: 148, heightMm: 210, label: 'A5 (১৪৮ × ২১০ মিমি - চেম্বার হাফ প্যাড)', cssSize: '148mm 210mm' };
+    case 'letter':
+      return { widthMm: 216, heightMm: 279, label: 'Letter (২১৬ × ২৭৯ মিমি)', cssSize: 'letter' };
+    case 'custom': {
+      const w = customWidth && customWidth >= 80 && customWidth <= 400 ? customWidth : 210;
+      const h = customHeight && customHeight >= 100 && customHeight <= 500 ? customHeight : 297;
+      return { widthMm: w, heightMm: h, label: `কাস্টম (${w} × ${h} মিমি)`, cssSize: `${w}mm ${h}mm` };
+    }
+    case 'a4':
+    default:
+      return { widthMm: 210, heightMm: 297, label: 'A4 (২১০ × ২৯৭ মিমি - ফুল পেজ)', cssSize: 'A4' };
+  }
 }

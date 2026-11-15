@@ -16,7 +16,7 @@ import {
   stripAiGeneratedFindings,
   toBengaliNumerals,
 } from '@/lib/prescriptionFormatters';
-import { getColumnGridClass, getPadTheme } from '@/lib/prescriptionTheme';
+import { getColumnGridClass, getPadTheme, getPaperDimensions } from '@/lib/prescriptionTheme';
 import type { Encounter, InvestigationReport, Patient, PrescriptionItem, Tenant } from '@/types/schema';
 import { PrintableRxHeader } from './PrintableRxHeader';
 import { RxWatermark } from './RxWatermark';
@@ -34,9 +34,20 @@ const VITAL_LABELS: Array<[keyof Encounter['vitals'], string]> = [
 ];
 
 export function PrintableRx({ tenant, patient, encounter, items, reports }: PrintableRxProps) {
-  const preprinted = tenant.hide_header_for_print === true;
-  const topPad = preprinted ? (tenant.print_margin_top_mm || 45) : 5;
-  const leftPad = tenant.print_margin_left_mm ?? 10;
+  const paper = getPaperDimensions(
+    tenant.paper_size_preset,
+    tenant.custom_paper_width_mm,
+    tenant.custom_paper_height_mm
+  );
+  const isCompactPaper = paper.widthMm < 180;
+  const preprintedHeader = tenant.hide_header_for_print === true;
+  const preprintedFooter = tenant.hide_footer_for_print === true;
+
+  const topPad = preprintedHeader ? (tenant.print_margin_top_mm ?? 45) : (isCompactPaper ? 4 : 5);
+  const bottomPad = preprintedFooter ? (tenant.print_margin_bottom_mm ?? 25) : (isCompactPaper ? 4 : 6);
+  const leftPad = tenant.print_margin_left_mm ?? (isCompactPaper ? 6 : 10);
+  const rightPad = tenant.print_margin_right_mm ?? (isCompactPaper ? 6 : 8);
+
   const specialNotes = tenant.special_notes;
   const isMonochrome = tenant.print_color_mode === 'monochrome';
   const theme = getPadTheme(tenant.pad_layout_style);
@@ -45,17 +56,42 @@ export function PrintableRx({ tenant, patient, encounter, items, reports }: Prin
   const manualOe = stripAiGeneratedFindings(encounter.clinical_findings);
 
   return (
-    <div
-      className={`print-sheet relative flex flex-col justify-between h-[296mm] max-h-[296mm] box-border bg-white text-slate-900 overflow-hidden ${
-        isMonochrome ? 'monochrome-print' : ''
-      }`}
-      style={{
-        paddingTop: `${topPad}mm`,
-        paddingBottom: '6mm',
-        paddingLeft: `${leftPad}mm`,
-        paddingRight: '8mm',
-      }}
-    >
+    <>
+      {/* Precision Dynamic Print Page Calibration */}
+      <style>{`
+        @media print {
+          @page {
+            size: ${paper.cssSize} portrait;
+            margin: 0;
+          }
+          html, body, main {
+            width: ${paper.widthMm}mm !important;
+            height: ${paper.heightMm}mm !important;
+            max-height: ${paper.heightMm}mm !important;
+          }
+          .print-sheet {
+            width: ${paper.widthMm}mm !important;
+            max-width: ${paper.widthMm}mm !important;
+            height: ${paper.heightMm}mm !important;
+            max-height: ${paper.heightMm}mm !important;
+          }
+        }
+      `}</style>
+
+      <div
+        className={`print-sheet relative flex flex-col justify-between box-border bg-white text-slate-900 overflow-hidden ${
+          isMonochrome ? 'monochrome-print' : ''
+        }`}
+        style={{
+          width: `${paper.widthMm}mm`,
+          height: `${paper.heightMm}mm`,
+          maxHeight: `${paper.heightMm}mm`,
+          paddingTop: `${topPad}mm`,
+          paddingBottom: `${bottomPad}mm`,
+          paddingLeft: `${leftPad}mm`,
+          paddingRight: `${rightPad}mm`,
+        }}
+      >
       {/* Watermark (জলছাপ) Layers for Full Page or Center Placements */}
       <RxWatermark tenant={tenant} theme={theme} targetPlacement="full_page" />
       <RxWatermark tenant={tenant} theme={theme} targetPlacement="center" />
@@ -64,7 +100,7 @@ export function PrintableRx({ tenant, patient, encounter, items, reports }: Prin
       <PrintableRxHeader tenant={tenant} patient={patient} encounter={encounter} theme={theme} />
 
       {/* Two Columns Layout (Width Controlled by Column Ratio) */}
-      <div className={`relative z-10 mt-2.5 grid ${gridClass} gap-3 text-[11px] leading-relaxed flex-1 min-h-0 overflow-hidden`}>
+      <div className={`relative z-10 mt-2 grid ${gridClass} gap-2.5 ${isCompactPaper ? 'text-[10px]' : 'text-[11px]'} leading-relaxed flex-1 min-h-0 overflow-hidden`}>
         {/* Left Column: Assessment (C/C, O/E, Vitals, History, Dx, Ix) */}
         <div className={`relative border-r border-dashed ${theme.dividerClass} pr-2.5 flex flex-col justify-between overflow-hidden`}>
           {/* Watermark specifically placed on Clinical Side */}
@@ -181,25 +217,31 @@ export function PrintableRx({ tenant, patient, encounter, items, reports }: Prin
             {/* Blank room right above signature for doctor to write note by hand */}
             <div className="min-h-[8px]" aria-hidden="true" />
 
-            {specialNotes && (
+            {/* Footer Notes (Hidden if pre-printed footer stationery is enabled) */}
+            {!preprintedFooter && specialNotes && (
               <div className="mb-2 pt-1 border-t border-dotted border-neutral-300 text-[10px] text-neutral-600 italic">
                 * {specialNotes}
               </div>
             )}
 
-            {/* Signature Block */}
-            <div className="pt-2 flex justify-end text-right">
-              <div className={`w-52 border-t-2 ${theme.borderClass} pt-1.5 text-center`}>
-                <div className={`text-[12.5px] font-bold ${theme.titleColorClass}`}>{tenant.doctor_name}</div>
-                <div className="text-[10px] text-neutral-700 font-medium">
-                  {tenant.specialty || tenant.degrees || 'চিকিৎসক'}
+            {/* Doctor Signature Block (Hidden if pre-printed pad already has signature line) */}
+            {!preprintedFooter ? (
+              <div className="pt-2 flex justify-end text-right">
+                <div className={`w-52 border-t-2 ${theme.borderClass} pt-1.5 text-center`}>
+                  <div className={`text-[12.5px] font-bold ${theme.titleColorClass}`}>{tenant.doctor_name}</div>
+                  <div className="text-[10px] text-neutral-700 font-medium">
+                    {tenant.specialty || tenant.degrees || 'চিকিৎসক'}
+                  </div>
                 </div>
               </div>
-            </div>
+            ) : (
+              <div className="min-h-[10px]" aria-hidden="true" />
+            )}
           </div>
         </div>
       </div>
     </div>
+  </>
   );
 }
 

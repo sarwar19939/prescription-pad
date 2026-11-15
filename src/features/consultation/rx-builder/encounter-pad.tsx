@@ -140,15 +140,23 @@ export function EncounterPad({ patient }: { patient: Patient }) {
           >
             <Save className="h-4 w-4 mr-1.5" /> সংরক্ষণ করুন
           </Button>
-          <Button
-            size="sm"
-            variant="outline"
-            onClick={() => window.print()}
-            className="h-9 px-3 sm:px-4 rounded-xl font-semibold text-xs border-teal-300 bg-teal-50/70 text-teal-900 hover:bg-teal-100 shadow-2xs"
-            title="প্রিন্ট করতে বা PDF হিসেবে সেভ করে শেয়ার করতে ক্লিক করুন"
-          >
-            <Printer className="h-4 w-4 mr-1.5 text-teal-700" /> প্রিন্ট / PDF সংরক্ষণ
-          </Button>
+          <div className="flex items-center gap-1.5">
+            <Button
+              size="sm"
+              variant="outline"
+              onClick={() => window.print()}
+              className="h-9 px-3 sm:px-4 rounded-xl font-semibold text-xs border-teal-300 bg-teal-50/70 text-teal-900 hover:bg-teal-100 shadow-2xs"
+              title="প্রিন্ট করতে বা PDF হিসেবে সেভ করে শেয়ার করতে ক্লিক করুন"
+            >
+              <Printer className="h-4 w-4 mr-1.5 text-teal-700" /> প্রিন্ট / PDF
+            </Button>
+            <span
+              className="hidden sm:inline-flex items-center px-2 py-1 rounded-lg text-[10px] font-mono font-bold bg-slate-100 text-slate-700 border border-slate-200"
+              title="বর্তমান প্রিন্ট পেপার সাইজ"
+            >
+              {(tenant?.paper_size_preset || 'a4').toUpperCase()}
+            </span>
+          </div>
         </div>
       </div>
 
