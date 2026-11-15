@@ -21,7 +21,7 @@ export const ACUTE_EMERGENCY_PROTOCOLS: DiseaseProtocolTemplate[] = [
         adult: { dosage_form: 'Inj', strength: '0.5 ml', schedule: '1 dose IM stat', meal_timing: 'Anytime', duration: 'Stat', special_instructions: 'যদি বিগত ৫ বছরে টিটি নেওয়া না থাকে।' },
       },
       {
-        brand_name: 'Augmentin',
+        brand_name: 'Moxaclav',
         generic_name: 'Amoxicillin + Clavulanic Acid',
         adult: { dosage_form: 'Tab', strength: '625 mg', schedule: '1+0+1', meal_timing: 'With Meal', duration: '5 Days', special_instructions: 'সেকেন্ডারি ইনফেকশন প্রতিরোধে পশুর কামড়ে প্রথম পছন্দ।' },
       },

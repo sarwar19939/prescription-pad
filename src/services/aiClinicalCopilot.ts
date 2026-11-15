@@ -250,19 +250,10 @@ async function callOllama(
   return data.response ?? '{}';
 }
 
-async function analyzeWithOllama(
-  content: string,
-  baseUrl?: string,
-): Promise<LabAnalysisResult> {
+async function analyzeWithOllama(content: string, baseUrl?: string): Promise<LabAnalysisResult> {
   const prompt = `You are a medical laboratory assistant. Analyze this clinical lab report text or data.
 Return STRICT JSON adhering to this schema:
-{
-  "test_name": string (e.g. "Complete Blood Count" or "Lipid Profile"),
-  "extracted_metrics": { [paramName: string]: number or string with units },
-  "abnormality_flags": string[] (list of abnormal findings with high/low note),
-  "ai_summary": string (maximum 2 clinical summary sentences)
-}
-
+{ "test_name": string, "extracted_metrics": { [paramName: string]: number | string }, "abnormality_flags": string[], "ai_summary": string }
 Lab Report Content:
 ${content}`;
 
@@ -278,25 +269,17 @@ async function suggestTrackWithOllama(
   context: AnonymizedPatientContext,
   baseUrl?: string,
 ): Promise<ClinicalTrackResult> {
-  const prompt = `You are an AI Clinical Decision Support co-pilot.
-Review this anonymized patient clinical summary and suggest an evidence-based clinical track.
+  const prompt = `You are an AI Clinical Decision Support co-pilot for doctors in Bangladesh.
+Review this patient clinical summary and suggest an evidence-based clinical track using authentic Bangladesh pharmaceutical brands (prioritize Square, Beximco, Incepta, Healthcare, Acme; strictly no foreign/Indian brands).
 Return STRICT JSON adhering to this schema:
 {
   "differential_diagnoses": string[],
   "suggested_medications": [
-    {
-      "generic_name": string,
-      "suggested_brand": string,
-      "strength": string,
-      "schedule": string,
-      "duration": string,
-      "rationale": string
-    }
+    { "generic_name": string, "suggested_brand": string, "strength": string, "schedule": string, "duration": string, "rationale": string }
   ],
   "recommended_investigations": string[],
   "safety_warnings": string[]
 }
-
 Clinical Context:
 ${JSON.stringify(context, null, 2)}`;
 

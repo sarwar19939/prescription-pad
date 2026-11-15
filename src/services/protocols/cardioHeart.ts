@@ -149,7 +149,7 @@ export const CARDIO_HEART_PROTOCOLS: DiseaseProtocolTemplate[] = [
     descriptionBn: 'হার্টবিট নিয়মিত রাখা ও স্ট্রোক ঝুঁকি প্রতিরোধে বিটা ব্লকার।',
     medicines: [
       {
-        brand_name: 'Concor',
+        brand_name: 'Bisocor',
         generic_name: 'Bisoprolol',
         adult: { dosage_form: 'Tab', strength: '5 mg', schedule: '1+0+0', meal_timing: 'After Meal', duration: '30 Days', special_instructions: 'সকালে ১টি।' },
       },

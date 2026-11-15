@@ -81,6 +81,28 @@ export async function seedInitialData(): Promise<SeedSummary> {
       });
     }
 
+    // Auto-migrate legacy foreign medicine seeds in local catalog to authentic top BD pharmaceutical brands
+    const legacyMeds = await db.medicine_catalog
+      .filter((m) =>
+        ['Micro Labs', 'Alkem', 'Cipla', 'USV', "Dr. Reddy's", 'Glenmark', 'Zydus', 'JB Chemicals', 'GSK', 'Alembic'].includes(m.manufacturer) ||
+        ['Dolo', 'Crocin Advance', 'Pan-D', 'Omez', 'Amlong', 'Telma 40', 'Montair LC', 'Taxim-O', 'Azithral', 'Medimet', 'Volini Gel'].includes(m.brand_name)
+      )
+      .toArray();
+
+    if (legacyMeds.length > 0) {
+      await db.medicine_catalog.bulkDelete(legacyMeds.map((m) => m.id));
+      const migrateTs = nowIso();
+      const updatedCatalog: MedicineCatalog[] = MEDICINE_SEEDS.map((m) => ({
+        ...m,
+        id: generateUUID(),
+        tenant_id: DEFAULT_TENANT_ID,
+        created_at: migrateTs,
+        updated_at: migrateTs,
+        sync_status: 'synced',
+      }));
+      await db.medicine_catalog.bulkPut(updatedCatalog);
+    }
+
     if (existingPatients >= PATIENT_SEEDS.length) {
       return snapshotCounts();
     }

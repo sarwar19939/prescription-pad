@@ -11,7 +11,7 @@ export const RESP_OBSTRUCTIVE_PROTOCOLS: DiseaseProtocolTemplate[] = [
     descriptionBn: 'ইনহেলার ওরাল স্টেরয়েড এবং ব্রঙ্কোডাইলেটর দিয়ে দ্রুত শ্বাসকষ্ট উপশম।',
     medicines: [
       {
-        brand_name: 'Ventolin Inhaler',
+        brand_name: 'Azmasol Inhaler',
         generic_name: 'Salbutamol Inhaler (100 mcg/puff)',
         adult: { dosage_form: 'Drop', strength: '100 mcg/puff', schedule: '2 puffs QDS (SOS)', meal_timing: 'Anytime', duration: 'As needed', special_instructions: 'শ্বাসকষ্ট হলে স্পেসার দিয়ে ২ চাপ টেনে গভীরভাবে শ্বাস নিন।' },
         pediatric: { dosage_form: 'Drop', strength: '100 mcg/puff', schedule: '2 puffs with baby mask', meal_timing: 'Anytime', duration: 'SOS', special_instructions: 'বেবি মাস্ক স্পেসার দিয়ে ২ চাপ দিন।' },
@@ -96,7 +96,7 @@ export const RESP_OBSTRUCTIVE_PROTOCOLS: DiseaseProtocolTemplate[] = [
     descriptionBn: 'হলুদ/সবুজ কফ ও শ্বাসকষ্ট বৃদ্ধিতে অ্যান্টিবায়োটিক ও প্রেডনিসোলোন কোর্স।',
     medicines: [
       {
-        brand_name: 'Azithral',
+        brand_name: 'Zithrin',
         generic_name: 'Azithromycin',
         adult: { dosage_form: 'Tab', strength: '500 mg', schedule: '1+0+0', meal_timing: 'Before Meal', duration: '5 Days', special_instructions: 'খাবারের ১ ঘণ্টা আগে ১টি।' },
       },

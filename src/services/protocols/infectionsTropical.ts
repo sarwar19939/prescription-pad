@@ -42,7 +42,7 @@ export const INFECTIONS_TROPICAL: DiseaseProtocolTemplate[] = [
         pediatric: { dosage_form: 'Syr', strength: '100 mg/5 ml', schedule: '1+0+1', meal_timing: 'After Meal', duration: '10 Days', special_instructions: '৮ মিগ্রা/কেজি বিভক্ত মাত্রায়।', perKgDoseMg: 8, concentrationMgPerMl: 20 },
       },
       {
-        brand_name: 'Azithral',
+        brand_name: 'Zithrin',
         generic_name: 'Azithromycin',
         adult: { dosage_form: 'Tab', strength: '500 mg', schedule: '1+0+0', meal_timing: 'Before Meal', duration: '5 Days', special_instructions: 'খাবারের ১ ঘণ্টা পূর্বে।' },
       },

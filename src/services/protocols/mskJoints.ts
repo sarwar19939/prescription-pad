@@ -16,7 +16,7 @@ export const MSK_JOINTS_PROTOCOLS: DiseaseProtocolTemplate[] = [
         adult: { dosage_form: 'Tab', strength: '50/750 mg', schedule: '1+0+1', meal_timing: 'After Meal', duration: '60-90 Days', special_instructions: 'খাবারের পর সকাল ও রাতে সেব্য।' },
       },
       {
-        brand_name: 'Voltalin Emulgel',
+        brand_name: 'Clofenac Gel',
         generic_name: 'Diclofenac Diethylamine 1% Gel',
         adult: { dosage_form: 'Oint', strength: '1%', schedule: '1+0+1', meal_timing: 'Anytime', duration: '30 Days', special_instructions: 'হাঁটুর চারপাশে দিনে ২-৩ বার আলতো করে মেখে দিন।' },
       },
@@ -94,7 +94,7 @@ export const MSK_JOINTS_PROTOCOLS: DiseaseProtocolTemplate[] = [
     descriptionBn: 'কনুইয়ের ফোরআর্ম ব্রেস ব্যবহার, ভারী বস্তু না তোলা ও ব্যথানাশক জেল।',
     medicines: [
       {
-        brand_name: 'Voltalin Emulgel',
+        brand_name: 'Clofenac Gel',
         generic_name: 'Diclofenac Diethylamine Gel',
         adult: { dosage_form: 'Oint', strength: '1%', schedule: '1+0+1', meal_timing: 'Anytime', duration: '14 Days', special_instructions: 'কনুইয়ের বাইরের ব্যথার স্থানে মেখে দিন।' },
       },
@@ -199,7 +199,7 @@ export const MSK_JOINTS_PROTOCOLS: DiseaseProtocolTemplate[] = [
     descriptionBn: 'আঙুল সোজা রাখার স্প্লিন্ট ও ব্যথানাশক জেল প্রয়োগ।',
     medicines: [
       {
-        brand_name: 'Voltalin Gel',
+        brand_name: 'Clofenac Gel',
         generic_name: 'Diclofenac Diethylamine Gel',
         adult: { dosage_form: 'Oint', strength: '1%', schedule: '1+0+1', meal_timing: 'Anytime', duration: '14 Days', special_instructions: 'আঙুলের গোড়ার ফোলার ওপর হালকা মেখে দিন।' },
       },

@@ -149,14 +149,14 @@ async function callNvidiaChat(apiKey: string, prompt: string, systemInstruction:
 }
 
 async function callNvidiaSuggestTrack(apiKey: string, context: any) {
-  const prompt = `Analyze this comprehensive patient clinical summary (vitals, complaints, drug history, examination findings, current prescribed medicines, lab trends, doctor answers) and audit for errors & suggest medications:
+  const prompt = `Analyze this comprehensive patient clinical summary (vitals, complaints, drug history, examination findings, current prescribed medicines, lab trends, doctor answers). Audit for errors & suggest evidence-based medications using authentic Bangladesh brands (prioritizing Square, Beximco, Incepta, Healthcare, Acme):
 ${JSON.stringify(context, null, 2)}`;
   return callNvidiaChat(apiKey, prompt, COPILOT_AUDIT_SYSTEM_INSTRUCTION);
 }
 
 async function callNvidiaFullPrescription(apiKey: string, payload: any) {
   const prompt = `Confirmed Diagnosis: "${payload.diagnosis}". Patient: ${payload.age}yo ${payload.gender}, weight: ${payload.vitals?.weight || 'normal'}, allergies: ${payload.allergies?.join(', ') || 'none'}.
-Generate a complete, comprehensive Bangladesh prescription package with all necessary medications and clinical advice in Bengali.
+Generate a complete Bangladesh prescription package with authentic Bangladesh brands (prioritize Square, Beximco, Incepta, Healthcare, Acme; no foreign/Indian brands) and clinical advice in Bengali.
 Return STRICT JSON: { "diagnosis": string, "medicines": Array<{ brand_name, generic_name, dosage_form, strength, schedule, meal_timing, duration, special_instructions }>, "advice": string[] }`;
   return callNvidiaChat(apiKey, prompt, BD_CLINICAL_SYSTEM_INSTRUCTION);
 }
@@ -278,13 +278,13 @@ async function callGeminiLabAnalysis(apiKey: string, payload: { content: string;
 
 async function callGeminiSuggestTrack(apiKey: string, context: any) {
   const prompt = `Patient Clinical Context (Complaints, Vitals, Drug History, Findings, Current Prescribed Meds, Labs, Doctor Answers):\n${JSON.stringify(context, null, 2)}\n
-Perform a comprehensive prescription error audit, detect any contradictions, and suggest evidence-based medications.`;
+Perform a comprehensive prescription error audit, detect any contradictions, and suggest evidence-based medications using authentic Bangladesh brands (prioritizing Square, Beximco, Incepta, Healthcare, Acme; no foreign/Indian brands).`;
   return callGemini(apiKey, [{ role: 'user', parts: [{ text: prompt }] }], COPILOT_AUDIT_SYSTEM_INSTRUCTION);
 }
 
 async function callGeminiFullPrescription(apiKey: string, payload: any) {
   const prompt = `Confirmed Diagnosis: "${payload.diagnosis}". Patient: ${payload.age}yo ${payload.gender}, weight: ${payload.vitals?.weight || 'normal'}, allergies: ${payload.allergies?.join(', ') || 'none'}.
-Generate a complete, comprehensive Bangladesh OPD prescription with all necessary medications and clinical advice in Bengali.
+Generate a complete, comprehensive Bangladesh OPD prescription with authentic Bangladesh brands (prioritize Square, Beximco, Incepta, Healthcare, Acme; strictly no foreign/Indian brands) and clinical advice in Bengali.
 Return STRICT JSON: { "diagnosis": string, "medicines": Array<{ brand_name, generic_name, dosage_form, strength, schedule, meal_timing, duration, special_instructions }>, "advice": string[] }`;
   return callGemini(apiKey, [{ role: 'user', parts: [{ text: prompt }] }], BD_CLINICAL_SYSTEM_INSTRUCTION);
 }

@@ -98,7 +98,7 @@ export const ENT_PROTOCOLS: DiseaseProtocolTemplate[] = [
     descriptionBn: 'ট্রায়ামসিনোলোন ডেন্টাল পেস্ট দিয়ে দ্রুত ক্ষত নিরাময় ও ভিটামিন থেরাপি।',
     medicines: [
       {
-        brand_name: 'Kenalog in Orabase',
+        brand_name: 'T-Cort in Orabase',
         generic_name: 'Triamcinolone Acetonide 0.1% Dental Paste',
         adult: { dosage_form: 'Oint', strength: '0.1%', schedule: 'Apply TDS after meals', meal_timing: 'Anytime', duration: '5-7 Days', special_instructions: 'খাবার শেষে মুখ কুলকুচি করে আঙুল দিয়ে ঘায়ের ওপর পেস্টের মতো প্রলেপ দিন (ঘষবেন না)।' },
       },

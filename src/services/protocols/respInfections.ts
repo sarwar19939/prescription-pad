@@ -11,12 +11,12 @@ export const RESP_INFECTIONS_PROTOCOLS: DiseaseProtocolTemplate[] = [
     descriptionBn: 'হাঁচি ও নাকের চুলকানি বন্ধে ফ্লুটিকাসোন স্প্রে ও বিলাস্টাইন।',
     medicines: [
       {
-        brand_name: 'Avamys Nasal Spray',
+        brand_name: 'Fluticone Nasal Spray',
         generic_name: 'Fluticasone Furoate (27.5 mcg/spray)',
         adult: { dosage_form: 'Drop', strength: '27.5 mcg/spray', schedule: '2 sprays each nostril OD', meal_timing: 'Anytime', duration: '30 Days', special_instructions: 'প্রতিদিন সকালে মাথা সামান্য নিচু করে প্রতি নাকে ২ চাপ। নাকের মাঝের পর্দা থেকে বাইরের দিকে স্প্রে করবেন।' },
       },
       {
-        brand_name: 'Bilashin',
+        brand_name: 'Bilastin',
         generic_name: 'Bilastine',
         adult: { dosage_form: 'Tab', strength: '20 mg', schedule: '1+0+0', meal_timing: 'Before Meal', duration: '14-30 Days', special_instructions: 'সকালে খালি পেটে ১টি।' },
       },
@@ -128,7 +128,7 @@ export const RESP_INFECTIONS_PROTOCOLS: DiseaseProtocolTemplate[] = [
     descriptionBn: 'হৃদরোগের ব্যথার সাথে পার্থক্য নিশ্চিতকরণ ও ব্যথানাশক জেল।',
     medicines: [
       {
-        brand_name: 'Voltalin Gel',
+        brand_name: 'Clofenac Gel',
         generic_name: 'Diclofenac Diethylamine 1% Gel',
         adult: { dosage_form: 'Oint', strength: '1%', schedule: '1+0+1', meal_timing: 'Anytime', duration: '7-14 Days', special_instructions: 'ব্যথার নির্দিষ্ট স্থানে আলতো করে মেখে দিন।' },
       },

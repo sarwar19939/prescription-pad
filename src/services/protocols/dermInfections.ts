@@ -90,7 +90,7 @@ export const DERM_INFECTIONS_PROTOCOLS: DiseaseProtocolTemplate[] = [
     descriptionBn: '৭২ ঘণ্টার মধ্যে অ্যাসাইক্লোভির এবং স্নায়বিক ব্যথা নিরাময়।',
     medicines: [
       {
-        brand_name: 'Zovirax',
+        brand_name: 'Virux',
         generic_name: 'Acyclovir',
         adult: { dosage_form: 'Tab', strength: '800 mg', schedule: '5 times daily (every 4 hrs)', meal_timing: 'After Meal', duration: '7 Days', special_instructions: 'দিনে ৫ বার (৪ ঘণ্টা পর পর) প্রচুর পানিসহ ৭ দিন নিয়ম মেনে সেব্য।' },
       },
@@ -115,7 +115,7 @@ export const DERM_INFECTIONS_PROTOCOLS: DiseaseProtocolTemplate[] = [
     descriptionBn: 'মিউপিরোসিন মলম ও ওরাল ফ্লুক্লক্সাসিলিন অ্যান্টিবায়োটিক।',
     medicines: [
       {
-        brand_name: 'Bactroban Ointment',
+        brand_name: 'Bactrocin Ointment',
         generic_name: 'Mupirocin Ointment 2%',
         adult: { dosage_form: 'Oint', strength: '2%', schedule: '1+0+1', meal_timing: 'Anytime', duration: '7-10 Days', special_instructions: 'ক্ষত কুসুম গরম পানি দিয়ে পরিষ্কার করে দিনে ২ বার মেখে দিন।' },
         pediatric: { dosage_form: 'Oint', strength: '2%', schedule: '1+0+1', meal_timing: 'Anytime', duration: '7 Days', special_instructions: 'ক্ষতের ওপর আলতো করে মেখে দিন।' },

@@ -16,7 +16,7 @@ export const GERIATRICS_GENERAL_PROTOCOLS: DiseaseProtocolTemplate[] = [
         adult: { dosage_form: 'Cap', strength: 'Standard', schedule: '1+0+0', meal_timing: 'After Meal', duration: '60-90 Days', special_instructions: 'প্রতিদিন দুপুরে ভারী খাবারের পর ১টি।' },
       },
       {
-        brand_name: 'Neurobion Forte',
+        brand_name: 'Neuro-B',
         generic_name: 'Vitamin B1 + B6 + B12 High Potency',
         adult: { dosage_form: 'Tab', strength: 'Standard', schedule: '1+0+1', meal_timing: 'After Meal', duration: '30 Days', special_instructions: 'সকাল ও রাতে খাবারের পর ১টি।' },
       },
@@ -62,7 +62,7 @@ export const GERIATRICS_GENERAL_PROTOCOLS: DiseaseProtocolTemplate[] = [
         adult: { dosage_form: 'Tab', strength: '10 mg', schedule: '1+1+1', meal_timing: 'After Meal', duration: '14 Days', special_instructions: 'খাবারের পর দিনে ৩ বার।' },
       },
       {
-        brand_name: 'Bactroban Ointment',
+        brand_name: 'Bactrocin Ointment',
         generic_name: 'Mupirocin 2%',
         adult: { dosage_form: 'Oint', strength: '2%', schedule: 'Apply BD', meal_timing: 'Anytime', duration: '7 Days', special_instructions: 'ঠোঁটের দুই কোণে আলতো করে মেখে রাখুন।' },
       },

@@ -10,20 +10,33 @@
 import { db } from '@/db/localDb';
 import type { MedicineCatalog } from '@/types/schema';
 
-const TOP_MANUFACTURERS = new Set([
-  'square pharmaceuticals ltd.',
-  'beximco pharmaceuticals ltd.',
-  'incepta pharmaceuticals ltd.',
-  'renata limited',
-  'healthcare pharmaceuticals ltd.',
-  'acme laboratories ltd.',
-  'opsonin pharma ltd.',
-  'eskayef pharmaceuticals ltd.',
-  'aci limited',
-  'aristopharma ltd.',
-  'drug international ltd.',
-  'popular pharmaceuticals ltd.',
-]);
+// Tier 1: Bangladesh Top 5 Standard Brands requested by doctors (Square, Beximco, Incepta, Healthcare, Acme)
+const TOP_TIER_MANUFACTURERS = [
+  'square',
+  'beximco',
+  'incepta',
+  'healthcare',
+  'acme',
+];
+
+// Tier 2: Top 20 Recognized National Pharmaceutical Companies
+const STANDARD_TIER_MANUFACTURERS = [
+  'renata',
+  'eskayef',
+  'sk+f',
+  'aristopharma',
+  'opsonin',
+  'popular',
+  'drug international',
+  'radiant',
+  'beacon',
+  'orion',
+  'general',
+  'unimed',
+  'aci',
+  'delta',
+  'ziska',
+];
 
 export interface ScoredMedicine {
   medicine: MedicineCatalog;
@@ -121,8 +134,10 @@ export function scoreMedicine(
   score += Math.max(0, 40 - brand.length * 1.5);
 
   // Top national pharmaceutical manufacturer bonus
-  if (TOP_MANUFACTURERS.has(mfg)) {
-    score += 45;
+  if (TOP_TIER_MANUFACTURERS.some((t) => mfg.includes(t))) {
+    score += 120; // Highest priority for Square, Beximco, Incepta, Healthcare, Acme
+  } else if (STANDARD_TIER_MANUFACTURERS.some((s) => mfg.includes(s))) {
+    score += 60; // Secondary priority for other Top 20 BD companies
   }
 
   return score;

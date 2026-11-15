@@ -32,12 +32,12 @@ export const CARDIO_HYPERTENSION_PROTOCOLS: DiseaseProtocolTemplate[] = [
     descriptionBn: 'দ্বৈত অ্যান্টিহাইপারটেনসিভ কম্বিনেশন ও অঙ্গের সুরক্ষা।',
     medicines: [
       {
-        brand_name: 'Telma-H',
+        brand_name: 'Telmax Plus',
         generic_name: 'Telmisartan + Hydrochlorothiazide',
         adult: { dosage_form: 'Tab', strength: '40/12.5 mg', schedule: '1+0+0', meal_timing: 'Anytime', duration: '30-60 Days', special_instructions: 'সকালে নাস্তার পর ১টি।' },
       },
       {
-        brand_name: 'Amlong',
+        brand_name: 'Amlocard',
         generic_name: 'Amlodipine',
         adult: { dosage_form: 'Tab', strength: '5 mg', schedule: '0+0+1', meal_timing: 'Anytime', duration: '30 Days', special_instructions: 'রাতে শোয়ার আগে ১টি।' },
       },
@@ -77,12 +77,12 @@ export const CARDIO_HYPERTENSION_PROTOCOLS: DiseaseProtocolTemplate[] = [
     descriptionBn: 'কিডনির ছাঁকনি ও রক্তনালী সুরক্ষায় টেলমিসারটান বা লসারটান ভিত্তিক থেরাপি।',
     medicines: [
       {
-        brand_name: 'Telmi',
+        brand_name: 'Telmax',
         generic_name: 'Telmisartan',
         adult: { dosage_form: 'Tab', strength: '40 mg', schedule: '1+0+0', meal_timing: 'Anytime', duration: '30 Days', special_instructions: 'সকালে নাস্তার পর নিয়মিত সেব্য।' },
       },
       {
-        brand_name: 'Forxiga',
+        brand_name: 'Dapaglif',
         generic_name: 'Dapagliflozin',
         adult: { dosage_form: 'Tab', strength: '10 mg', schedule: '1+0+0', meal_timing: 'Anytime', duration: '30 Days', special_instructions: 'কিডনি ও হার্টের সুরক্ষায় সেব্য।' },
       },

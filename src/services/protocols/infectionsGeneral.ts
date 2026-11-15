@@ -86,7 +86,7 @@ export const INFECTIONS_GENERAL: DiseaseProtocolTemplate[] = [
         pediatric: { dosage_form: 'Syr', strength: '120 mg/5 ml', schedule: '1+1+1', meal_timing: 'After Meal', duration: '3 Days', special_instructions: 'শিশুর ওজন অনুযায়ী ডোজ দিন।', perKgDoseMg: 15, concentrationMgPerMl: 24 },
       },
       {
-        brand_name: 'Telfast',
+        brand_name: 'Fexo',
         generic_name: 'Fexofenadine',
         adult: { dosage_form: 'Tab', strength: '120 mg', schedule: '0+0+1', meal_timing: 'After Meal', duration: '5 Days', special_instructions: 'নাক বন্ধ বা চোখ দিয়ে পানি পড়লে রাতে সেব্য।' },
         pediatric: { dosage_form: 'Syr', strength: '30 mg/5 ml', schedule: '0+0+1', meal_timing: 'After Meal', duration: '5 Days', special_instructions: 'রাতের বেলা খাওয়ান।' },

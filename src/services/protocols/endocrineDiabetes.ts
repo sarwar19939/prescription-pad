@@ -52,7 +52,7 @@ export const ENDOCRINE_DIABETES_PROTOCOLS: DiseaseProtocolTemplate[] = [
     descriptionBn: 'প্রস্রাবের মাধ্যমে বাড়তি সুগার বের করে হার্ট ও কিডনিকে সুরক্ষিত রাখে।',
     medicines: [
       {
-        brand_name: 'Jardiance',
+        brand_name: 'Emaglim',
         generic_name: 'Empagliflozin',
         adult: { dosage_form: 'Tab', strength: '10 mg', schedule: '1+0+0', meal_timing: 'Anytime', duration: '60 Days', special_instructions: 'সকালে নাস্তার পর ১টি।' },
       },
