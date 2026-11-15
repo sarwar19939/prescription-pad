@@ -149,6 +149,24 @@ export function PrescriplyPadHeader({
                 {visitingHours && <span className="text-teal-700 font-medium">Visiting Hours: {visitingHours}</span>}
               </div>
             </div>
+          ) : logoPosition === 'center' && logoUrl ? (
+            /* 3-Column Balanced Header (Doctor Left | Logo Dead-Center | Clinic Right) */
+            <div className="grid grid-cols-1 sm:grid-cols-[1fr_auto_1fr] items-center gap-4">
+              {/* Doctor Details (Left) */}
+              <div className="flex items-start min-w-0">
+                {renderDoctorInfo()}
+              </div>
+
+              {/* Logo in Exact Center (Marked by User) */}
+              <div className="flex flex-col items-center justify-center px-4 self-center">
+                {renderLogo()}
+              </div>
+
+              {/* Clinic Info (Right) */}
+              <div className="sm:text-right min-w-0 justify-self-end">
+                {renderClinicInfo()}
+              </div>
+            </div>
           ) : (
             /* Split / Left Header Layout (Classic & Modern Chamber Standard) */
             <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4">
@@ -157,13 +175,6 @@ export function PrescriplyPadHeader({
                 {logoPosition === 'left' && renderLogo('mt-0.5')}
                 {renderDoctorInfo()}
               </div>
-
-              {/* Logo in Center */}
-              {logoPosition === 'center' && logoUrl && (
-                <div className="hidden sm:flex flex-col items-center justify-center shrink-0 px-2 self-center">
-                  {renderLogo()}
-                </div>
-              )}
 
               {/* Clinic Info (Right) + Optional Right Logo */}
               <div className="flex items-start gap-3.5 shrink-0 max-w-sm sm:justify-end">

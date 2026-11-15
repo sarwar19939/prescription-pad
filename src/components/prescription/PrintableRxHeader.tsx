@@ -126,6 +126,24 @@ export function PrintableRxHeader({
                 {visitingHours && <span className="font-medium text-teal-800">Visiting Hours: {visitingHours}</span>}
               </div>
             </div>
+          ) : logoPosition === 'center' && logoUrl ? (
+            /* 3-Column Balanced Header for Print (Doctor Left | Logo Dead-Center | Clinic Right) */
+            <div className="grid grid-cols-[1fr_auto_1fr] items-center gap-4">
+              {/* Doctor Details (Left) */}
+              <div className="min-w-0 text-left">
+                {renderDoctorInfo('left')}
+              </div>
+
+              {/* Logo in Exact Center (Marked by User) */}
+              <div className="flex flex-col items-center justify-center px-3 self-center">
+                {renderLogo()}
+              </div>
+
+              {/* Clinic Info (Right) */}
+              <div className="min-w-0 text-right justify-self-end">
+                {renderClinicInfo('right')}
+              </div>
+            </div>
           ) : (
             /* Split / Left Header Layout with Flexible Logo Placement (Left, Center, Right) */
             <div className="flex items-start justify-between gap-4">
@@ -134,13 +152,6 @@ export function PrintableRxHeader({
                 {logoPosition === 'left' && renderLogo('mt-0.5')}
                 {renderDoctorInfo('left')}
               </div>
-
-              {/* Logo in Center */}
-              {logoPosition === 'center' && logoUrl && (
-                <div className="flex flex-col items-center justify-center shrink-0 px-2 self-center">
-                  {renderLogo()}
-                </div>
-              )}
 
               {/* Clinic Info (Right) + Optional Right Logo */}
               <div className="flex items-start gap-3 shrink-0 max-w-sm justify-end">
