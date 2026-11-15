@@ -3,11 +3,11 @@
 /**
  * ClinicalAutocompleteInput — Floating 0ms suggestion dropdown for
  * Symptoms, Patient History, and Physical Examination findings.
- * Supports keyboard navigation (Arrow Up/Down, Enter, Esc) and highlights
- * both DGHS presets and past saved drafts.
+ * Supports keyboard navigation (Arrow Up/Down, Enter, Esc), 1-click "+ যুক্ত করুন" button,
+ * and seamless free-text custom symptom submission.
  */
 import { useEffect, useRef, useState } from 'react';
-import { Clock, Search, Sparkles } from 'lucide-react';
+import { Clock, Plus, Search } from 'lucide-react';
 import type { ClinicalSuggestionItem } from '@/services/clinicalAutocompleteService';
 
 interface ClinicalAutocompleteInputProps {
@@ -26,7 +26,7 @@ export function ClinicalAutocompleteInput({
   onSelect,
   onSubmitFreeText,
   searchFn,
-  placeholder = 'টাইপ করুন (যেমন: amenorrhea, fever, chest)...',
+  placeholder = 'টাইপ করুন (যেমন: whole body itching, fever)...',
   className = '',
 }: ClinicalAutocompleteInputProps) {
   const [open, setOpen] = useState(false);
@@ -41,7 +41,7 @@ export function ClinicalAutocompleteInput({
       searchFn(q).then((results) => {
         if (active) {
           setSuggestions(results);
-          setHighlightedIndex(results.length > 0 ? 0 : -1);
+          setHighlightedIndex(-1); // Default to -1 so Enter submits custom typed text
           setOpen(true);
         }
       });
@@ -67,20 +67,9 @@ export function ClinicalAutocompleteInput({
   }, []);
 
   const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
-    if (!open || suggestions.length === 0) {
-      if (e.key === 'Enter') {
-        e.preventDefault();
-        const trimmed = value.trim();
-        if (trimmed && onSubmitFreeText) {
-          onSubmitFreeText(trimmed);
-          setOpen(false);
-        }
-      }
-      return;
-    }
-
     if (e.key === 'ArrowDown') {
       e.preventDefault();
+      setOpen(true);
       setHighlightedIndex((prev) => (prev < suggestions.length - 1 ? prev + 1 : 0));
     } else if (e.key === 'ArrowUp') {
       e.preventDefault();
@@ -90,18 +79,29 @@ export function ClinicalAutocompleteInput({
       if (highlightedIndex >= 0 && highlightedIndex < suggestions.length) {
         onSelect(suggestions[highlightedIndex]);
         setOpen(false);
-      } else if (onSubmitFreeText && value.trim()) {
-        onSubmitFreeText(value.trim());
-        setOpen(false);
+      } else {
+        const trimmed = value.trim();
+        if (trimmed && onSubmitFreeText) {
+          onSubmitFreeText(trimmed);
+          setOpen(false);
+        }
       }
     } else if (e.key === 'Escape') {
       setOpen(false);
     }
   };
 
+  const handleCommitFreeText = () => {
+    const trimmed = value.trim();
+    if (trimmed && onSubmitFreeText) {
+      onSubmitFreeText(trimmed);
+      setOpen(false);
+    }
+  };
+
   return (
-    <div ref={containerRef} className={`relative flex-1 ${className}`}>
-      <div className="flex items-center gap-1.5 w-full">
+    <div ref={containerRef} className={`relative flex-1 min-w-[200px] ${className}`}>
+      <div className="flex items-center gap-1 w-full">
         <input
           value={value}
           onChange={(e) => {
@@ -109,21 +109,49 @@ export function ClinicalAutocompleteInput({
             setOpen(true);
           }}
           onFocus={() => {
-            if (value.trim().length >= 1 && suggestions.length > 0) setOpen(true);
+            if (value.trim().length >= 1) setOpen(true);
           }}
           onKeyDown={handleKeyDown}
           placeholder={placeholder}
-          className="h-7 w-full border-0 bg-transparent text-xs font-medium outline-none placeholder:text-slate-400"
+          className="h-8 w-full border-0 bg-transparent text-xs font-medium outline-none placeholder:text-slate-400"
         />
+
+        {value.trim().length > 0 && (
+          <button
+            type="button"
+            onClick={handleCommitFreeText}
+            className="h-6 px-2 rounded-lg bg-teal-700 hover:bg-teal-800 text-white text-[10px] font-bold shrink-0 flex items-center gap-1 shadow-2xs transition-all"
+            title="নতুন উপসর্গ হিসেবে প্রেসক্রিপশনে যুক্ত করুন"
+          >
+            <Plus className="h-3 w-3" /> যুক্ত করুন
+          </button>
+        )}
       </div>
 
       {/* Floating Suggestions Dropdown */}
-      {open && suggestions.length > 0 && (
+      {open && value.trim().length > 0 && (
         <ul
           role="listbox"
-          className="absolute left-0 top-full z-50 mt-1 max-h-56 w-72 md:w-80 overflow-y-auto rounded-xl border border-teal-200 bg-white p-1 shadow-xl animate-in fade-in duration-100 divide-y divide-slate-100"
+          className="absolute left-0 top-full z-50 mt-1 max-h-60 w-72 md:w-84 overflow-y-auto rounded-xl border border-teal-200 bg-white p-1 shadow-xl animate-in fade-in duration-100 divide-y divide-slate-100"
           onMouseDown={(e) => e.preventDefault()}
         >
+          {/* Top Option: Explicitly add custom text */}
+          <li className="bg-teal-50/70 rounded-lg mb-1">
+            <button
+              type="button"
+              onClick={handleCommitFreeText}
+              className="flex w-full items-center justify-between px-2.5 py-1.5 text-left text-xs rounded-lg hover:bg-teal-100 text-teal-950 font-bold transition-colors"
+            >
+              <div className="flex items-center gap-1.5 truncate">
+                <Plus className="h-3.5 w-3.5 text-teal-700 shrink-0" />
+                <span className="truncate">&quot;{value.trim()}&quot;</span>
+              </div>
+              <span className="text-[9px] px-1.5 py-0.5 rounded bg-teal-200 text-teal-900 font-bold shrink-0 ml-1">
+                + যুক্ত করুন
+              </span>
+            </button>
+          </li>
+
           {suggestions.map((item, idx) => {
             const isHighlighted = idx === highlightedIndex;
             return (
@@ -135,24 +163,14 @@ export function ClinicalAutocompleteInput({
                     setOpen(false);
                   }}
                   className={`flex w-full items-center justify-between px-2.5 py-1.5 text-left text-xs rounded-lg transition-colors ${
-                    isHighlighted
-                      ? 'bg-teal-700 text-white font-bold'
-                      : 'hover:bg-teal-50 text-slate-800'
+                    isHighlighted ? 'bg-teal-700 text-white font-bold' : 'hover:bg-teal-50 text-slate-800'
                   }`}
                 >
                   <div className="flex items-center gap-1.5 truncate">
                     {item.hasQualifier ? (
-                      <Clock
-                        className={`h-3 w-3 shrink-0 ${
-                          isHighlighted ? 'text-amber-300' : 'text-teal-600'
-                        }`}
-                      />
+                      <Clock className={`h-3 w-3 shrink-0 ${isHighlighted ? 'text-amber-300' : 'text-teal-600'}`} />
                     ) : (
-                      <Search
-                        className={`h-3 w-3 shrink-0 ${
-                          isHighlighted ? 'text-teal-200' : 'text-slate-400'
-                        }`}
-                      />
+                      <Search className={`h-3 w-3 shrink-0 ${isHighlighted ? 'text-teal-200' : 'text-slate-400'}`} />
                     )}
                     <span className="truncate">{item.label}</span>
                   </div>
@@ -161,9 +179,7 @@ export function ClinicalAutocompleteInput({
                     {item.category && (
                       <span
                         className={`text-[9px] px-1 py-0.2 rounded font-medium ${
-                          isHighlighted
-                            ? 'bg-teal-800 text-teal-100'
-                            : 'bg-slate-100 text-slate-500'
+                          isHighlighted ? 'bg-teal-800 text-teal-100' : 'bg-slate-100 text-slate-500'
                         }`}
                       >
                         {item.category}
@@ -172,9 +188,7 @@ export function ClinicalAutocompleteInput({
                     {item.source === 'draft' && (
                       <span
                         className={`text-[9px] px-1 py-0.2 rounded font-semibold ${
-                          isHighlighted
-                            ? 'bg-amber-500 text-white'
-                            : 'bg-amber-100 text-amber-800'
+                          isHighlighted ? 'bg-amber-500 text-white' : 'bg-amber-100 text-amber-800'
                         }`}
                       >
                         ড্রাফট

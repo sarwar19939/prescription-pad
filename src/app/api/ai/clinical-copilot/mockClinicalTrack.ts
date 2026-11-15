@@ -133,7 +133,23 @@ export function mockClinicalTrack(context: any) {
       text.includes('টক ঢেকুর') ||
       text.includes('গ্যাস'));
 
-  if (!isGastro && !isFever && !isGastric) {
+  const isDerm =
+    !isGastro &&
+    !isFever &&
+    !isGastric &&
+    (text.includes('itch') ||
+      text.includes('rash') ||
+      text.includes('scabies') ||
+      text.includes('urticaria') ||
+      text.includes('allergy') ||
+      text.includes('eczema') ||
+      text.includes('skin') ||
+      text.includes('চুলকানি') ||
+      text.includes('খোসপ') ||
+      text.includes('একজিমা') ||
+      text.includes('ফুসকুড়ি'));
+
+  if (!isGastro && !isFever && !isGastric && !isDerm) {
     return {
       probable_diagnosis: activeDiagnoses[0] || (complaints[0] ? `Suspected ${complaints[0]}` : ''),
       differential_diagnoses: activeDiagnoses.length > 0 ? activeDiagnoses : complaints.slice(0, 3),
@@ -158,6 +174,21 @@ export function mockClinicalTrack(context: any) {
     track = FEVER_TRACK;
   } else if (isGastric) {
     track = GASTRIC_TRACK;
+  } else if (isDerm) {
+    track = {
+      category: 'derm',
+      defaultProbable: 'Scabies / খোসপাঁচড়া (Sarcoptes scabiei)',
+      differentials: ['Scabies / খোসপাঁচড়া', 'Acute Urticaria (এলার্জি ও চুলকানি)', 'Atopic Dermatitis (একজিমা)'],
+      medications: [
+        { suggested_brand: 'Lorex 5% Cream', generic_name: 'Permethrin 5% w/w', dosage_form: 'Oint', strength: '5%', schedule: '0+0+1', meal_timing: 'Anytime', duration: '1 Day', rationale: 'খোসপাঁচড়ায় ঘাড় থেকে পায়ের পাতা পর্যন্ত ব্যবহার্য।' },
+        { suggested_brand: 'Fenadin', generic_name: 'Fexofenadine HCl', dosage_form: 'Tab', strength: '120 mg', schedule: '0+0+1', meal_timing: 'After Meal', duration: '14 Days', rationale: 'তীব্র চুলকানি ও অ্যালার্জি উপশমে রাতে সেব্য।' },
+      ],
+      investigations: ['CBC with ESR (Eosinophil)', 'Skin Scraping for Mites'],
+      questions: [
+        { id: 'family_itch', question: 'পরিবারের অন্য কারও কি চুলকানি আছে?', options: ['হ্যাঁ, পরিবারের সদস্যদেরও চুলকানি আছে', 'না, শুধু রোগীর একা'] },
+      ],
+      warnings: [],
+    };
   }
 
   // Doctor pre-existing diagnosis handling

@@ -7,41 +7,12 @@
  */
 import { useState } from 'react';
 import { addDays, addMonths, format } from 'date-fns';
-import { Check, ChevronDown, ChevronUp, Clock, Plus, RotateCcw, X } from 'lucide-react';
+import { Check, ChevronDown, ChevronUp, Clock, Plus, RotateCcw, Sparkles, X } from 'lucide-react';
 import { db } from '@/db/localDb';
 import { toBengaliNumerals } from '@/lib/prescriptionFormatters';
+import { matchProtocolsForDiagnosis } from '@/services/clinicalProtocolsService';
 import type { Encounter } from '@/types/schema';
-
-const FOLLOW_UP_PRESETS = [
-  { label: '৩ দিন পর', days: 3 },
-  { label: '৫ দিন পর', days: 5 },
-  { label: '৭ দিন পর', days: 7 },
-  { label: '১০ দিন পর', days: 10 },
-  { label: '১ সপ্তাহ পর', days: 7 },
-  { label: '২ সপ্তাহ পর', days: 14 },
-  { label: '১ মাস পর', months: 1 },
-  { label: '২ মাস পর', months: 2 },
-  { label: '৩ মাস পর', months: 3 },
-  { label: 'প্রয়োজনে (SOS)', text: 'প্রয়োজনে (যেকোনো জটিলতায়)' },
-];
-
-const QUICK_ADVICE = [
-  'পর্যাপ্ত কুসুম গরম পানি পান করুন (Drink plenty of warm water)',
-  'তৈলাক্ত, ভাজাপোড়া ও অতিরিক্ত ঝাল খাবার পরিহার করুন (Avoid oily/spicy food)',
-  'খাবারে বাড়তি কাঁচা লবণ সম্পূর্ণ বর্জন করুন (Avoid added table salt)',
-  'চিনি ও মিষ্টি জাতীয় খাবার এড়িয়ে চলুন (Avoid sugar & sweets)',
-  'প্রতিবার পাতলা পায়খানার পর ১ গ্লাস খাবার স্যালাইন (ORS) নিশ্চিত করুন',
-  'ধূমপান, গুল, তামাক ও জর্দা সম্পূর্ণ বর্জন করুন (Avoid smoking & tobacco)',
-  'কুসুম গরম পানির ভাপ নেবেন ও লবণ-গরম পানি দিয়ে গড়গড়া করবেন',
-  'ভারী কোনো ওজন তুলবেন না ও শক্ত সমান বিছানায় ঘুমাবেন (For back pain)',
-  'প্রতিদিন অন্তত ৩০ মিনিট দ্রুত হাঁটার অভ্যাস গড়ে তুলুন (Exercise regularly)',
-  'প্রতিদিন বা সপ্তাহে অন্তত একবার রক্তচাপ মাপুন (Monitor BP regularly)',
-  'ডাক্তারের পরামর্শ ছাড়া কোনো ওষুধ হঠাৎ বন্ধ করবেন না (Do not stop meds abruptly)',
-  'অ্যান্টিবায়োটিকের সম্পূর্ণ কোর্স শেষ করুন (Complete full antibiotic course)',
-  'পর্যাপ্ত বিশ্রাম নিন ও দুশ্চিন্তামুক্ত থাকুন (Adequate rest & sleep)',
-  'ডেঙ্গু সতর্কতা: তীব্র পেট ব্যথা, অতিরিক্ত বমি বা রক্তক্ষরণ হলে দ্রুত হাসপাতালে আসুন',
-  '৭ দিন পর প্রয়োজনীয় রিপোর্টসহ পুনরায় দেখা করবেন (Follow-up after 7 days)',
-];
+import { FOLLOW_UP_PRESETS, QUICK_ADVICE } from './advice-presets';
 
 export function AdviceSection({ encounter }: { encounter: Encounter }) {
   const [showAdvicePresets, setShowAdvicePresets] = useState(false);
@@ -62,6 +33,14 @@ export function AdviceSection({ encounter }: { encounter: Encounter }) {
   };
 
   const currentAdvice = encounter.advice || [];
+
+  // Disease-tailored AI Advice based on Diagnosis & Complaints
+  const matchedProtocols = matchProtocolsForDiagnosis([
+    ...(encounter.diagnosis || []),
+    ...(encounter.chief_complaints || []),
+  ]);
+  const smartAiAdvice = Array.from(new Set(matchedProtocols.flatMap((p) => p.adviceBn)));
+  const unselectedSmartAdvice = smartAiAdvice.filter((a) => !currentAdvice.includes(a));
 
   const toggleAdvice = (advice: string) => {
     const has = currentAdvice.includes(advice);
@@ -135,6 +114,40 @@ export function AdviceSection({ encounter }: { encounter: Encounter }) {
                 <span>{advice}</span>
               </label>
             ))}
+          </div>
+        )}
+
+        {/* Disease-Tailored Smart AI Advice Banner */}
+        {unselectedSmartAdvice.length > 0 && (
+          <div className="mb-3 rounded-xl border border-indigo-200 bg-indigo-50/60 p-2.5 space-y-1.5 text-xs animate-in fade-in duration-150">
+            <div className="flex items-center justify-between">
+              <span className="font-bold text-indigo-950 flex items-center gap-1.5">
+                <Sparkles className="h-3.5 w-3.5 text-indigo-600" /> রোগ অনুযায়ী AI নির্বাচিত পরামর্শ:
+              </span>
+              <button
+                type="button"
+                onClick={() => {
+                  const merged = Array.from(new Set([...currentAdvice, ...unselectedSmartAdvice]));
+                  write({ advice: merged });
+                }}
+                className="px-2.5 py-0.5 rounded-lg bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-[10px] shadow-2xs transition-all"
+              >
+                + সব যুক্ত করুন
+              </button>
+            </div>
+            <div className="flex flex-wrap gap-1.5">
+              {unselectedSmartAdvice.map((adv) => (
+                <button
+                  key={adv}
+                  type="button"
+                  onClick={() => toggleAdvice(adv)}
+                  className="rounded-lg bg-white border border-indigo-200 px-2 py-1 text-left text-xs text-indigo-900 font-medium hover:bg-indigo-100 flex items-center gap-1 transition-colors"
+                >
+                  <Plus className="h-3 w-3 text-indigo-600 shrink-0" />
+                  <span>{adv}</span>
+                </button>
+              ))}
+            </div>
           </div>
         )}
 

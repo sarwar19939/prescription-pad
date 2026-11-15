@@ -8,6 +8,7 @@
 import { format } from 'date-fns';
 import { Clock, Phone, ShieldCheck, User } from 'lucide-react';
 import type { Encounter, Patient, Tenant } from '@/types/schema';
+import { formatPatientAge } from '@/lib/prescriptionFormatters';
 import {
   formatDegreesList,
   getClinicNameSizeClasses,
@@ -87,8 +88,8 @@ export function PrescriplyPadHeader({
               <div className="flex flex-wrap items-center justify-center gap-3 text-[11px] text-slate-600 mt-0.5">
                 {regNumber && <span className="font-mono">BM&amp;DC Reg: <strong className="text-slate-800">{regNumber}</strong></span>}
                 {address && <span>{address}</span>}
-                {phone && <span className="font-semibold text-slate-700">সিরিয়াল: {phone}</span>}
-                {visitingHours && <span className="text-teal-700 font-medium">সময়: {visitingHours}</span>}
+                {phone && <span className="font-semibold text-slate-700">Phone: {phone}</span>}
+                {visitingHours && <span className="text-teal-700 font-medium">Visiting Hours: {visitingHours}</span>}
               </div>
             </div>
           ) : (
@@ -140,11 +141,11 @@ export function PrescriplyPadHeader({
                 <p className="text-xs text-slate-600 mt-0.5 leading-snug">{address}</p>
                 {visitingHours && (
                   <p className="text-[11px] text-slate-600 flex items-center sm:justify-end gap-1 mt-1 font-medium">
-                    <Clock className="h-3 w-3 text-teal-600" /> {visitingHours}
+                    <Clock className="h-3 w-3 text-teal-600" /> Visiting Hours: {visitingHours}
                   </p>
                 )}
                 <p className="text-xs font-semibold text-slate-800 mt-1 flex items-center sm:justify-end gap-1">
-                  <Phone className="h-3 w-3 text-teal-600" /> সিরিয়াল / হেল্পলাইন: {phone}
+                  <Phone className="h-3 w-3 text-teal-600" /> Phone: {phone}
                 </p>
               </div>
             </div>
@@ -152,43 +153,43 @@ export function PrescriplyPadHeader({
         </div>
       )}
 
-      {/* 2. Patient Demographic Strip */}
+      {/* 2. Patient Demographic Strip (English Clinical Standard) */}
       <div className={`mt-3 grid grid-cols-2 sm:grid-cols-3 md:grid-cols-6 gap-2.5 rounded-xl border px-3.5 py-2.5 text-xs text-slate-800 font-medium ${theme.patientBarClass}`}>
         <div className="flex items-center gap-1.5 truncate">
           <User className="h-3.5 w-3.5 text-teal-700 shrink-0" />
-          <span className="font-semibold text-slate-600">নাম:</span>
+          <span className="font-semibold text-slate-600">Name:</span>
           <span className="font-bold text-slate-950 truncate">{patient.full_name}</span>
         </div>
 
         <div>
-          <span className="font-semibold text-slate-600">বয়স/লিঙ্গ:</span>{' '}
+          <span className="font-semibold text-slate-600">Age/Sex:</span>{' '}
           <span className="font-bold text-slate-900">
-            {patient.age}Y / {patient.gender === 'male' ? 'M' : patient.gender === 'female' ? 'F' : patient.gender}
+            {formatPatientAge(patient.age, patient.age_months)} / {patient.gender === 'male' ? 'M' : patient.gender === 'female' ? 'F' : patient.gender}
           </span>
         </div>
 
         <div>
-          <span className="font-semibold text-slate-600">ওজন:</span>{' '}
+          <span className="font-semibold text-slate-600">Weight:</span>{' '}
           <span className="font-bold text-slate-900 font-mono">
             {encounter?.vitals?.weight ? `${encounter.vitals.weight} kg` : '—'}
           </span>
         </div>
 
         <div className="truncate">
-          <span className="font-semibold text-slate-600">ঠিকানা:</span>{' '}
+          <span className="font-semibold text-slate-600">Address:</span>{' '}
           <span className="font-bold text-slate-900 truncate" title={patient.address || '—'}>
             {patient.address || '—'}
           </span>
         </div>
 
         <div>
-          <span className="font-semibold text-slate-600">তারিখ:</span>{' '}
+          <span className="font-semibold text-slate-600">Date:</span>{' '}
           <span className="font-bold text-slate-900 font-mono">{visitDateFormatted}</span>
         </div>
 
         <div className="flex items-center justify-between gap-1">
           <div>
-            <span className="font-semibold text-slate-600">আইডি:</span>{' '}
+            <span className="font-semibold text-slate-600">ID / Reg:</span>{' '}
             <span className="font-bold text-slate-900 font-mono">{patient.patient_code}</span>
           </div>
           {encounter?.vitals?.bp && (

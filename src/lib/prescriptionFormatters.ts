@@ -64,6 +64,21 @@ export function toBengaliNumerals(input: string | number): string {
 }
 
 /**
+ * Formats patient age in standard English clinical notation (Years and Months):
+ * e.g. age 42, months 5 -> "42 Y 5 M"
+ * age 0, months 7 -> "7 Months"
+ * age 35, months undefined -> "35 Y"
+ */
+export function formatPatientAge(age?: number | null, months?: number | null): string {
+  const y = typeof age === 'number' ? age : 0;
+  const m = typeof months === 'number' && months > 0 ? months : 0;
+  if (y > 0 && m > 0) return `${y} Y ${m} M`;
+  if (y > 0) return `${y} Y`;
+  if (m > 0) return `${m} Months`;
+  return `${y} Y`;
+}
+
+/**
  * Formats prescription schedule into standard Subcontinent chamber notation:
  * e.g. "1+0+1" -> "১ + ০ + ১"
  * "1+1+1" -> "১ + ১ + ১"

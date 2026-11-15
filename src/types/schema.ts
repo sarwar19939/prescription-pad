@@ -102,7 +102,8 @@ export interface Tenant extends BaseRecord {
 export interface Patient extends BaseRecord {
   patient_code: string;
   full_name: string;
-  age: number;
+  age: number; // in years
+  age_months?: number; // 0-11 months (optional)
   gender: Gender;
   phone: string;
   blood_group: string;

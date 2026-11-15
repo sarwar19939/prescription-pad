@@ -95,11 +95,11 @@ export function PrintableRx({ tenant, patient, encounter, items, reports }: Prin
       <div className={`relative z-10 mt-3 grid ${gridClass} gap-4 text-[11px] leading-relaxed flex-1`}>
         {/* Left Column: Assessment (C/C, O/E, Vitals, History, Dx, Ix) */}
         <div className={`border-r border-dashed ${theme.dividerClass} pr-3 flex flex-col`}>
-          <PrintList heading="C/C (চিফ কমপ্লেইন)" values={encounter.chief_complaints} theme={theme} />
+          <PrintList heading="C/C (Chief Complaints)" values={encounter.chief_complaints} theme={theme} />
 
           {((encounter.drug_history && encounter.drug_history.length > 0) || (patient.drug_history && patient.drug_history.length > 0)) && (
             <div className="mb-2">
-              <div className={`font-bold ${theme.accentColorClass}`}>Drug History (চলমান ওষুধ)</div>
+              <div className={`font-bold ${theme.accentColorClass}`}>Drug History</div>
               <ul className="list-disc pl-4 text-slate-800">
                 {(encounter.drug_history || patient.drug_history || []).map((dh) => <li key={dh}>{dh}</li>)}
               </ul>
@@ -114,7 +114,7 @@ export function PrintableRx({ tenant, patient, encounter, items, reports }: Prin
 
           {(patient.chronic_conditions?.length > 0 || patient.allergies?.length > 0 || patient.medical_surgical_history) && (
             <div className="mb-1.5">
-              <div className={`font-bold ${theme.accentColorClass}`}>H/O (রোগের ইতিহাস)</div>
+              <div className={`font-bold ${theme.accentColorClass}`}>H/O (Past History)</div>
               {patient.chronic_conditions?.length > 0 && <div>• Illness: {patient.chronic_conditions.join(', ')}</div>}
               {patient.allergies?.length > 0 && <div className="font-bold text-rose-700">• Allergy: {patient.allergies.join(', ')}</div>}
               {patient.medical_surgical_history && <div>• Notes: {patient.medical_surgical_history}</div>}
@@ -123,12 +123,12 @@ export function PrintableRx({ tenant, patient, encounter, items, reports }: Prin
 
           {manualOe && (
             <div className="mb-1.5">
-              <div className={`font-bold ${theme.accentColorClass}`}>O/E (শারীরিক পরীক্ষা)</div>
+              <div className={`font-bold ${theme.accentColorClass}`}>O/E (On Examination)</div>
               <p className="whitespace-pre-line text-slate-800">{manualOe}</p>
             </div>
           )}
 
-          <PrintList heading="Lab Investigations (পরীক্ষা)" theme={theme}>
+          <PrintList heading="Investigations (Lab Tests)" theme={theme}>
             {reports.map((r) => (
               <div key={r.id}>
                 • {r.test_name}{r.abnormality_flags.length > 0 ? ` (${r.abnormality_flags.join(', ')})` : ''}
@@ -137,7 +137,7 @@ export function PrintableRx({ tenant, patient, encounter, items, reports }: Prin
             {reports.length === 0 && <div className="text-neutral-400">—</div>}
           </PrintList>
 
-          <PrintList heading="Diagnosis (রোগ নির্ণয়)" values={encounter.diagnosis} theme={theme} />
+          <PrintList heading="Diagnosis (Dx)" values={encounter.diagnosis} theme={theme} />
         </div>
 
         {/* Right Column: ℞, Items, Advice, Follow-up, Signature */}
@@ -168,7 +168,7 @@ export function PrintableRx({ tenant, patient, encounter, items, reports }: Prin
                   </li>
                 );
               })}
-              {items.length === 0 && <li className="text-neutral-400 italic">(কোনো ওষুধ যুক্ত করা হয়নি)</li>}
+              {items.length === 0 && <li className="text-neutral-400 italic">(No medicines prescribed)</li>}
             </ol>
 
             {encounter.advice.length > 0 && (
@@ -182,7 +182,7 @@ export function PrintableRx({ tenant, patient, encounter, items, reports }: Prin
 
             {(encounter.follow_up_text || encounter.follow_up_date) && (
               <div className={`mb-4 text-[11px] font-bold text-neutral-900 border-l-2 ${theme.borderClass} pl-2 py-0.5 bg-slate-50 rounded-r`}>
-                পরবর্তী সাক্ষাৎ:{' '}
+                Next Visit / Follow-up:{' '}
                 {encounter.follow_up_text || format(new Date(encounter.follow_up_date! + 'T00:00:00'), 'dd/MM/yyyy')}
                 {encounter.follow_up_text && encounter.follow_up_date && !encounter.follow_up_text.includes(encounter.follow_up_date) && (
                   <span className="font-normal text-[10px] text-neutral-600 ml-1">

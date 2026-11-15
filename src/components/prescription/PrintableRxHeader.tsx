@@ -5,6 +5,7 @@
  * Formats doctor qualifications with paragraph word wrapping and full theme styling.
  */
 import { format } from 'date-fns';
+import { formatPatientAge } from '@/lib/prescriptionFormatters';
 import {
   formatDegreesList,
   getLogoSizeClasses,
@@ -68,8 +69,8 @@ export function PrintableRxHeader({
               <div className="text-[10px] text-neutral-600 mt-1 flex flex-wrap items-center justify-center gap-2">
                 {tenant.reg_number && <span>BM&amp;DC Reg: <strong className="text-slate-800">{tenant.reg_number}</strong></span>}
                 {tenant.address && <span>{tenant.address}</span>}
-                {tenant.phone && <span>ফোন: {tenant.phone}</span>}
-                {visitingHours && <span className="font-medium text-teal-800">সময়: {visitingHours}</span>}
+                {tenant.phone && <span>Phone: {tenant.phone}</span>}
+                {visitingHours && <span className="font-medium text-teal-800">Visiting Hours: {visitingHours}</span>}
               </div>
             </div>
           ) : (
@@ -117,12 +118,12 @@ export function PrintableRxHeader({
                 {tenant.address && <div className="text-[10.5px] text-neutral-700 mt-0.5 leading-snug">{tenant.address}</div>}
                 {tenant.phone && (
                   <div className="text-[10.5px] text-neutral-800 font-semibold mt-0.5">
-                    সিরিয়াল: {tenant.phone}
+                    Phone: {tenant.phone}
                   </div>
                 )}
                 {visitingHours && (
                   <div className="text-[10px] font-medium text-teal-800 mt-0.5">
-                    সময়সূচী: {visitingHours}
+                    Visiting Hours: {visitingHours}
                   </div>
                 )}
               </div>
@@ -131,14 +132,14 @@ export function PrintableRxHeader({
         </div>
       )}
 
-      {/* Patient Demographic Bar with Theme Color */}
+      {/* Patient Demographic Bar with Theme Color (English Clinical Standard) */}
       <div className={`relative z-10 mt-2 flex flex-wrap items-center justify-between border-b ${theme.patientBarClass} px-2.5 py-1.5 text-[11px] font-semibold gap-x-3 gap-y-1 rounded-md`}>
-        <span><strong>নাম:</strong> {patient.full_name}</span>
-        <span><strong>বয়স/লিঙ্গ:</strong> {patient.age} Y / {patient.gender === 'male' ? 'M' : patient.gender === 'female' ? 'F' : patient.gender}</span>
-        {encounter.vitals?.weight && <span><strong>ওজন:</strong> {encounter.vitals.weight} kg</span>}
-        {patient.address && <span><strong>ঠিকানা:</strong> {patient.address}</span>}
-        <span><strong>তারিখ:</strong> {format(new Date(encounter.visit_date + 'T00:00:00'), 'dd/MM/yyyy')}</span>
-        <span><strong>আইডি:</strong> {patient.patient_code}</span>
+        <span><strong>Name:</strong> {patient.full_name}</span>
+        <span><strong>Age/Sex:</strong> {formatPatientAge(patient.age, patient.age_months)} / {patient.gender === 'male' ? 'M' : patient.gender === 'female' ? 'F' : patient.gender}</span>
+        {encounter.vitals?.weight && <span><strong>Weight:</strong> {encounter.vitals.weight} kg</span>}
+        {patient.address && <span><strong>Address:</strong> {patient.address}</span>}
+        <span><strong>Date:</strong> {format(new Date(encounter.visit_date + 'T00:00:00'), 'dd/MM/yyyy')}</span>
+        <span><strong>ID / Reg:</strong> {patient.patient_code}</span>
         {encounter.vitals?.bp && <span><strong>BP:</strong> {encounter.vitals.bp}</span>}
       </div>
     </>

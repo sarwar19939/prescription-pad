@@ -128,7 +128,6 @@ export function ClinicalCcSection({
     if (!complaints.some((c) => c.toLowerCase() === val.toLowerCase())) {
       const next = [...complaints, val];
       updateComplaints(next);
-      setActiveModifier({ symptomName: val, existingText: val, index: next.length - 1 });
     }
     setCustomInput('');
   };

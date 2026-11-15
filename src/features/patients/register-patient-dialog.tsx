@@ -67,6 +67,7 @@ export function RegisterPatientDialog({ open, onOpenChange, onRegistered }: Regi
   const [form, setForm] = useState({
     full_name: '',
     age: '',
+    age_months: '',
     gender: '' as Gender | '',
     phone: '',
     address: '',
@@ -92,7 +93,8 @@ export function RegisterPatientDialog({ open, onOpenChange, onRegistered }: Regi
         tenant_id: tenantId,
         patient_code: await nextPatientCode(tenantId),
         full_name: form.full_name.trim(),
-        age: Number.parseInt(form.age, 10),
+        age: Number.parseInt(form.age, 10) || 0,
+        age_months: form.age_months ? Number.parseInt(form.age_months, 10) : undefined,
         gender: form.gender as Gender,
         phone: form.phone.trim(),
         address: form.address.trim(),
@@ -106,7 +108,7 @@ export function RegisterPatientDialog({ open, onOpenChange, onRegistered }: Regi
       };
       await db.patients.put(patient);
       onOpenChange(false);
-      setForm({ full_name: '', age: '', gender: '', phone: '', address: '', blood_group: '', chronic_conditions: [], allergies: [] });
+      setForm({ full_name: '', age: '', age_months: '', gender: '', phone: '', address: '', blood_group: '', chronic_conditions: [], allergies: [] });
       onRegistered?.(patient);
       if (startConsultation) router.push(`/consultation/${patient.id}`);
     } catch (e) {
@@ -138,17 +140,31 @@ export function RegisterPatientDialog({ open, onOpenChange, onRegistered }: Regi
               autoFocus
             />
           </div>
-          <div className="grid gap-1.5">
-            <Label htmlFor="age">Age *</Label>
-            <Input
-              id="age"
-              type="number"
-              min={0}
-              max={149}
-              value={form.age}
-              onChange={(e) => set('age', e.target.value)}
-              placeholder="e.g. 42"
-            />
+          <div className="grid grid-cols-2 gap-2">
+            <div className="grid gap-1.5">
+              <Label htmlFor="age">Age (Years) *</Label>
+              <Input
+                id="age"
+                type="number"
+                min={0}
+                max={149}
+                value={form.age}
+                onChange={(e) => set('age', e.target.value)}
+                placeholder="e.g. 42"
+              />
+            </div>
+            <div className="grid gap-1.5">
+              <Label htmlFor="age_months">Months (০-১১ মাস)</Label>
+              <Input
+                id="age_months"
+                type="number"
+                min={0}
+                max={11}
+                value={form.age_months}
+                onChange={(e) => set('age_months', e.target.value)}
+                placeholder="e.g. 6"
+              />
+            </div>
           </div>
           <div className="grid gap-1.5">
             <Label>Gender *</Label>
