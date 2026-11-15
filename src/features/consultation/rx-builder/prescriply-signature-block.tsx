@@ -5,13 +5,15 @@
  * rendered at the bottom of the digital prescription pad.
  * Displays custom footer special instructions/notes if configured by clinic.
  */
-import { ShieldCheck, Info } from 'lucide-react';
+import { Info } from 'lucide-react';
 import type { Tenant } from '@/types/schema';
+import { getPadTheme } from '@/lib/prescriptionTheme';
 
 export function PrescriplySignatureBlock({ tenant }: { tenant?: Tenant | null }) {
   const doctorName = tenant?.doctor_name || 'ডাঃ গোলাম সারোয়ার';
   const designation = tenant?.specialty || tenant?.degrees || 'জেনারেল ফিজিশিয়ান';
   const specialNotes = tenant?.special_notes;
+  const theme = getPadTheme(tenant?.pad_layout_style);
 
   return (
     <div className="mt-12 pt-6 flex flex-col gap-3">
@@ -24,8 +26,8 @@ export function PrescriplySignatureBlock({ tenant }: { tenant?: Tenant | null })
 
       {/* Signature placed cleanly at bottom-right with doctor name & designation only */}
       <div className="flex justify-end pt-4">
-        <div className="w-56 border-t-2 border-slate-800 pt-1.5 text-center">
-          <p className="text-sm font-bold text-slate-950">{doctorName}</p>
+        <div className={`w-56 border-t-2 ${theme.borderClass} pt-1.5 text-center`}>
+          <p className={`text-sm font-bold ${theme.titleColorClass}`}>{doctorName}</p>
           <p className="text-xs font-semibold text-slate-600">{designation}</p>
         </div>
       </div>

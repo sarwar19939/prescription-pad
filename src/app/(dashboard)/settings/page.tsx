@@ -78,14 +78,24 @@ export default function SettingsPage() {
         </h2>
         <div className="mt-3 grid grid-cols-1 md:grid-cols-2 gap-3">
           {CLINICAL_FIELDS.map((f) => (
-            <label key={f.key} className="grid gap-1 text-xs text-neutral-600">
+            <label key={f.key} className={`grid gap-1 text-xs text-neutral-600 ${f.key === 'degrees' || f.key === 'address' ? 'md:col-span-2' : ''}`}>
               {f.label}
-              <input
-                className="rounded-md border border-neutral-300 px-2 py-1.5 text-sm outline-none focus:border-emerald-600"
-                value={String(tenant[f.key] ?? '')}
-                placeholder={f.placeholder}
-                onChange={(e) => patch({ [f.key]: e.target.value })}
-              />
+              {f.key === 'degrees' ? (
+                <textarea
+                  rows={2}
+                  className="rounded-md border border-neutral-300 px-2 py-1.5 text-sm outline-none focus:border-emerald-600 font-mono leading-relaxed"
+                  value={String(tenant[f.key] ?? '')}
+                  placeholder="প্রতিটি ডিগ্রি আলাদা লাইনে বা কমা দিয়ে লিখুন (যেমন: MBBS, FCPS)"
+                  onChange={(e) => patch({ [f.key]: e.target.value })}
+                />
+              ) : (
+                <input
+                  className="rounded-md border border-neutral-300 px-2 py-1.5 text-sm outline-none focus:border-emerald-600"
+                  value={String(tenant[f.key] ?? '')}
+                  placeholder={f.placeholder}
+                  onChange={(e) => patch({ [f.key]: e.target.value })}
+                />
+              )}
             </label>
           ))}
         </div>

@@ -29,6 +29,22 @@ export type DosageForm = 'Tab' | 'Cap' | 'Syr' | 'Inj' | 'Oint' | 'Drop' | 'Sach
 export type MealTiming = 'After Meal' | 'Before Meal' | 'With Meal' | 'Anytime';
 export type Gender = 'male' | 'female' | 'other';
 
+export type PadLayoutStyle =
+  | 'modern_teal'
+  | 'classic_clinical'
+  | 'executive_navy'
+  | 'minimal_elegant'
+  | 'emerald_health'
+  | 'royal_purple'
+  | 'rose_maroon';
+
+export type HeaderAlignment = 'split' | 'centered' | 'left';
+export type ColumnRatio = '25_75' | '30_70' | '35_65' | '40_60';
+export type PadFontSize = 'compact' | 'standard' | 'large';
+export type NameFontSize = 'normal' | 'large' | 'xl';
+export type LogoSize = 'sm' | 'md' | 'lg' | 'xl';
+export type DegreesDisplayMode = 'paragraph' | 'inline' | 'badges';
+
 /** Clinical vitals captured at a visit. */
 export interface Vitals {
   bp: string;
@@ -60,13 +76,24 @@ export interface Tenant extends BaseRecord {
   ai_api_key?: string;
   nvidia_api_key?: string;
   ollama_base_url?: string;
-  pad_layout_style?: 'modern_teal' | 'classic_clinical' | 'executive_navy' | 'minimal_elegant';
+  pad_layout_style?: PadLayoutStyle;
+  header_alignment?: HeaderAlignment;
+  column_ratio?: ColumnRatio;
+  pad_font_size?: PadFontSize;
+  doctor_name_size?: NameFontSize;
+  clinic_name_size?: NameFontSize;
+  degrees_display_mode?: DegreesDisplayMode;
   logo_url?: string;
+  logo_size?: LogoSize;
+  logo_grayscale?: boolean;
   watermark_enabled?: boolean;
   watermark_type?: 'custom_image' | 'logo' | 'text';
   watermark_image_url?: string;
   watermark_text?: string;
   watermark_opacity?: number;
+  watermark_color_mode?: 'color' | 'grayscale';
+  watermark_color?: string;
+  print_color_mode?: 'full_color' | 'monochrome';
   visiting_hours?: string;
   special_notes?: string;
 }

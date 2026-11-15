@@ -19,6 +19,7 @@ import { AdviceSection } from './advice-section';
 import { RxPad } from './rx-pad';
 import { PrescriplySignatureBlock } from './prescriply-signature-block';
 import { PrintableRx } from '@/components/prescription/PrintableRx';
+import { getDesktopColumnGridClass, getPadTheme } from '@/lib/prescriptionTheme';
 import type { Patient } from '@/types/schema';
 import { Button } from '@/components/ui/button';
 
@@ -162,20 +163,27 @@ export function EncounterPad({ patient }: { patient: Patient }) {
               <img
                 src={tenant.watermark_image_url}
                 alt=""
-                className="max-w-[340px] max-h-[340px] object-contain grayscale"
+                className={`max-w-[340px] max-h-[340px] object-contain ${
+                  tenant.watermark_color_mode === 'grayscale' ? 'grayscale' : ''
+                }`}
                 style={{ opacity: tenant.watermark_opacity ?? 0.07 }}
               />
             ) : tenant.watermark_type === 'logo' && tenant.logo_url ? (
               <img
                 src={tenant.logo_url}
                 alt=""
-                className="max-w-[320px] max-h-[320px] object-contain grayscale"
+                className={`max-w-[320px] max-h-[320px] object-contain ${
+                  tenant.watermark_color_mode === 'grayscale' ? 'grayscale' : ''
+                }`}
                 style={{ opacity: tenant.watermark_opacity ?? 0.07 }}
               />
             ) : (
               <span
-                className="text-4xl sm:text-6xl font-black uppercase tracking-widest text-slate-800 rotate-[-25deg] whitespace-nowrap"
-                style={{ opacity: tenant.watermark_opacity ?? 0.05 }}
+                className="text-4xl sm:text-6xl font-black uppercase tracking-widest rotate-[-25deg] whitespace-nowrap"
+                style={{
+                  opacity: tenant.watermark_opacity ?? 0.05,
+                  color: tenant.watermark_color || getPadTheme(tenant?.pad_layout_style).hex,
+                }}
               >
                 {tenant.watermark_text || tenant.clinic_name}
               </span>
@@ -224,9 +232,20 @@ export function EncounterPad({ patient }: { patient: Patient }) {
         </div>
 
         {/* 2. Authentic Two-Column Clinical Pad Layout */}
-        <div className="relative z-10 grid grid-cols-1 lg:grid-cols-[33%_67%] gap-6 text-slate-900">
-          {/* Left Column (33%): Clinical Assessment (C/C, O/E, Vitals, History, Dx, Ix) */}
-          <div className={cn('lg:border-r lg:border-dashed lg:border-slate-300 lg:pr-5', mobileTab === 'rx' ? 'hidden lg:block' : 'block')}>
+        <div
+          className={cn(
+            'relative z-10 grid grid-cols-1 gap-6 text-slate-900',
+            getDesktopColumnGridClass(tenant?.column_ratio)
+          )}
+        >
+          {/* Left Column: Clinical Assessment (C/C, O/E, Vitals, History, Dx, Ix) */}
+          <div
+            className={cn(
+              'lg:border-r lg:border-dashed lg:pr-5',
+              getPadTheme(tenant?.pad_layout_style).dividerClass,
+              mobileTab === 'rx' ? 'hidden lg:block' : 'block'
+            )}
+          >
             <PrescriplyClinicalSidebar
               encounter={encounter}
               patient={patient}
@@ -234,7 +253,7 @@ export function EncounterPad({ patient }: { patient: Patient }) {
             />
           </div>
 
-          {/* Right Column (67%): ℞ Prescription Canvas, Medicines, Advice, Follow-up */}
+          {/* Right Column: ℞ Prescription Canvas, Medicines, Advice, Follow-up */}
           <div className={cn('lg:pl-2 space-y-6', mobileTab === 'sidebar' ? 'hidden lg:block' : 'block')}>
             <RxPad patient={patient} encounterId={encounter.id} />
             <div className="pt-4 border-t border-slate-100">

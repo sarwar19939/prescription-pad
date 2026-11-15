@@ -142,9 +142,12 @@
     min-height: 297mm;
     margin: 0 !important;
     background: white !important;
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
+    color-adjust: exact !important;
   }
-  .print-sheet * {
-    color: black !important;
-    background: transparent !important;
+  .print-sheet.monochrome-print,
+  .print-sheet.monochrome-print * {
+    filter: grayscale(100%) !important;
   }
 }
