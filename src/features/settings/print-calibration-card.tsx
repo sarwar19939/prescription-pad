@@ -31,8 +31,14 @@ export function PrintCalibrationCard({ tenant, onPatch }: PrintCalibrationCardPr
   const customHeight = tenant.custom_paper_height_mm || 297;
   const topOffset = tenant.print_margin_top_mm ?? 12;
   const bottomOffset = tenant.print_margin_bottom_mm ?? 15;
-  const leftOffset = tenant.print_margin_left_mm ?? 10;
-  const rightOffset = tenant.print_margin_right_mm ?? 8;
+  const defaultHMargin = activePreset === 'a5' ? 8 : 14;
+  const leftOffset = tenant.print_margin_left_mm ?? defaultHMargin;
+  const rightOffset =
+    tenant.print_margin_right_mm != null && tenant.print_margin_right_mm > 8
+      ? tenant.print_margin_right_mm
+      : tenant.print_margin_right_mm != null && tenant.print_margin_right_mm === 0
+      ? 0
+      : (tenant.print_margin_left_mm ?? defaultHMargin);
   const hideHeader = tenant.hide_header_for_print === true;
   const hideFooter = tenant.hide_footer_for_print === true;
 
@@ -190,36 +196,64 @@ export function PrintCalibrationCard({ tenant, onPatch }: PrintCalibrationCardPr
         </div>
 
         {/* Left & Right Margin Calibration */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 p-3 rounded-xl bg-slate-50 border border-slate-200 text-xs">
+        <div className="p-3.5 rounded-xl bg-slate-50 border border-slate-200 text-xs space-y-3">
           <div className="flex items-center justify-between">
-            <span className="font-semibold text-slate-700">বাম মার্জিন (Left Margin Offset):</span>
-            <div className="flex items-center gap-1.5">
-              <input
-                type="number"
-                min={0}
-                max={60}
-                value={leftOffset}
-                onChange={(e) => onPatch({ print_margin_left_mm: Number(e.target.value) || 0 })}
-                className="w-20 h-8 rounded-lg border border-slate-300 bg-white px-2 font-mono text-xs font-bold outline-none focus:border-teal-600"
-              />
-              <span className="text-slate-500 font-mono">মিমি</span>
-            </div>
+            <span className="font-bold text-slate-800">
+              বাম ও ডান মার্জিন (Left & Right Margins):
+            </span>
+            <button
+              type="button"
+              onClick={() => onPatch({
+                print_margin_left_mm: leftOffset,
+                print_margin_right_mm: leftOffset,
+              })}
+              className="text-[11px] font-semibold text-teal-700 hover:text-teal-900 hover:underline flex items-center gap-1"
+              title="বাম মার্জিনের সমান করে ডান মার্জিন সেট করুন"
+            >
+              দুই পাশ সমান করুন ({leftOffset} মিমি)
+            </button>
           </div>
 
-          <div className="flex items-center justify-between">
-            <span className="font-semibold text-slate-700">ডান মার্জিন (Right Margin Offset):</span>
-            <div className="flex items-center gap-1.5">
-              <input
-                type="number"
-                min={0}
-                max={60}
-                value={rightOffset}
-                onChange={(e) => onPatch({ print_margin_right_mm: Number(e.target.value) || 0 })}
-                className="w-20 h-8 rounded-lg border border-slate-300 bg-white px-2 font-mono text-xs font-bold outline-none focus:border-teal-600"
-              />
-              <span className="text-slate-500 font-mono">মিমি</span>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div className="flex items-center justify-between bg-white p-2.5 rounded-lg border border-slate-200">
+              <div>
+                <span className="font-semibold text-slate-700 block">বাম মার্জিন (Left Margin):</span>
+                <span className="text-[10px] text-slate-400">ক্লিপবোর্ড ও ফাইলিং স্পেস</span>
+              </div>
+              <div className="flex items-center gap-1.5">
+                <input
+                  type="number"
+                  min={0}
+                  max={60}
+                  value={leftOffset}
+                  onChange={(e) => onPatch({ print_margin_left_mm: Number(e.target.value) || 0 })}
+                  className="w-20 h-8 rounded-lg border border-slate-300 bg-white px-2 font-mono text-xs font-bold outline-none focus:border-teal-600"
+                />
+                <span className="text-slate-500 font-mono">মিমি</span>
+              </div>
+            </div>
+
+            <div className="flex items-center justify-between bg-white p-2.5 rounded-lg border border-slate-200">
+              <div>
+                <span className="font-semibold text-slate-700 block">ডান মার্জিন (Right Margin):</span>
+                <span className="text-[10px] text-slate-400">প্রিন্টারের ডান কাটিং ও সেফ স্পেস</span>
+              </div>
+              <div className="flex items-center gap-1.5">
+                <input
+                  type="number"
+                  min={0}
+                  max={60}
+                  value={rightOffset}
+                  onChange={(e) => onPatch({ print_margin_right_mm: Number(e.target.value) || 0 })}
+                  className="w-20 h-8 rounded-lg border border-slate-300 bg-white px-2 font-mono text-xs font-bold outline-none focus:border-teal-600"
+                />
+                <span className="text-slate-500 font-mono">মিমি</span>
+              </div>
             </div>
           </div>
+          <p className="text-[11px] text-slate-500">
+            💡 প্রেসক্রিপশন প্রিন্ট মেশিনে দুই পাশ সুন্দর ও ব্যালান্সড দেখাতে সাধারণত ১২ থেকে ১৫ মিমি মার্জিন আদর্শ।
+          </p>
         </div>
       </div>
 
@@ -229,7 +263,15 @@ export function PrintCalibrationCard({ tenant, onPatch }: PrintCalibrationCardPr
           লাইভ প্যাড ডায়াগ্রাম (কাগজের সাইজ: {currentPaper.label}):
         </span>
 
-        <div className="relative mx-auto w-64 h-80 rounded-xl border-2 border-slate-400 bg-white shadow-sm flex flex-col justify-between overflow-hidden p-2 text-center text-[10px]">
+        <div
+          className="relative mx-auto w-64 h-80 rounded-xl border-2 border-slate-400 bg-white shadow-sm flex flex-col justify-between overflow-hidden text-center text-[10px] transition-all"
+          style={{
+            paddingLeft: `${Math.min(24, Math.max(6, leftOffset * 1.1))}px`,
+            paddingRight: `${Math.min(24, Math.max(6, rightOffset * 1.1))}px`,
+            paddingTop: '8px',
+            paddingBottom: '8px',
+          }}
+        >
           {/* Header Area */}
           <div
             className={`border border-dashed rounded flex flex-col items-center justify-center transition-all ${

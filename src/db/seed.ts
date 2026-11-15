@@ -31,7 +31,9 @@ const DEFAULT_TENANT: Omit<Tenant, 'id' | 'created_at' | 'updated_at'> = {
   address: 'বসিরবানিয়া, পার্বতীপুর, দিনাজপুর',
   subscription_plan: 'free',
   print_margin_top_mm: 12,
-  print_margin_left_mm: 15,
+  print_margin_bottom_mm: 12,
+  print_margin_left_mm: 14,
+  print_margin_right_mm: 14,
 };
 
 function nowIso(): string {

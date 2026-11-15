@@ -135,28 +135,28 @@ export function getPadTheme(style?: PadLayoutStyle | null): PadThemeConfig {
 export function getColumnGridClass(ratio?: ColumnRatio | null): string {
   switch (ratio) {
     case '25_75':
-      return 'grid-cols-[25%_75%]';
+      return 'grid-cols-[1fr_3fr]';
     case '35_65':
-      return 'grid-cols-[35%_65%]';
+      return 'grid-cols-[7fr_13fr]';
     case '40_60':
-      return 'grid-cols-[40%_60%]';
+      return 'grid-cols-[2fr_3fr]';
     case '30_70':
     default:
-      return 'grid-cols-[30%_70%]';
+      return 'grid-cols-[3fr_7fr]';
   }
 }
 
 export function getDesktopColumnGridClass(ratio?: ColumnRatio | null): string {
   switch (ratio) {
     case '25_75':
-      return 'lg:grid-cols-[25%_75%]';
+      return 'lg:grid-cols-[1fr_3fr]';
     case '35_65':
-      return 'lg:grid-cols-[35%_65%]';
+      return 'lg:grid-cols-[7fr_13fr]';
     case '40_60':
-      return 'lg:grid-cols-[40%_60%]';
+      return 'lg:grid-cols-[2fr_3fr]';
     case '30_70':
     default:
-      return 'lg:grid-cols-[30%_70%]';
+      return 'lg:grid-cols-[3fr_7fr]';
   }
 }
 

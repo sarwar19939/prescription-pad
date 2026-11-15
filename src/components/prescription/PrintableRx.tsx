@@ -45,8 +45,19 @@ export function PrintableRx({ tenant, patient, encounter, items, reports }: Prin
 
   const topPad = preprintedHeader ? (tenant.print_margin_top_mm ?? 45) : (isCompactPaper ? 4 : 5);
   const bottomPad = preprintedFooter ? (tenant.print_margin_bottom_mm ?? 25) : (isCompactPaper ? 4 : 6);
-  const leftPad = tenant.print_margin_left_mm ?? (isCompactPaper ? 6 : 10);
-  const rightPad = tenant.print_margin_right_mm ?? (isCompactPaper ? 6 : 8);
+
+  // Left & Right margin calibration (Subcontinent medical prescription standard):
+  // Safe margins prevent edge clipping on physical laser/inkjet printers and ensure visual balance.
+  const defaultHorizontalMargin = isCompactPaper ? 8 : 14;
+  const leftPad = tenant.print_margin_left_mm ?? defaultHorizontalMargin;
+  // If right margin is not explicitly configured or was set to old tiny default (<= 8mm),
+  // automatically equalize with left margin (up to 15mm) to guarantee clean, beautiful margins.
+  const rightPad =
+    tenant.print_margin_right_mm != null && tenant.print_margin_right_mm > 8
+      ? tenant.print_margin_right_mm
+      : tenant.print_margin_right_mm != null && tenant.print_margin_right_mm === 0
+      ? 0
+      : (tenant.print_margin_left_mm ? Math.min(tenant.print_margin_left_mm, 15) : defaultHorizontalMargin);
 
   const specialNotes = tenant.special_notes;
   const isMonochrome = tenant.print_color_mode === 'monochrome';
@@ -154,7 +165,7 @@ export function PrintableRx({ tenant, patient, encounter, items, reports }: Prin
         </div>
 
         {/* Right Column: ℞, Items, Space for Manual Rx, Advice, Space for Manual Advice, Signature */}
-        <div className="relative flex flex-col justify-between h-full min-h-0 pl-1 overflow-hidden">
+        <div className="relative flex flex-col justify-between h-full min-h-0 pl-1 pr-1 overflow-hidden">
           {/* Watermark specifically placed on Rx / Medicine Side */}
           <RxWatermark tenant={tenant} theme={theme} targetPlacement="rx_side" isColumnScope />
           {/* Top section: ℞ Symbol & Prescribed Medicines */}
