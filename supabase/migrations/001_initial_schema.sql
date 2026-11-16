@@ -109,13 +109,7 @@ create table if not exists prescription_items (
   special_instructions   text not null default '',
   sync_status            sync_status not null default 'pending',
   created_at             timestamptz not null default now(),
-  updated_at             timestamptz not null default now(),
-  constraint prescription_items_patient_match check (
-    exists (
-      select 1 from encounters e
-      where e.id = encounter_id and e.patient_id = prescription_items.patient_id and e.tenant_id = prescription_items.tenant_id
-    )
-  )
+  updated_at             timestamptz not null default now()
 );
 create index if not exists idx_rx_items_tenant on prescription_items (tenant_id);
 create index if not exists idx_rx_items_patient on prescription_items (patient_id);
@@ -169,6 +163,32 @@ create index if not exists idx_medicine_brand on medicine_catalog (brand_name);
 create index if not exists idx_medicine_generic on medicine_catalog (generic_name);
 
 -- ---------------------------------------------------------------------------
+-- 7. prescription_templates
+-- ---------------------------------------------------------------------------
+create table if not exists prescription_templates (
+  id                     uuid primary key,
+  tenant_id              uuid not null references tenants (tenant_id) on delete cascade,
+  title                  text not null,
+  title_bn               text not null default '',
+  category               text not null default '',
+  disease_group          text not null default '',
+  age_group              text not null default 'all',
+  age_range_label        text,
+  description            text,
+  description_bn         text,
+  diagnosis              text[] not null default '{}',
+  chief_complaints       text[] not null default '{}',
+  medicines              jsonb not null default '[]'::jsonb,
+  advice                 text[] not null default '{}',
+  investigations         text[] not null default '{}',
+  is_custom              boolean not null default false,
+  sync_status            sync_status not null default 'synced',
+  created_at             timestamptz not null default now(),
+  updated_at             timestamptz not null default now()
+);
+create index if not exists idx_templates_tenant on prescription_templates (tenant_id);
+
+-- ---------------------------------------------------------------------------
 -- updated_at trigger
 -- ---------------------------------------------------------------------------
 create or replace function set_updated_at() returns trigger
@@ -182,7 +202,7 @@ $$;
 do $$
 declare t text;
 begin
-  foreach t in array array['tenants', 'patients', 'encounters', 'prescription_items', 'investigation_reports', 'medicine_catalog']
+  foreach t in array array['tenants', 'patients', 'encounters', 'prescription_items', 'investigation_reports', 'medicine_catalog', 'prescription_templates']
   loop
     execute format(
       'drop trigger if exists trg_%s_updated_at on %I; create trigger trg_%s_updated_at before update on %I for each row execute function set_updated_at();',
@@ -201,29 +221,30 @@ alter table encounters            enable row level security;
 alter table prescription_items    enable row level security;
 alter table investigation_reports enable row level security;
 alter table medicine_catalog      enable row level security;
+alter table prescription_templates enable row level security;
 
 do $$
 declare t text;
 begin
-  foreach t in array array['tenants', 'patients', 'encounters', 'prescription_items', 'investigation_reports', 'medicine_catalog']
+  foreach t in array array['tenants', 'patients', 'encounters', 'prescription_items', 'investigation_reports', 'medicine_catalog', 'prescription_templates']
   loop
     execute format($f$
       drop policy if exists tenant_read on %I;
       create policy tenant_read on %I for select
-        using (auth.uid() = tenant_id);
+        using (auth.uid() = tenant_id or coalesce((auth.jwt() -> 'user_metadata' ->> 'tenant_id')::uuid, auth.uid()) = tenant_id);
 
       drop policy if exists tenant_insert on %I;
       create policy tenant_insert on %I for insert
-        with check (auth.uid() = tenant_id);
+        with check (auth.uid() = tenant_id or coalesce((auth.jwt() -> 'user_metadata' ->> 'tenant_id')::uuid, auth.uid()) = tenant_id);
 
       drop policy if exists tenant_update on %I;
       create policy tenant_update on %I for update
-        using (auth.uid() = tenant_id)
-        with check (auth.uid() = tenant_id);
+        using (auth.uid() = tenant_id or coalesce((auth.jwt() -> 'user_metadata' ->> 'tenant_id')::uuid, auth.uid()) = tenant_id)
+        with check (auth.uid() = tenant_id or coalesce((auth.jwt() -> 'user_metadata' ->> 'tenant_id')::uuid, auth.uid()) = tenant_id);
 
       drop policy if exists tenant_delete on %I;
       create policy tenant_delete on %I for delete
-        using (auth.uid() = tenant_id);
+        using (auth.uid() = tenant_id or coalesce((auth.jwt() -> 'user_metadata' ->> 'tenant_id')::uuid, auth.uid()) = tenant_id);
     $f$, t, t, t, t, t, t, t, t);
   end loop;
 end $$;
