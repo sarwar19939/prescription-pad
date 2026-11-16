@@ -54,6 +54,11 @@ interface SeedSummary {
  * with seeded patients, nothing is written.
  */
 export async function seedInitialData(): Promise<SeedSummary> {
+  // If already seeded in this browser, never overwrite user settings or re-seed deleted patients
+  if (typeof window !== 'undefined' && localStorage.getItem('medrecord_initial_seed_done') === 'true') {
+    return snapshotCounts();
+  }
+
   const existingTenant = await db.tenants.get(DEFAULT_TENANT_ID);
   const existingPatients = await db.patients
     .where('tenant_id')
@@ -105,17 +110,18 @@ export async function seedInitialData(): Promise<SeedSummary> {
       await db.medicine_catalog.bulkPut(updatedCatalog);
     }
 
-    if (existingPatients >= PATIENT_SEEDS.length) {
-      return snapshotCounts();
+    if (typeof window !== 'undefined') {
+      localStorage.setItem('medrecord_initial_seed_done', 'true');
     }
+    return snapshotCounts();
   }
 
   const ts = nowIso();
 
   const tenantRecord: Tenant = {
     ...DEFAULT_TENANT,
-    id: existingTenant?.id ?? DEFAULT_TENANT_ID,
-    created_at: existingTenant?.created_at ?? ts,
+    id: DEFAULT_TENANT_ID,
+    created_at: ts,
     updated_at: ts,
   };
 
@@ -187,6 +193,10 @@ export async function seedInitialData(): Promise<SeedSummary> {
     if (encounters.length) await db.encounters.bulkAdd(encounters);
     if (items.length) await db.prescription_items.bulkAdd(items);
   });
+
+  if (typeof window !== 'undefined') {
+    localStorage.setItem('medrecord_initial_seed_done', 'true');
+  }
 
   return snapshotCounts();
 }
