@@ -171,7 +171,6 @@ export function PrintableRxHeader({
         {patient.address && <span><strong>Address:</strong> {patient.address}</span>}
         <span><strong>Date:</strong> {format(new Date(encounter.visit_date + 'T00:00:00'), 'dd/MM/yyyy')}</span>
         <span><strong>ID / Reg:</strong> {patient.patient_code}</span>
-        {encounter.vitals?.bp && <span><strong>BP:</strong> {encounter.vitals.bp}</span>}
       </div>
     </>
   );

@@ -220,16 +220,9 @@ export function PrescriplyPadHeader({
           <span className="font-bold text-slate-900 font-mono">{visitDateFormatted}</span>
         </div>
 
-        <div className="flex items-center justify-between gap-1">
-          <div>
-            <span className="font-semibold text-slate-600">ID / Reg:</span>{' '}
-            <span className="font-bold text-slate-900 font-mono">{patient.patient_code}</span>
-          </div>
-          {encounter?.vitals?.bp && (
-            <span className="font-mono text-[11px] font-bold text-slate-800 bg-white px-1.5 py-0.5 rounded border border-slate-300">
-              {encounter.vitals.bp}
-            </span>
-          )}
+        <div>
+          <span className="font-semibold text-slate-600">ID / Reg:</span>{' '}
+          <span className="font-bold text-slate-900 font-mono">{patient.patient_code}</span>
         </div>
       </div>
     </div>

@@ -129,11 +129,13 @@ export function PrintableRx({ tenant, patient, encounter, items, reports }: Prin
               </div>
             )}
 
-            <PrintList heading="Vitals" theme={theme}>
-              {VITAL_LABELS.filter(([k]) => k !== 'weight' && encounter.vitals[k]).map(([k, label]) => (
-                <div key={k}>{label}: <strong>{encounter.vitals[k]}</strong></div>
-              ))}
-            </PrintList>
+            {VITAL_LABELS.some(([k]) => k !== 'weight' && encounter.vitals?.[k]) && (
+              <PrintList heading="Vitals" theme={theme}>
+                {VITAL_LABELS.filter(([k]) => k !== 'weight' && encounter.vitals?.[k]).map(([k, label]) => (
+                  <div key={k}>{label}: <strong>{encounter.vitals[k]}</strong></div>
+                ))}
+              </PrintList>
+            )}
 
             {(patient.chronic_conditions?.length > 0 || patient.allergies?.length > 0 || patient.medical_surgical_history) && (
               <div className="mb-1">
