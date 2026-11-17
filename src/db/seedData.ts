@@ -124,6 +124,26 @@ export const MEDICINE_SEEDS: MedicineSeed[] = [
   { brand_name: 'Flexi', generic_name: 'Aceclofenac', dosage_form: 'Tab', strength: '100mg', manufacturer: 'Square Pharmaceuticals PLC', contraindications: ['Peptic ulcer disease', 'Renal impairment'] },
   { brand_name: 'Clofenac Gel', generic_name: 'Diclofenac Diethylamine', dosage_form: 'Oint', strength: '1%', manufacturer: 'Square Pharmaceuticals PLC', contraindications: ['Broken skin'] },
 
+  // Topicals (Creams, Ointments, Gels & Scabies)
+  { brand_name: 'Permin', generic_name: 'Permethrin', dosage_form: 'Cream', strength: '5% w/w', manufacturer: 'Square Pharmaceuticals PLC', contraindications: ['Hypersensitivity to pyrethroids'] },
+  { brand_name: 'Afun', generic_name: 'Clotrimazole', dosage_form: 'Cream', strength: '1%', manufacturer: 'Square Pharmaceuticals PLC', contraindications: ['Hypersensitivity'] },
+  { brand_name: 'Halobet', generic_name: 'Halobetasol Propionate', dosage_form: 'Cream', strength: '0.05%', manufacturer: 'Square Pharmaceuticals PLC', contraindications: ['Viral skin infections', 'Facial rosacea'] },
+  { brand_name: 'Halovar', generic_name: 'Halobetasol Propionate', dosage_form: 'Cream', strength: '0.05%', manufacturer: 'Incepta Pharmaceuticals Ltd.', contraindications: ['Viral skin infections', 'Facial rosacea'] },
+  { brand_name: 'Dermasol', generic_name: 'Clobetasol Propionate', dosage_form: 'Cream', strength: '0.05%', manufacturer: 'Square Pharmaceuticals PLC', contraindications: ['Viral skin infections', 'Facial rosacea'] },
+  { brand_name: 'Econate Plus', generic_name: 'Econazole Nitrate + Triamcinolone', dosage_form: 'Cream', strength: 'Standard', manufacturer: 'Square Pharmaceuticals PLC', contraindications: ['Hypersensitivity'] },
+  { brand_name: 'Bactroban', generic_name: 'Mupirocin', dosage_form: 'Oint', strength: '2%', manufacturer: 'GSK / Square', contraindications: ['Open extensive burn wounds'] },
+  { brand_name: 'Burnsil', generic_name: 'Silver Sulfadiazine', dosage_form: 'Cream', strength: '1%', manufacturer: 'Square Pharmaceuticals PLC', contraindications: ['Sulfa allergy', 'Late pregnancy'] },
+
+  // Suppositories & Pessaries
+  { brand_name: 'Candid-V', generic_name: 'Clotrimazole', dosage_form: 'Pessary', strength: '500mg', manufacturer: 'Square Pharmaceuticals PLC', contraindications: ['Hypersensitivity'] },
+  { brand_name: 'Glycerin Suppository', generic_name: 'Glycerin', dosage_form: 'Supp', strength: '2.25g', manufacturer: 'Square Pharmaceuticals PLC', contraindications: ['Acute abdomen'] },
+  { brand_name: 'Clofenac Suppository', generic_name: 'Diclofenac Sodium', dosage_form: 'Supp', strength: '50mg', manufacturer: 'Square Pharmaceuticals PLC', contraindications: ['Proctitis', 'Active peptic ulcer'] },
+
+  // Injections & Inhalers
+  { brand_name: 'Ceftron', generic_name: 'Ceftriaxone', dosage_form: 'Inj', strength: '1g (IV/IM)', manufacturer: 'Square Pharmaceuticals PLC', contraindications: ['Cephalosporin allergy'] },
+  { brand_name: 'Azmasol Inhaler', generic_name: 'Salbutamol', dosage_form: 'Inhaler', strength: '100mcg/puff', manufacturer: 'Beximco Pharmaceuticals Ltd.', contraindications: ['Hypersensitivity'] },
+  { brand_name: 'Moxacav Eye Drops', generic_name: 'Moxifloxacin', dosage_form: 'Drop', strength: '0.5%', manufacturer: 'Square Pharmaceuticals PLC', contraindications: ['Hypersensitivity'] },
+
   // Vitamins & Supportive
   { brand_name: 'Neuro-B', generic_name: 'Vitamin B1 + B6 + B12', dosage_form: 'Tab', strength: 'Standard', manufacturer: 'Square Pharmaceuticals PLC', contraindications: ['Levodopa therapy'] },
   { brand_name: 'Filwel Gold', generic_name: 'Multivitamin + Multimineral', dosage_form: 'Tab', strength: 'Standard', manufacturer: 'Square Pharmaceuticals PLC', contraindications: ['Component hypersensitivity'] },

@@ -141,6 +141,7 @@ export function AddCustomMedicineDialog({
       const cleanDuration = duration.split('(')[1]?.replace(')', '') || duration;
 
       // 1. Add to active prescription_items
+      const isNonOral = profile.hideMealTiming || (category !== 'oral_solid' && category !== 'syrup');
       const rxRow: PrescriptionItem = {
         id: generateUUID(),
         tenant_id: patient.tenant_id,
@@ -150,8 +151,8 @@ export function AddCustomMedicineDialog({
         generic_name: finalGeneric,
         dosage_form: dosageForm,
         strength: finalStrength,
-        schedule: schedule.trim() || '1+0+1',
-        meal_timing: mealTiming,
+        schedule: schedule.trim() || (isNonOral ? profile.defaultSchedule : '1+0+1'),
+        meal_timing: isNonOral ? undefined : mealTiming,
         duration: cleanDuration.trim() || '7 Days',
         special_instructions: instructions.trim(),
         route: route.trim() || profile.defaultRoute,
@@ -359,19 +360,26 @@ export function AddCustomMedicineDialog({
 
             <div>
               <label className="font-bold text-slate-700 block mb-1">
-                খাবার সময় (Meal Timing):
+                {profile.hideMealTiming || (category !== 'oral_solid' && category !== 'syrup')
+                  ? 'প্রয়োগের রুট (Route):'
+                  : 'খাবার সময় (Meal Timing):'}
               </label>
-              <select
-                value={mealTiming}
-                onChange={(e) => setMealTiming(e.target.value as MealTiming)}
-                className="w-full h-8 px-2 rounded-lg border border-slate-300 text-xs bg-white focus:border-teal-600 outline-none"
-              >
-                <option value="After Meal">After Meal (খাওয়ার পর)</option>
-                <option value="Before Meal">Before Meal (খাওয়ার আগে)</option>
-                <option value="With Meal">With Meal (খাবারের সাথে)</option>
-                <option value="Anytime">Anytime (যেকোনো সময়)</option>
-                <option value="প্রযোজ্য নয়">প্রযোজ্য নয় (বাহ্যিক / রুট)</option>
-              </select>
+              {profile.hideMealTiming || (category !== 'oral_solid' && category !== 'syrup') ? (
+                <div className="w-full h-8 px-2.5 rounded-lg border border-teal-200 bg-teal-50/70 text-xs font-semibold text-teal-900 flex items-center">
+                  {route || profile.defaultRoute || 'বাহ্যিক (ত্বকে)'}
+                </div>
+              ) : (
+                <select
+                  value={mealTiming}
+                  onChange={(e) => setMealTiming(e.target.value as MealTiming)}
+                  className="w-full h-8 px-2 rounded-lg border border-slate-300 text-xs bg-white focus:border-teal-600 outline-none"
+                >
+                  <option value="After Meal">After Meal (খাওয়ার পর)</option>
+                  <option value="Before Meal">Before Meal (খাওয়ার আগে)</option>
+                  <option value="With Meal">With Meal (খাবারের সাথে)</option>
+                  <option value="Anytime">Anytime (যেকোনো সময়)</option>
+                </select>
+              )}
             </div>
           </div>
 

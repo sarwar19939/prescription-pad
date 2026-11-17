@@ -89,7 +89,7 @@ export function calculateSmartDose(
         hasAdjustment: true,
         dosage_form: normalizedForm === 'Oint' ? 'Oint' : 'Cream',
         strength: med.strength || '1%',
-        schedule: '১+০+১ (দিনে ২ বার)',
+        schedule: 'দিনে ২ বার',
         meal_timing: undefined,
         duration: '১৪-২১ দিন',
         special_instructions: 'আক্রান্ত স্থান পরিষ্কার ও শুকনা করে পাতলা করে লাগাবেন (লক্ষণ ভালো হওয়ার পরও ৭ দিন চালিয়ে যান)',
@@ -114,7 +114,7 @@ export function calculateSmartDose(
         hasAdjustment: true,
         dosage_form: normalizedForm === 'Oint' ? 'Oint' : 'Cream',
         strength: med.strength || '0.05%',
-        schedule: '১+০+০ (দিনে ১ বার রাতে)',
+        schedule: 'রাতে ১ বার',
         meal_timing: undefined,
         duration: '৭-১০ দিন',
         special_instructions: 'আক্রান্ত স্থানে সামান্য পরিমাণ পাতলা করে লাগাবেন (চোখে বা মুখে লাগানো নিষেধ; দীর্ঘমেয়াদে ব্যবহার অনুচিত)',
@@ -141,7 +141,7 @@ export function calculateSmartDose(
           schedule: '1+1+1 (every 6-8 hrs SOS)',
           meal_timing: 'After Meal',
           duration: '3 Days',
-          special_instructions: weight !== null ? `Infant weight ${weight}kg: ~${drops} drops (${doseMg}mg) during fever` : 'Infant drop during fever',
+          special_instructions: 'জ্বর আসলে সেব্য',
           reason: 'Paediatric infant drops calibrated for age < 2.',
           badge: 'Infant Drops',
         };
@@ -156,7 +156,7 @@ export function calculateSmartDose(
           schedule: '1+1+1 (every 6-8 hrs SOS)',
           meal_timing: 'After Meal',
           duration: '3 Days',
-          special_instructions: `Weight-based pediatric dose: ${doseMg}mg (~${ml} ml) during fever`,
+          special_instructions: 'জ্বর বেশি হলে সেব্য',
           reason: `Pediatric weight ${weight}kg: calibrated 15 mg/kg per dose.`,
           badge: `Pediatric ${doseMg}mg (~${ml}ml)`,
         };
@@ -168,7 +168,7 @@ export function calculateSmartDose(
         schedule: '1+1+1 (SOS)',
         meal_timing: 'After Meal',
         duration: '3 Days',
-        special_instructions: 'Pediatric paracetamol syrup for fever or pain.',
+        special_instructions: 'জ্বর বা ব্যথায় সেব্য',
         reason: 'Age-appropriate pediatric oral suspension.',
         badge: 'Pediatric Syrup',
       };
@@ -262,7 +262,7 @@ export function calculateSmartDose(
         schedule: '1+0+0',
         meal_timing: 'Before Meal',
         duration: '3-5 Days',
-        special_instructions: `Pediatric dose: 10mg/kg (${azithroMg}mg once daily). 1 hr before or 2 hrs after meal.`,
+        special_instructions: 'খাওয়ার ১ ঘণ্টা পূর্বে অথবা ২ ঘণ্টা পরে সেব্য',
         reason: `Pediatric Azithromycin 10mg/kg for weight ${weight}kg.`,
         badge: `10mg/kg (${azithroMg}mg OD)`,
       };
@@ -274,7 +274,7 @@ export function calculateSmartDose(
       schedule: '1+0+0',
       meal_timing: 'Before Meal',
       duration: '5 Days',
-      special_instructions: 'Take once daily 1 hour before or 2 hours after meal',
+      special_instructions: 'খাওয়ার ১ ঘণ্টা পূর্বে অথবা ২ ঘণ্টা পরে সেব্য',
       reason: 'Macrolide once-daily 5-day course.',
       badge: 'Once Daily 5-Day',
     };
@@ -292,7 +292,7 @@ export function calculateSmartDose(
         schedule: '1+0+1',
         meal_timing: 'After Meal',
         duration: '7 Days',
-        special_instructions: `Pediatric 8mg/kg (${cefMg}mg/day): ~${Math.round((ml / 2) * 10) / 10} ml BD`,
+        special_instructions: '৭ দিনের পূর্ণ কোর্স সম্পন্ন করুন',
         reason: `Pediatric Cefixime 8mg/kg for weight ${weight}kg.`,
         badge: `8mg/kg (~${ml}ml/day)`,
       };
@@ -304,7 +304,7 @@ export function calculateSmartDose(
       schedule: '1+0+1',
       meal_timing: 'After Meal',
       duration: '7 Days',
-      special_instructions: 'Complete the full 7-day course',
+      special_instructions: '৭ দিনের পূর্ণ কোর্স সম্পন্ন করুন',
       reason: 'Standard 3rd-generation cephalosporin regimen.',
       badge: 'Cefixime 7-Day',
     };
@@ -321,7 +321,7 @@ export function calculateSmartDose(
         schedule: '1+0+1',
         meal_timing: 'Before Meal',
         duration: '3-5 Days',
-        special_instructions: isDrop ? 'Take 15-30 minutes before feed' : 'Take 15-30 minutes before meal for nausea/vomiting',
+        special_instructions: isDrop ? 'খাওয়ার ১৫-৩০ মিনিট পূর্বে সেব্য' : 'বমি বা বমি বমি ভাব হলে খাওয়ার ১৫-৩০ মিনিট পূর্বে সেব্য',
         reason: isDrop ? 'Pediatric drops before feeding.' : 'Pediatric syrup before meals.',
         badge: isDrop ? 'Pediatric Drop' : 'Pediatric Syrup',
       };
@@ -333,7 +333,7 @@ export function calculateSmartDose(
       schedule: '1+0+1',
       meal_timing: 'Before Meal',
       duration: '7 Days',
-      special_instructions: 'Take 15-30 minutes before meal',
+      special_instructions: 'খাওয়ার ১৫-৩০ মিনিট পূর্বে সেব্য',
       reason: 'Upper GI prokinetic motility agent.',
       badge: 'Before Meal',
     };
@@ -348,7 +348,7 @@ export function calculateSmartDose(
       schedule: '1+0+1',
       meal_timing: 'With Meal',
       duration: '30 Days',
-      special_instructions: 'Take in the middle of principal meals to prevent GI upset',
+      special_instructions: 'খাওয়ার মাঝে সেব্য',
       reason: 'First-line biguanide insulin sensitizer.',
       badge: 'With Meal',
     };
@@ -363,7 +363,7 @@ export function calculateSmartDose(
       schedule: '1+0+1',
       meal_timing: 'After Meal',
       duration: '7 Days',
-      special_instructions: weight ? `Pediatric patient (Weight: ${weight}kg, Age: ${patient.age} yrs)` : `Pediatric patient (Age: ${patient.age} yrs)`,
+      special_instructions: '',
       reason: 'Switched to oral liquid formulation for pediatric safety.',
       badge: isInfant ? 'Pediatric Drops' : 'Pediatric Syrup',
     };

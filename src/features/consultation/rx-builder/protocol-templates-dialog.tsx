@@ -24,6 +24,7 @@ import {
 } from 'lucide-react';
 import { db } from '@/db/localDb';
 import { generateUUID } from '@/lib/uuid';
+import { detectMedicineCategory, getCategoryDosageProfile } from '@/services/medicineRouteService';
 import type { DosageForm, Encounter, MealTiming, Patient, PrescriptionItem, TemplateMedicineItem } from '@/types/schema';
 import { Button } from '@/components/ui/button';
 import {
@@ -141,23 +142,29 @@ export function ProtocolTemplatesDialog({
       const now = new Date().toISOString();
 
       // 1. Add medicines to prescription_items table
-      const itemsToInsert: PrescriptionItem[] = activeSub.medicines.map((m: TemplateMedicineItem) => ({
-        id: generateUUID(),
-        tenant_id: tenantId,
-        patient_id: patient.id,
-        encounter_id: encounter.id,
-        brand_name: m.brand_name,
-        generic_name: m.generic_name || '',
-        dosage_form: (m.dosage_form as DosageForm) || 'Tab',
-        strength: m.strength || '',
-        schedule: m.schedule || '1+0+1',
-        meal_timing: (m.meal_timing as MealTiming) || 'After Meal',
-        duration: m.duration || '7 Days',
-        special_instructions: m.special_instructions || '',
-        created_at: now,
-        updated_at: now,
-        sync_status: 'pending',
-      }));
+      const itemsToInsert: PrescriptionItem[] = activeSub.medicines.map((m: TemplateMedicineItem) => {
+        const cat = detectMedicineCategory(m.dosage_form, m.brand_name, m.generic_name);
+        const prof = getCategoryDosageProfile(cat, m.brand_name, m.generic_name);
+        const isNonOral = prof.hideMealTiming || (cat !== 'oral_solid' && cat !== 'syrup');
+        return {
+          id: generateUUID(),
+          tenant_id: tenantId,
+          patient_id: patient.id,
+          encounter_id: encounter.id,
+          brand_name: m.brand_name,
+          generic_name: m.generic_name || '',
+          dosage_form: (m.dosage_form as DosageForm) || 'Tab',
+          strength: m.strength || '',
+          schedule: m.schedule || (isNonOral ? prof.defaultSchedule : '1+0+1'),
+          meal_timing: isNonOral ? undefined : ((m.meal_timing as MealTiming) || 'After Meal'),
+          duration: m.duration || prof.defaultDuration || '7 Days',
+          special_instructions: m.special_instructions || prof.defaultSpecialInstructions || '',
+          route: prof.defaultRoute || '',
+          created_at: now,
+          updated_at: now,
+          sync_status: 'pending',
+        };
+      });
 
       if (itemsToInsert.length > 0) {
         await db.prescription_items.bulkAdd(itemsToInsert);

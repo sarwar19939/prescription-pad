@@ -2,11 +2,29 @@
  * Subcontinent & Bangladesh Chamber Prescription Formatters.
  * Aligns prescription display with "Master The Chamber" & BMDC standards:
  * - Bengali Schedules (১+০+১, ১+১+১, ০+০+১, ১+০+০)
+ * - Topical chamber phrases (দিনে ২ বার, রাতে ১ বার, সারা শরীরে মেখে ৮-১২ ঘণ্টা পর ধুয়ে ফেলবেন)
  * - Classical Bengali Meal Timing (খাবারের ২০ মিনিট পূর্বে খালি পেটে / ভরা পেটে)
  * - Duration in days/months (৫ দিন, ৭ দিন, ১৪ দিন, চলবে)
  */
 import type { DosageForm, MealTiming, PrescriptionItem } from '@/types/schema';
 import { detectMedicineCategory } from '@/services/medicineRouteService';
+
+/**
+ * Sanitizes special instructions to completely prevent internal developer/AI/pediatric debug notes
+ * (e.g. "Pediatric patient (Age: 5 yrs)") from leaking onto patient-facing prescriptions.
+ */
+export function sanitizeSpecialInstructions(instructions?: string | null): string {
+  if (!instructions) return '';
+  const text = instructions.trim();
+  if (
+    /pediatric patient|paediatric patient|switched to oral|weight-based pediatric|titrated morning regimen|optimal 30 mins before|patient \(age:\s*\d+/i.test(
+      text
+    )
+  ) {
+    return '';
+  }
+  return text;
+}
 
 const FORM_PREFIX_REGEX =
   /^(tablet|tab|capsule|cap|syrup|syr|suspension|susp|injection|inj|ointment|oint|cream|gel|lotion|lot|drop|drops|suppository|supp|pessary|sachet|inhaler|spray)\.?\s+/i;
@@ -222,8 +240,17 @@ export function formatSubcontinentRxLine(item: Partial<PrescriptionItem>): {
   dosageDetails: string;
   taperingLines?: string[];
 } {
-  const form = normalizeDosageForm(item.dosage_form);
+  let form = normalizeDosageForm(item.dosage_form);
   const brand = cleanBrandName(item.brand_name) || item.brand_name || 'Medicine';
+  const category = detectMedicineCategory(item.dosage_form, item.brand_name, item.generic_name);
+
+  // Auto-correct dosage form if topical was mistakenly stored as Syr or Tab
+  if (category === 'topical' && (form === 'Syr' || form === 'Tab')) {
+    form = (item.brand_name?.toLowerCase().includes('oint') || item.generic_name?.toLowerCase().includes('oint'))
+      ? 'Oint'
+      : 'Cream';
+  }
+
   const hasStrengthInBrand = item.strength && brand.toLowerCase().includes(item.strength.toLowerCase());
   const strengthPart = item.strength && !hasStrengthInBrand ? item.strength : '';
   const title = `${form}. ${brand}${strengthPart ? ' ' + strengthPart : ''}`.trim();
@@ -240,10 +267,9 @@ export function formatSubcontinentRxLine(item: Partial<PrescriptionItem>): {
     });
   }
 
-  const category = detectMedicineCategory(item.dosage_form, item.brand_name, item.generic_name);
-  const sched = formatSubcontinentSchedule(item.schedule);
+  let sched = formatSubcontinentSchedule(item.schedule);
   const dur = formatSubcontinentDuration(item.duration);
-  const instructions = (item.special_instructions || '').trim();
+  const instructions = sanitizeSpecialInstructions(item.special_instructions);
   const route = (item.route || '').trim();
 
   let dosageDetails = '';
@@ -257,16 +283,48 @@ export function formatSubcontinentRxLine(item: Partial<PrescriptionItem>): {
     category === 'drops' ||
     category === 'inhaler'
   ) {
+    // For topicals specifically, normalize numeric schedules like "1+0+1" or "1+1" into standard clinical Bengali phrases:
+    if (category === 'topical') {
+      const rawSched = (item.schedule || '').trim();
+      const combinedName = `${brand} ${item.generic_name || ''}`.toLowerCase();
+      const isScabies =
+        combinedName.includes('permin') ||
+        combinedName.includes('permethrin') ||
+        combinedName.includes('scabex') ||
+        combinedName.includes('lorex');
+
+      if (isScabies) {
+        sched = '১ বার (রাতে)';
+      } else if (/^(1\+0\+1|1\s*\+\s*1|2)$/i.test(rawSched)) {
+        sched = 'দিনে ২ বার';
+      } else if (/^(1\+1\+1|3)$/i.test(rawSched)) {
+        sched = 'দিনে ৩ বার';
+      } else if (/^(0\+0\+1|1\+0\+0|1\+0|1)$/i.test(rawSched)) {
+        sched = 'রাতে ১ বার';
+      } else if (/^(2-3|2\s*-\s*3)$/i.test(rawSched)) {
+        sched = 'দিনে ২-৩ বার';
+      }
+    }
+
     const parts: string[] = [];
 
+    // Schedule / Frequency
+    if (sched) {
+      parts.push(sched);
+    }
+
+    // Instructions or Route
     if (instructions) {
-      if (sched && !instructions.includes(sched)) {
-        parts.push(sched);
+      if (!instructions.includes(sched)) {
+        parts.push(instructions);
+      } else {
+        parts.length = 0;
+        parts.push(instructions);
       }
-      parts.push(instructions);
-    } else {
-      if (sched) parts.push(sched);
-      if (route) parts.push(route);
+    } else if (route && route !== 'প্রযোজ্য নয়' && route !== 'Topical') {
+      parts.push(route);
+    } else if (category === 'topical') {
+      parts.push('আক্রান্ত স্থানে পাতলা করে লাগাবেন');
     }
 
     if (dur) parts.push(dur);

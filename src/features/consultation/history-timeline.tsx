@@ -11,6 +11,7 @@ import { ChevronDown, Copy, FlaskConical, Loader2, PackageOpen, Trash2 } from 'l
 
 import { db } from '@/db/localDb';
 import { copyRxToToday } from './copy-rx';
+import { formatSubcontinentRxLine } from '@/lib/prescriptionFormatters';
 import type { Encounter, InvestigationReport, Patient } from '@/types/schema';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -168,17 +169,16 @@ function EncounterDetail({
           <span className="text-slate-500">None recorded.</span>
         ) : (
           <ul className="flex flex-col gap-1.5">
-            {(lines ?? []).map((rx) => (
-              <li key={rx.id} className="flex items-center gap-2">
-                <PackageOpen className="h-4 w-4 shrink-0 text-teal-700" aria-hidden />
-                <span className="font-bold text-slate-900">
-                  {rx.brand_name} {rx.strength}
-                </span>
-                <span className="text-slate-500 text-xs">({rx.dosage_form})</span>
-                <span className="font-mono text-slate-700 text-sm">{rx.schedule}</span>
-                <span className="text-slate-500 text-sm">· {rx.meal_timing} · {rx.duration}</span>
-              </li>
-            ))}
+            {(lines ?? []).map((rx) => {
+              const { title, dosageDetails } = formatSubcontinentRxLine(rx);
+              return (
+                <li key={rx.id} className="flex items-center gap-2">
+                  <PackageOpen className="h-4 w-4 shrink-0 text-teal-700" aria-hidden />
+                  <span className="font-bold text-slate-900">{title}</span>
+                  {dosageDetails && <span className="text-slate-600 text-xs">· {dosageDetails}</span>}
+                </li>
+              );
+            })}
           </ul>
         )}
       </Detail>

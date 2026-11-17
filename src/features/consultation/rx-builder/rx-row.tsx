@@ -21,6 +21,7 @@ import {
   formatSubcontinentRxLine,
   formatSubcontinentSchedule,
   normalizeDosageForm,
+  sanitizeSpecialInstructions,
   toBengaliNumerals,
 } from '@/lib/prescriptionFormatters';
 import { detectMedicineCategory, getCategoryDosageProfile } from '@/services/medicineRouteService';
@@ -98,11 +99,15 @@ export function RxRow({
   const cleanForm = normalizeDosageForm(item.dosage_form);
   const cleanBrand = cleanBrandName(item.brand_name) || item.brand_name;
   const hasStrengthInBrand = item.strength && cleanBrand.toLowerCase().includes(item.strength.toLowerCase());
-  const displayTitle = `${cleanForm}. ${cleanBrand}${
+  const effectiveForm =
+    category === 'topical' && (cleanForm === 'Syr' || cleanForm === 'Tab')
+      ? (cleanBrand.toLowerCase().includes('oint') ? 'Oint' : 'Cream')
+      : cleanForm;
+  const displayTitle = `${effectiveForm}. ${cleanBrand}${
     item.strength && !hasStrengthInBrand ? ` ${item.strength}` : ''
   }`.trim();
 
-  // Auto-sanitize legacy records with duplicate form prefixes and auto-fix wrongly tagged topicals
+  // Auto-sanitize legacy records with duplicate form prefixes, pediatric debug notes, and auto-fix wrongly tagged topicals
   useEffect(() => {
     const fixedForm = normalizeDosageForm(item.dosage_form);
     const fixedBrand = cleanBrandName(item.brand_name);
@@ -110,27 +115,63 @@ export function RxRow({
     if (fixedForm !== item.dosage_form) updates.dosage_form = fixedForm;
     if (fixedBrand && fixedBrand !== item.brand_name) updates.brand_name = fixedBrand;
 
-    // Auto-fix topical medicines that were mistakenly tagged as Syr or Tab (e.g. Afun, Permin, Halovar)
-    const genuineCat = detectMedicineCategory(item.dosage_form, item.brand_name, item.generic_name);
-    if (genuineCat === 'topical' && (item.dosage_form === 'Syr' || item.dosage_form === 'Tab')) {
-      const isOint = item.brand_name.toLowerCase().includes('oint') || (item.generic_name || '').toLowerCase().includes('oint');
-      updates.dosage_form = isOint ? 'Oint' : 'Cream';
-      if (!item.route) updates.route = 'Topical';
-      if (item.meal_timing) updates.meal_timing = undefined;
+    // 1. Auto-sanitize legacy records with pediatric debug instructions
+    const sanitizedInst = sanitizeSpecialInstructions(item.special_instructions);
+    if (sanitizedInst !== (item.special_instructions || '')) {
+      updates.special_instructions = sanitizedInst;
     }
 
-    // If item has no route and category has a specific default route (e.g. IV, Per Rectum, Topical), auto-fill
-    if (!item.route && profile.defaultRoute && category !== 'oral_solid') {
-      updates.route = profile.defaultRoute;
+    // 2. Auto-fix topical medicines that were mistakenly tagged as Syr or Tab (e.g. Afun, Permin, Halovar)
+    const genuineCat = detectMedicineCategory(item.dosage_form, item.brand_name, item.generic_name);
+    if (genuineCat === 'topical') {
+      if (item.dosage_form === 'Syr' || item.dosage_form === 'Tab') {
+        const isOint = item.brand_name.toLowerCase().includes('oint') || (item.generic_name || '').toLowerCase().includes('oint');
+        updates.dosage_form = isOint ? 'Oint' : 'Cream';
+      }
+      if (item.meal_timing) {
+        updates.meal_timing = undefined;
+      }
+      // If schedule is numeric 1+0+1 or 1+1, migrate to standard clinical frequency
+      const isScabies =
+        (item.brand_name + ' ' + (item.generic_name || '')).toLowerCase().includes('permin') ||
+        (item.brand_name + ' ' + (item.generic_name || '')).toLowerCase().includes('permethrin');
+      if (item.schedule === '1+0+1' || item.schedule === '1+1') {
+        updates.schedule = isScabies ? '১ বার (রাতে)' : 'দিনে ২ বার';
+      }
+      if (!item.route) {
+        updates.route = isScabies ? 'সারা শরীরে (ঘাড় থেকে পা)' : 'আক্রান্ত স্থানে (ত্বকে)';
+      }
+    }
+
+    // 3. For any non-oral category (suppository, injection, drops, inhaler)
+    if (genuineCat !== 'oral_solid' && genuineCat !== 'syrup') {
+      if (item.meal_timing) {
+        updates.meal_timing = undefined;
+      }
+      if (!item.route && profile.defaultRoute) {
+        updates.route = profile.defaultRoute;
+      }
     }
 
     if (Object.keys(updates).length > 0) {
       void db.prescription_items.update(item.id, {
         ...updates,
         updated_at: new Date().toISOString(),
+        sync_status: 'pending',
       });
     }
-  }, [item.id, item.dosage_form, item.brand_name, item.generic_name, item.route, item.meal_timing, profile.defaultRoute, category]);
+  }, [
+    item.id,
+    item.dosage_form,
+    item.brand_name,
+    item.generic_name,
+    item.route,
+    item.meal_timing,
+    item.schedule,
+    item.special_instructions,
+    profile.defaultRoute,
+    category,
+  ]);
 
   // Form-specific color accents
   const categoryBadgeColor =
@@ -247,7 +288,9 @@ export function RxRow({
       <div className="flex flex-wrap items-center gap-2 pt-1 border-t border-slate-100 text-xs">
         {/* Bengali Shorthand / Frequency Badge */}
         <span className="font-bold text-teal-800 bg-teal-50 border border-teal-200 px-2.5 py-1 rounded-md text-xs">
-          {formatSubcontinentSchedule(item.schedule) || (profile.isTopical ? 'দিনে ২ বার' : '১ + ০ + ১')}
+          {category === 'topical'
+            ? (item.schedule || profile.defaultSchedule || 'দিনে ২ বার')
+            : (formatSubcontinentSchedule(item.schedule) || '১ + ০ + ১')}
         </span>
 
         {/* Schedule / Frequency Input */}
@@ -256,21 +299,51 @@ export function RxRow({
           placeholder={profile.defaultSchedule || '1+0+1'}
           value={item.schedule}
           onChange={(e) => write({ schedule: e.target.value })}
-          title="শিডিউল (যেমন: 1+0+1, দিনে ২ বার, রাতে ১ বার)"
+          title="শিডিউল (যেমন: দিনে ২ বার, রাতে ১ বার, 1+0+1)"
         />
 
-        {/* Meal Timing / Route Select */}
-        <select
-          className="h-8 rounded-lg border border-slate-300 bg-white px-2.5 text-xs font-medium text-slate-800 outline-none focus:border-teal-600 focus:ring-1 focus:ring-teal-500/30"
-          value={item.meal_timing}
-          onChange={(e) => write({ meal_timing: e.target.value as MealTiming })}
-        >
-          {STANDARD_MEAL_OPTIONS.map((opt) => (
-            <option key={opt.value} value={opt.value}>
-              {opt.label}
-            </option>
-          ))}
-        </select>
+        {/* Quick Frequency Chips for Topical Preparations */}
+        {category === 'topical' && (
+          <div className="flex items-center gap-1">
+            {(profile.categoryLabelBn.includes('স্ক্যাবিস')
+              ? ['১ বার (রাতে)', '৭ দিন পর পুনরায়', 'প্রয়োজনমতো']
+              : ['দিনে ২ বার', 'দিনে ৩ বার', 'রাতে ১ বার', 'প্রয়োজনমতো']
+            ).map((q) => (
+              <button
+                key={q}
+                type="button"
+                onClick={() => write({ schedule: q })}
+                className={`text-[11px] font-semibold px-2 py-1 rounded-md border transition-all ${
+                  item.schedule === q
+                    ? 'bg-teal-700 text-white border-teal-700 shadow-2xs'
+                    : 'bg-slate-50 text-slate-700 border-slate-200 hover:bg-teal-50 hover:border-teal-300'
+                }`}
+              >
+                {q}
+              </button>
+            ))}
+          </div>
+        )}
+
+        {/* Meal Timing / Route: STRICTLY Oral gets Meal Timing, non-oral displays route */}
+        {category === 'oral_solid' || category === 'syrup' ? (
+          <select
+            className="h-8 rounded-lg border border-slate-300 bg-white px-2.5 text-xs font-medium text-slate-800 outline-none focus:border-teal-600 focus:ring-1 focus:ring-teal-500/30"
+            value={item.meal_timing || 'After Meal'}
+            onChange={(e) => write({ meal_timing: e.target.value as MealTiming })}
+          >
+            {STANDARD_MEAL_OPTIONS.filter((opt) => opt.value !== 'প্রযোজ্য নয়').map((opt) => (
+              <option key={opt.value} value={opt.value}>
+                {opt.label}
+              </option>
+            ))}
+          </select>
+        ) : (
+          <div className="flex items-center gap-1.5 h-8 px-2.5 rounded-lg bg-teal-50/70 border border-teal-200 text-xs font-semibold text-teal-900">
+            <span className="text-[10px] text-teal-600 uppercase">রুট:</span>
+            <span>{item.route || profile.defaultRoute || 'বাহ্যিক (ত্বকে)'}</span>
+          </div>
+        )}
 
         {/* Duration input */}
         <input
@@ -285,7 +358,7 @@ export function RxRow({
         <div className="flex items-center gap-1 flex-1 min-w-[150px]">
           <input
             className="h-8 w-full rounded-lg border border-teal-200 bg-teal-50/30 px-2.5 text-xs text-slate-800 placeholder:text-slate-400 outline-none focus:border-teal-600 focus:bg-white"
-            placeholder='শর্টহ্যান্ড (যেমন: "bd pc 7d" বা "1+0+1")'
+            placeholder={category === 'topical' ? 'শর্টহ্যান্ড (যেমন: "দিনে ২ বার ৭ দিন")' : 'শর্টহ্যান্ড (যেমন: "bd pc 7d" বা "1+0+1")'}
             value={cmd}
             onChange={(e) => setCmd(e.target.value)}
             onKeyDown={(e) => {
