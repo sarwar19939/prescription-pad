@@ -179,7 +179,7 @@ export interface PrescriptionItem extends BaseRecord {
   dosage_form: DosageForm;
   strength: string;
   schedule: string; // e.g. '1+0+1' or 'দিনে ২ বার'
-  meal_timing: MealTiming;
+  meal_timing?: MealTiming;
   duration: string; // e.g. '7 Days'
   special_instructions: string;
   route?: string; // e.g. 'আক্রান্ত স্থানে' | 'পায়ুপথে' | 'যোনিপথে' | 'শিরায় (IV)' | 'মাংসে (IM)' | 'চোখে' | 'কানে'
@@ -223,7 +223,7 @@ export interface TemplateMedicineItem {
   dosage_form: DosageForm | string;
   strength: string;
   schedule: string;
-  meal_timing: MealTiming | string;
+  meal_timing?: MealTiming | string;
   duration: string;
   special_instructions?: string;
   route?: string;

@@ -28,7 +28,7 @@ import { checkMedicineWithCatalog, type SafetyWarning } from './safety';
 import { SafetyBanners } from './safety-banners';
 import { parseShorthand } from './shorthand';
 import { TaperingDosePanel } from './tapering-dose-panel';
-import type { MealTiming, Patient, PrescriptionItem, Vitals } from '@/types/schema';
+import type { DosageForm, MealTiming, Patient, PrescriptionItem, Vitals } from '@/types/schema';
 import { Button } from '@/components/ui/button';
 
 const STANDARD_MEAL_OPTIONS: Array<{ value: MealTiming; label: string }> = [
@@ -102,13 +102,22 @@ export function RxRow({
     item.strength && !hasStrengthInBrand ? ` ${item.strength}` : ''
   }`.trim();
 
-  // Auto-sanitize legacy records with duplicate form prefixes
+  // Auto-sanitize legacy records with duplicate form prefixes and auto-fix wrongly tagged topicals
   useEffect(() => {
     const fixedForm = normalizeDosageForm(item.dosage_form);
     const fixedBrand = cleanBrandName(item.brand_name);
     const updates: Partial<PrescriptionItem> = {};
     if (fixedForm !== item.dosage_form) updates.dosage_form = fixedForm;
     if (fixedBrand && fixedBrand !== item.brand_name) updates.brand_name = fixedBrand;
+
+    // Auto-fix topical medicines that were mistakenly tagged as Syr or Tab (e.g. Afun, Permin, Halovar)
+    const genuineCat = detectMedicineCategory(item.dosage_form, item.brand_name, item.generic_name);
+    if (genuineCat === 'topical' && (item.dosage_form === 'Syr' || item.dosage_form === 'Tab')) {
+      const isOint = item.brand_name.toLowerCase().includes('oint') || (item.generic_name || '').toLowerCase().includes('oint');
+      updates.dosage_form = isOint ? 'Oint' : 'Cream';
+      if (!item.route) updates.route = 'Topical';
+      if (item.meal_timing) updates.meal_timing = undefined;
+    }
 
     // If item has no route and category has a specific default route (e.g. IV, Per Rectum, Topical), auto-fill
     if (!item.route && profile.defaultRoute && category !== 'oral_solid') {
@@ -121,7 +130,7 @@ export function RxRow({
         updated_at: new Date().toISOString(),
       });
     }
-  }, [item.id, item.dosage_form, item.brand_name, item.route, profile.defaultRoute, category]);
+  }, [item.id, item.dosage_form, item.brand_name, item.generic_name, item.route, item.meal_timing, profile.defaultRoute, category]);
 
   // Form-specific color accents
   const categoryBadgeColor =
@@ -155,10 +164,40 @@ export function RxRow({
             {displayTitle}
           </span>
 
-          {/* Clinical Category Badge (ক্রিম / ইনজেকশন / সাপোজিটরি ইত্যাদি) */}
-          <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full border ${categoryBadgeColor}`}>
-            {profile.categoryLabelBn}
-          </span>
+          {/* Clinical Category Badge & Form Selector */}
+          <select
+            value={item.dosage_form || 'Tab'}
+            onChange={(e) => {
+              const newForm = e.target.value as DosageForm;
+              const cat = detectMedicineCategory(newForm, item.brand_name, item.generic_name);
+              const prof = getCategoryDosageProfile(cat, item.brand_name, item.generic_name);
+              const updates: Partial<PrescriptionItem> = { dosage_form: newForm };
+              if (prof.defaultRoute && (!item.route || item.route === profile.defaultRoute)) {
+                updates.route = prof.defaultRoute;
+              }
+              if (prof.hideMealTiming) {
+                updates.meal_timing = undefined;
+              }
+              write(updates);
+            }}
+            className={`text-[10px] font-bold px-2 py-0.5 rounded-full border cursor-pointer outline-none transition-all ${categoryBadgeColor}`}
+            title="ঔষধের প্রিপারেশন পরিবর্তন করতে ক্লিক করুন (যেমন: Cream, Oint, Syr, Tab)"
+          >
+            <option value="Cream">ক্রিম (Cream)</option>
+            <option value="Oint">মলম (Ointment)</option>
+            <option value="Lotion">লোশন (Lotion)</option>
+            <option value="Gel">জেল (Gel)</option>
+            <option value="Tab">ট্যাবলেট (Tab)</option>
+            <option value="Cap">ক্যাপসুল (Cap)</option>
+            <option value="Syr">সিরাপ (Syr)</option>
+            <option value="Susp">সাসপেনশন (Susp)</option>
+            <option value="Supp">সাপোজিটরি (Supp)</option>
+            <option value="Pessary">পেসারি (Pessary)</option>
+            <option value="Inj">ইনজেকশন (Inj)</option>
+            <option value="Drop">ড্রপ (Drop)</option>
+            <option value="Inhaler">ইনহেলার (Inhaler)</option>
+            <option value="Spray">স্প্রে (Spray)</option>
+          </select>
 
           {item.tapering_steps && item.tapering_steps.length > 0 && (
             <span className="text-[10px] font-bold text-amber-900 bg-amber-100 border border-amber-300 px-2 py-0.5 rounded-full">

@@ -4,10 +4,11 @@
  * AddCustomMedicineDialog — Allows doctors to prescribe unlisted / new medicines & preparations
  * and automatically saves them to the local MedicineCatalog for future autocomplete.
  */
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { BookmarkCheck, Check, Pill, Plus, Sparkles, Syringe, X } from 'lucide-react';
 import { db } from '@/db/localDb';
 import { generateUUID } from '@/lib/uuid';
+import { cleanBrandName } from '@/lib/prescriptionFormatters';
 import { detectMedicineCategory, getCategoryDosageProfile } from '@/services/medicineRouteService';
 import type { DosageForm, MealTiming, Patient, PrescriptionItem, MedicineCatalog } from '@/types/schema';
 import { Button } from '@/components/ui/button';
@@ -74,6 +75,45 @@ export function AddCustomMedicineDialog({
 
   const category = detectMedicineCategory(dosageForm, brandName, genericName);
   const profile = getCategoryDosageProfile(category, brandName, genericName);
+
+  // Auto-detect dosage form, clean brand, and profile presets when initialBrand is provided
+  useEffect(() => {
+    if (initialBrand) {
+      const lower = initialBrand.toLowerCase();
+      let detectedForm: DosageForm = 'Tab';
+      if (lower.includes('cream') || lower.includes('ক্রিম')) detectedForm = 'Cream';
+      else if (lower.includes('oint') || lower.includes('মলম')) detectedForm = 'Oint';
+      else if (lower.includes('gel') || lower.includes('জেল')) detectedForm = 'Gel';
+      else if (lower.includes('lot') || lower.includes('লোশন')) detectedForm = 'Lotion';
+      else if (lower.includes('supp') || lower.includes('সাপোজিটরি')) detectedForm = 'Supp';
+      else if (lower.includes('syr') || lower.includes('সিরাপ')) detectedForm = 'Syr';
+      else if (lower.includes('drop') || lower.includes('ড্রপ')) detectedForm = 'Drop';
+      else if (lower.includes('inj') || lower.includes('ইনজেকশন')) detectedForm = 'Inj';
+      else if (lower.includes('inhal') || lower.includes('ইনহেলার')) detectedForm = 'Inhaler';
+      else {
+        const cat = detectMedicineCategory(undefined, initialBrand);
+        if (cat === 'topical') detectedForm = 'Cream';
+        else if (cat === 'syrup') detectedForm = 'Syr';
+        else if (cat === 'rectal_suppository') detectedForm = 'Supp';
+        else if (cat === 'vaginal_suppository') detectedForm = 'Pessary';
+        else if (cat === 'injection') detectedForm = 'Inj';
+        else if (cat === 'drops') detectedForm = 'Drop';
+        else if (cat === 'inhaler') detectedForm = 'Inhaler';
+      }
+      setDosageForm(detectedForm);
+      const cleanName = cleanBrandName(initialBrand)
+        .replace(/^(ক্রিম|মলম|জেল|লোশন|সিরাপ|ড্রপ|ইনজেকশন|সাপোজিটরি)\s*/i, '')
+        .trim();
+      setBrandName(cleanName || initialBrand);
+      const cat = detectMedicineCategory(detectedForm, cleanName);
+      const prof = getCategoryDosageProfile(cat, cleanName);
+      setSchedule(prof.defaultSchedule);
+      setMealTiming(prof.defaultMealTiming);
+      setDuration(prof.defaultDuration);
+      setRoute(prof.defaultRoute);
+      if (prof.defaultSpecialInstructions) setInstructions(prof.defaultSpecialInstructions);
+    }
+  }, [initialBrand]);
 
   const handleFormChange = (newForm: DosageForm) => {
     setDosageForm(newForm);

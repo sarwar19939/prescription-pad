@@ -18,20 +18,20 @@ const FORM_PREFIX_REGEX =
 export function normalizeDosageForm(form?: string | null): DosageForm {
   if (!form) return 'Tab';
   const f = form.trim().toLowerCase();
-  if (f.startsWith('cap')) return 'Cap';
-  if (f.startsWith('susp')) return 'Susp';
-  if (f.startsWith('syr')) return 'Syr';
-  if (f.startsWith('inj')) return 'Inj';
-  if (f.startsWith('cream')) return 'Cream';
-  if (f.startsWith('gel')) return 'Gel';
-  if (f.startsWith('lot')) return 'Lotion';
-  if (f.startsWith('oint')) return 'Oint';
-  if (f.startsWith('drop')) return 'Drop';
-  if (f.startsWith('pess')) return 'Pessary';
-  if (f.startsWith('supp')) return 'Supp';
-  if (f.startsWith('sachet')) return 'Sachet';
-  if (f.startsWith('inhal')) return 'Inhaler';
-  if (f.startsWith('spray')) return 'Spray';
+  if (f.startsWith('cap') || f.includes('ক্যাপসুল')) return 'Cap';
+  if (f.startsWith('susp') || f.includes('সাসপেনশন')) return 'Susp';
+  if (f.startsWith('syr') || f.includes('সিরাপ')) return 'Syr';
+  if (f.startsWith('inj') || f.includes('ইনজেকশন')) return 'Inj';
+  if (f.startsWith('cream') || f.includes('cream') || f.includes('ক্রিম')) return 'Cream';
+  if (f.startsWith('gel') || f.includes('gel') || f.includes('জেল')) return 'Gel';
+  if (f.startsWith('lot') || f.includes('lot') || f.includes('লোশন')) return 'Lotion';
+  if (f.startsWith('oint') || f.includes('oint') || f.includes('মলম')) return 'Oint';
+  if (f.startsWith('drop') || f.includes('drop') || f.includes('ড্রপ')) return 'Drop';
+  if (f.startsWith('pess') || f.includes('pess') || f.includes('পেসারি')) return 'Pessary';
+  if (f.startsWith('supp') || f.includes('supp') || f.includes('সাপোজিটরি')) return 'Supp';
+  if (f.startsWith('sachet') || f.includes('স্যাচেট')) return 'Sachet';
+  if (f.startsWith('inhal') || f.includes('ইনহেলার')) return 'Inhaler';
+  if (f.startsWith('spray') || f.includes('স্প্রে')) return 'Spray';
   return 'Tab';
 }
 

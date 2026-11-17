@@ -14,7 +14,7 @@ import { generateUUID } from '@/lib/uuid';
 import { calculateSmartDose } from '@/services/dosingEngine';
 import { getDrugGuideline } from '@/services/drugGuidelinesService';
 import { detectMedicineCategory, getCategoryDosageProfile } from '@/services/medicineRouteService';
-import { toBengaliNumerals } from '@/lib/prescriptionFormatters';
+import { normalizeDosageForm, toBengaliNumerals } from '@/lib/prescriptionFormatters';
 import { MedicineSearch } from './medicine-search';
 import { ProtocolTemplatesDialog } from './protocol-templates-dialog';
 import { SaveAsTemplateDialog } from './save-as-template-dialog';
@@ -22,7 +22,7 @@ import { AddCustomMedicineDialog } from './add-custom-medicine-dialog';
 import { RxRow } from './rx-row';
 import { AnimatedList, AnimatedListItem } from '@/components/ui/motion';
 import { Button } from '@/components/ui/button';
-import type { MedicineCatalog, Patient, PrescriptionItem } from '@/types/schema';
+import type { DosageForm, MedicineCatalog, Patient, PrescriptionItem } from '@/types/schema';
 
 export function RxPad({ patient, encounterId }: { patient: Patient; encounterId: string }) {
   const [search, setSearch] = useState('');
@@ -63,14 +63,29 @@ export function RxPad({ patient, encounterId }: { patient: Patient; encounterId:
     const guide = getDrugGuideline(brand || generic);
     const category = detectMedicineCategory(form, brand, generic);
     const profile = getCategoryDosageProfile(category, brand, generic);
+    const isNonOral = category !== 'oral_solid' && category !== 'syrup';
+
+    // Dosage form:
+    // If non-oral (cream, ointment, suppository, injection, drop, inhaler), NEVER force it into Syr!
+    let resolvedForm: DosageForm = normalizeDosageForm(form);
+    if (isNonOral) {
+      if (smart.hasAdjustment && smart.dosage_form && smart.dosage_form !== 'Syr') {
+        resolvedForm = smart.dosage_form;
+      } else if (category === 'topical') {
+        resolvedForm = form && (form.toLowerCase().includes('oint') || form.toLowerCase().includes('মলম')) ? 'Oint' : 'Cream';
+      }
+    } else if (smart.hasAdjustment && smart.dosage_form) {
+      resolvedForm = smart.dosage_form;
+    }
 
     const initialSchedule = smart.hasAdjustment && smart.schedule
       ? smart.schedule
       : (guide?.standardSchedule || profile.defaultSchedule || '1+0+1');
 
-    const initialMealTiming = smart.hasAdjustment && smart.meal_timing
-      ? smart.meal_timing
-      : (guide?.standardMealTiming || profile.defaultMealTiming || 'After Meal');
+    // Never attach meal timing to topicals, suppositories, drops, inhalers, or injections
+    const initialMealTiming = profile.hideMealTiming || isNonOral
+      ? undefined
+      : (smart.hasAdjustment && smart.meal_timing ? smart.meal_timing : (guide?.standardMealTiming || profile.defaultMealTiming || 'After Meal'));
 
     const initialInstructions = smart.hasAdjustment && smart.special_instructions
       ? smart.special_instructions
@@ -89,12 +104,12 @@ export function RxPad({ patient, encounterId }: { patient: Patient; encounterId:
       patient_id: patient.id,
       brand_name: brand,
       generic_name: generic,
-      dosage_form: smart.hasAdjustment && smart.dosage_form ? smart.dosage_form : form,
+      dosage_form: resolvedForm,
       strength: smart.hasAdjustment && smart.strength ? smart.strength : str,
       schedule: initialSchedule,
-      meal_timing: initialMealTiming,
+      meal_timing: initialMealTiming || '',
       duration: initialDuration,
-      special_instructions: initialInstructions,
+      special_instructions: initialInstructions || '',
       route: initialRoute,
       created_at: ts,
       updated_at: ts,

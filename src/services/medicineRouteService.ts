@@ -145,16 +145,37 @@ export function detectMedicineCategory(
     f.includes('oint') ||
     f.includes('gel') ||
     f.includes('lot') ||
+    f.includes('ক্রিম') ||
+    f.includes('মলম') ||
+    f.includes('জেল') ||
+    f.includes('লোশন') ||
     combined.includes(' cream') ||
     combined.includes(' oint') ||
     combined.includes(' gel') ||
     combined.includes(' lotion') ||
+    combined.includes('ক্রিম') ||
+    combined.includes('মলম') ||
+    combined.includes('afun') ||
+    combined.includes('এফান') ||
+    combined.includes('halovar') ||
+    combined.includes('halovate') ||
+    combined.includes('হ্যালোভার') ||
+    combined.includes('হ্যালোভেট') ||
+    combined.includes('permin') ||
+    combined.includes('পারমিন') ||
     combined.includes('permethrin') ||
     combined.includes('scabex') ||
     combined.includes('lorex') ||
     combined.includes('dermasol') ||
     combined.includes('betnovate') ||
     combined.includes('clobetasol') ||
+    combined.includes('halobetasol') ||
+    combined.includes('clotrimazole') ||
+    combined.includes('miconazole') ||
+    combined.includes('ketoconazole') ||
+    combined.includes('terbinafine') ||
+    combined.includes('econazole') ||
+    combined.includes('luliconazole') ||
     combined.includes('fusidic') ||
     combined.includes('mupirocin') ||
     combined.includes('bactroban') ||

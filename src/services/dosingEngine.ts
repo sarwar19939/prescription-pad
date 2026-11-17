@@ -4,6 +4,8 @@
  */
 import type { MealTiming, Patient, PrescriptionItem, Vitals } from '@/types/schema';
 import { parseBP } from './vitalsService';
+import { detectMedicineCategory } from './medicineRouteService';
+import { normalizeDosageForm } from '@/lib/prescriptionFormatters';
 
 export interface DoseProposal {
   hasAdjustment: boolean;
@@ -39,6 +41,92 @@ export function calculateSmartDose(
   const isHighBP = (sbp !== null && sbp >= 140) || (dbp !== null && dbp >= 90);
   const pulse = parseNum(vitals?.pulse);
   const isTachycardia = pulse !== null && pulse > 100;
+
+  const category = detectMedicineCategory(med.dosage_form, med.brand_name, med.generic_name);
+  const normalizedForm = normalizeDosageForm(med.dosage_form);
+
+  // If medicine is non-oral (Topical, Suppository, Injection, Drops, Inhaler),
+  // NEVER force it into Syrup or Drops! Keep its authentic form and topical/route instructions.
+  if (category !== 'oral_solid' && category !== 'syrup') {
+    // Check for Scabies / Permethrin pediatric specifics
+    const isScabies =
+      name.includes('permethrin') ||
+      name.includes('scabex') ||
+      name.includes('lorex') ||
+      name.includes('permin') ||
+      name.includes('পারমিন');
+
+    if (isScabies) {
+      return {
+        hasAdjustment: true,
+        dosage_form: normalizedForm === 'Lotion' ? 'Lotion' : 'Cream',
+        strength: med.strength || '5% w/w',
+        schedule: '১ বার (রাতে)',
+        meal_timing: undefined,
+        duration: '১ দিন (৭ দিন পর পুনরায়)',
+        special_instructions:
+          patientAge < 1
+            ? 'সারা শরীরে (মাথা ও মুখমণ্ডল বাদে) হালকাভাবে মেখে ৮-১২ ঘণ্টা পর ধুয়ে ফেলুন। ৭ দিন পর পুনরায় ১ বার ব্যবহার করুন।'
+            : 'সারা শরীরে (ঘাড় থেকে পায়ের পাতা পর্যন্ত) মেখে ৮-১২ ঘণ্টা পর সাবান দিয়ে ধুয়ে ফেলুন। পরিবারের সবার একসাথে ব্যবহার করা উচিত।',
+        reason: 'স্ক্যাবিস পারমেথ্রিন ৫% সারা শরীরে ওভারনাইট অ্যাপ্লিকেশন।',
+        badge: 'Scabies Protocol',
+      };
+    }
+
+    // Check for Antifungal creams (Afun, Clotrimazole, Fungidal, Econazole, Miconazole)
+    const isAntifungal =
+      name.includes('afun') ||
+      name.includes('এফান') ||
+      name.includes('clotrimazole') ||
+      name.includes('miconazole') ||
+      name.includes('econazole') ||
+      name.includes('ketoconazole') ||
+      name.includes('fungidal') ||
+      name.includes('candid');
+
+    if (isAntifungal) {
+      return {
+        hasAdjustment: true,
+        dosage_form: normalizedForm === 'Oint' ? 'Oint' : 'Cream',
+        strength: med.strength || '1%',
+        schedule: '১+০+১ (দিনে ২ বার)',
+        meal_timing: undefined,
+        duration: '১৪-২১ দিন',
+        special_instructions: 'আক্রান্ত স্থান পরিষ্কার ও শুকনা করে পাতলা করে লাগাবেন (লক্ষণ ভালো হওয়ার পরও ৭ দিন চালিয়ে যান)',
+        reason: 'টপিক্যাল অ্যান্টিফাংগাল ত্বকের সংক্রমণ প্রটোকল।',
+        badge: 'Topical Antifungal',
+      };
+    }
+
+    // Check for Topical Steroids (Halovar, Halovate, Dermasol, Clobetasol, Betnovate)
+    const isTopicalSteroid =
+      name.includes('halovar') ||
+      name.includes('halovate') ||
+      name.includes('হ্যালোভার') ||
+      name.includes('হ্যালোভেট') ||
+      name.includes('halobetasol') ||
+      name.includes('clobetasol') ||
+      name.includes('dermasol') ||
+      name.includes('betnovate');
+
+    if (isTopicalSteroid) {
+      return {
+        hasAdjustment: true,
+        dosage_form: normalizedForm === 'Oint' ? 'Oint' : 'Cream',
+        strength: med.strength || '0.05%',
+        schedule: '১+০+০ (দিনে ১ বার রাতে)',
+        meal_timing: undefined,
+        duration: '৭-১০ দিন',
+        special_instructions: 'আক্রান্ত স্থানে সামান্য পরিমাণ পাতলা করে লাগাবেন (চোখে বা মুখে লাগানো নিষেধ; দীর্ঘমেয়াদে ব্যবহার অনুচিত)',
+        reason: 'টপিক্যাল কর্টিকোস্টেরয়েড স্কিন অ্যাপ্লিকেশন।',
+        badge: 'Topical Steroid',
+      };
+    }
+
+    // For any other topical / suppository / injection / drop / inhaler:
+    // DO NOT convert to Syr or Drop!
+    return { hasAdjustment: false };
+  }
 
   // 1. Paracetamol / Acetaminophen (Ace, Napa, Fast, Parapyrol)
   if (name.includes('paracetamol') || name.includes('napa') || name.includes('ace') || name.includes('fast')) {
@@ -266,8 +354,8 @@ export function calculateSmartDose(
     };
   }
 
-  // 10. General Pediatric Fallback (strictly under 12 years)
-  if (isPediatric) {
+  // 10. General Pediatric Fallback (strictly for oral tablets/capsules under 12 years)
+  if (isPediatric && category === 'oral_solid') {
     return {
       hasAdjustment: true,
       dosage_form: isInfant ? 'Drop' : 'Syr',

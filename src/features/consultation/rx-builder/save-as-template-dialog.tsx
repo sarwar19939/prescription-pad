@@ -80,7 +80,7 @@ export function SaveAsTemplateDialog({
           dosage_form: m.dosage_form,
           strength: m.strength,
           schedule: m.schedule,
-          meal_timing: m.meal_timing,
+          meal_timing: m.meal_timing || '',
           duration: m.duration,
           special_instructions: m.special_instructions,
         })),
