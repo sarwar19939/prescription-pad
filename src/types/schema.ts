@@ -25,8 +25,25 @@ export interface BaseRecord {
 export type UUID = string;
 
 export type SubscriptionPlan = 'free' | 'pro' | 'enterprise';
-export type DosageForm = 'Tab' | 'Cap' | 'Syr' | 'Inj' | 'Oint' | 'Drop' | 'Sachet' | 'Inhaler' | 'Supp';
-export type MealTiming = 'After Meal' | 'Before Meal' | 'With Meal' | 'Anytime';
+export type DosageForm =
+  | 'Tab'
+  | 'Cap'
+  | 'Syr'
+  | 'Inj'
+  | 'Oint'
+  | 'Cream'
+  | 'Gel'
+  | 'Lotion'
+  | 'Drop'
+  | 'Sachet'
+  | 'Inhaler'
+  | 'Supp'
+  | 'Pessary'
+  | 'Susp'
+  | 'Spray'
+  | 'Solution'
+  | string;
+export type MealTiming = 'After Meal' | 'Before Meal' | 'With Meal' | 'Anytime' | string;
 export type Gender = 'male' | 'female' | 'other';
 
 export type PadLayoutStyle =
@@ -40,7 +57,7 @@ export type PadLayoutStyle =
 
 export type HeaderAlignment = 'split' | 'centered' | 'left';
 export type ColumnRatio = '25_75' | '30_70' | '35_65' | '40_60';
-export type PadFontSize = 'compact' | 'standard' | 'large';
+export type PadFontSize = 'compact' | 'standard' | 'large' | 'xl';
 export type NameFontSize = 'normal' | 'large' | 'xl';
 export type LogoSize = 'sm' | 'md' | 'lg' | 'xl';
 export type LogoPosition = 'left' | 'center' | 'right';
@@ -161,10 +178,11 @@ export interface PrescriptionItem extends BaseRecord {
   generic_name: string;
   dosage_form: DosageForm;
   strength: string;
-  schedule: string; // e.g. '1+0+1'
+  schedule: string; // e.g. '1+0+1' or 'দিনে ২ বার'
   meal_timing: MealTiming;
   duration: string; // e.g. '7 Days'
   special_instructions: string;
+  route?: string; // e.g. 'আক্রান্ত স্থানে' | 'পায়ুপথে' | 'যোনিপথে' | 'শিরায় (IV)' | 'মাংসে (IM)' | 'চোখে' | 'কানে'
   tapering_steps?: TaperingStep[];
 }
 
@@ -208,6 +226,7 @@ export interface TemplateMedicineItem {
   meal_timing: MealTiming | string;
   duration: string;
   special_instructions?: string;
+  route?: string;
 }
 
 /** Doctor custom and customizable disease prescription template. */

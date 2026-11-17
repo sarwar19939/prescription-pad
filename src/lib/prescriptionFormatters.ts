@@ -6,24 +6,32 @@
  * - Duration in days/months (৫ দিন, ৭ দিন, ১৪ দিন, চলবে)
  */
 import type { DosageForm, MealTiming, PrescriptionItem } from '@/types/schema';
+import { detectMedicineCategory } from '@/services/medicineRouteService';
 
-const FORM_PREFIX_REGEX = /^(tablet|tab|capsule|cap|syrup|syr|injection|inj|ointment|oint|cream|gel|drop|drops|suppository|supp|sachet|inhaler)\.?\s+/i;
+const FORM_PREFIX_REGEX =
+  /^(tablet|tab|capsule|cap|syrup|syr|suspension|susp|injection|inj|ointment|oint|cream|gel|lotion|lot|drop|drops|suppository|supp|pessary|sachet|inhaler|spray)\.?\s+/i;
 
 /**
  * Normalizes any free-form or AI dosage form into the standard BMDC short form:
- * e.g. "Tablet" -> "Tab", "Capsule" -> "Cap", "Syrup" -> "Syr", "Injection" -> "Inj".
+ * e.g. "Tablet" -> "Tab", "Capsule" -> "Cap", "Cream" -> "Cream", "Ointment" -> "Oint", "Injection" -> "Inj".
  */
 export function normalizeDosageForm(form?: string | null): DosageForm {
   if (!form) return 'Tab';
   const f = form.trim().toLowerCase();
   if (f.startsWith('cap')) return 'Cap';
+  if (f.startsWith('susp')) return 'Susp';
   if (f.startsWith('syr')) return 'Syr';
   if (f.startsWith('inj')) return 'Inj';
-  if (f.startsWith('oint') || f.startsWith('cream') || f.startsWith('gel')) return 'Oint';
+  if (f.startsWith('cream')) return 'Cream';
+  if (f.startsWith('gel')) return 'Gel';
+  if (f.startsWith('lot')) return 'Lotion';
+  if (f.startsWith('oint')) return 'Oint';
   if (f.startsWith('drop')) return 'Drop';
+  if (f.startsWith('pess')) return 'Pessary';
   if (f.startsWith('supp')) return 'Supp';
   if (f.startsWith('sachet')) return 'Sachet';
   if (f.startsWith('inhal')) return 'Inhaler';
+  if (f.startsWith('spray')) return 'Spray';
   return 'Tab';
 }
 
@@ -147,6 +155,15 @@ export function formatSubcontinentSchedule(schedule?: string | null): string {
 export function formatSubcontinentMealTiming(timing?: MealTiming | string | null): string {
   if (!timing) return '';
   const t = timing.trim().toLowerCase();
+  if (
+    t === 'প্রযোজ্য নয়' ||
+    t === 'প্রযোজ্য নয়' ||
+    t.includes('not applicable') ||
+    t.includes('বাহ্যিক') ||
+    t.includes('n/a')
+  ) {
+    return '';
+  }
   if (t === 'before meal' || t.includes('before') || t.includes('খালি পেট') || t.includes('পূর্বে')) {
     return 'খাবারের পূর্বে';
   }
@@ -191,8 +208,14 @@ export function formatSubcontinentDuration(duration?: string | null): string {
 }
 
 /**
- * Formats a full prescription line matching "Master The Chamber" layout:
- * "Tab. Napa Extend (665 mg) — ১ + ০ + ১ — খাবারের পরে (ভরা পেটে) — ৫ দিন"
+ * Formats a full prescription line matching BMDC & subcontinent chamber standards:
+ * Automatically adapts format for:
+ * - Creams / Ointments (instructions + route, e.g. "সারা শরীরে ভালোভাবে মেখে ৮-১২ ঘণ্টা পর ধুয়ে ফেলবেন — ১ দিন")
+ * - Syrups (spoon/ml + meal timing, e.g. "১ চামচ করে দিনে ৩ বার — খাবারের পরে — ৫ দিন")
+ * - Suppositories & Pessaries (rectal / vaginal route, e.g. "১টি করে সাপোজিটরি পায়ুপথে — প্রয়োজনে (SOS)")
+ * - Injections (IV/IM route, e.g. "শিরায় (IV) ধীরে ধীরে পুশ করবেন — দিনে ১ বার — ৩ দিন")
+ * - Drops / Inhalers
+ * - Standard Oral Tablets / Capsules
  */
 export function formatSubcontinentRxLine(item: Partial<PrescriptionItem>): {
   title: string;
@@ -217,12 +240,46 @@ export function formatSubcontinentRxLine(item: Partial<PrescriptionItem>): {
     });
   }
 
+  const category = detectMedicineCategory(item.dosage_form, item.brand_name, item.generic_name);
   const sched = formatSubcontinentSchedule(item.schedule);
-  const meal = formatSubcontinentMealTiming(item.meal_timing);
   const dur = formatSubcontinentDuration(item.duration);
+  const instructions = (item.special_instructions || '').trim();
+  const route = (item.route || '').trim();
 
-  const parts = [sched, meal, dur].filter(Boolean);
-  const dosageDetails = parts.join(' — ');
+  let dosageDetails = '';
+
+  // Non-oral routes (creams, suppositories, vaginal pessaries, injections, drops, inhalers)
+  if (
+    category === 'topical' ||
+    category === 'rectal_suppository' ||
+    category === 'vaginal_suppository' ||
+    category === 'injection' ||
+    category === 'drops' ||
+    category === 'inhaler'
+  ) {
+    const parts: string[] = [];
+
+    if (instructions) {
+      if (sched && !instructions.includes(sched)) {
+        parts.push(sched);
+      }
+      parts.push(instructions);
+    } else {
+      if (sched) parts.push(sched);
+      if (route) parts.push(route);
+    }
+
+    if (dur) parts.push(dur);
+    dosageDetails = parts.filter(Boolean).join(' — ');
+  } else {
+    // Oral formulations (Tablets, Capsules, Syrups, Sachets)
+    const meal = formatSubcontinentMealTiming(item.meal_timing);
+    const parts = [sched, meal, dur].filter(Boolean);
+    if (instructions) {
+      parts.push(instructions);
+    }
+    dosageDetails = parts.join(' — ');
+  }
 
   return { title, dosageDetails, taperingLines };
 }

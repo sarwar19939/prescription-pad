@@ -5,9 +5,10 @@
  * and automatically saves them to the local MedicineCatalog for future autocomplete.
  */
 import { useState } from 'react';
-import { BookmarkCheck, Check, Pill, Plus, Sparkles, X } from 'lucide-react';
+import { BookmarkCheck, Check, Pill, Plus, Sparkles, Syringe, X } from 'lucide-react';
 import { db } from '@/db/localDb';
 import { generateUUID } from '@/lib/uuid';
+import { detectMedicineCategory, getCategoryDosageProfile } from '@/services/medicineRouteService';
 import type { DosageForm, MealTiming, Patient, PrescriptionItem, MedicineCatalog } from '@/types/schema';
 import { Button } from '@/components/ui/button';
 import {
@@ -22,12 +23,18 @@ const DOSAGE_FORMS: DosageForm[] = [
   'Tab',
   'Cap',
   'Syr',
+  'Susp',
+  'Cream',
+  'Oint',
+  'Gel',
+  'Lotion',
   'Inj',
   'Drop',
-  'Oint',
+  'Spray',
+  'Supp',
+  'Pessary',
   'Sachet',
   'Inhaler',
-  'Supp',
 ];
 
 const COMMON_STRENGTHS = ['500 mg', '650 mg', '20 mg', '40 mg', '10 mg', '5 mg', '100 ml', '200 ml', '0.5%'];
@@ -59,10 +66,27 @@ export function AddCustomMedicineDialog({
   const [mealTiming, setMealTiming] = useState<MealTiming>('After Meal');
   const [duration, setDuration] = useState('7 Days');
   const [instructions, setInstructions] = useState('');
+  const [route, setRoute] = useState('');
   const [manufacturer, setManufacturer] = useState('');
   const [saveToCatalog, setSaveToCatalog] = useState(true);
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
+
+  const category = detectMedicineCategory(dosageForm, brandName, genericName);
+  const profile = getCategoryDosageProfile(category, brandName, genericName);
+
+  const handleFormChange = (newForm: DosageForm) => {
+    setDosageForm(newForm);
+    const cat = detectMedicineCategory(newForm, brandName, genericName);
+    const prof = getCategoryDosageProfile(cat, brandName, genericName);
+    setSchedule(prof.defaultSchedule);
+    setMealTiming(prof.defaultMealTiming);
+    setDuration(prof.defaultDuration);
+    setRoute(prof.defaultRoute);
+    if (!instructions || instructions === profile.defaultSpecialInstructions) {
+      setInstructions(prof.defaultSpecialInstructions);
+    }
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -90,6 +114,7 @@ export function AddCustomMedicineDialog({
         meal_timing: mealTiming,
         duration: cleanDuration.trim() || '7 Days',
         special_instructions: instructions.trim(),
+        route: route.trim() || profile.defaultRoute,
         created_at: now,
         updated_at: now,
         sync_status: 'pending',
@@ -185,15 +210,20 @@ export function AddCustomMedicineDialog({
 
           {/* Dosage Form (Preparation) */}
           <div>
-            <label className="font-bold text-slate-700 block mb-1">
-              প্রিপারেশন (Preparation / Form):
-            </label>
+            <div className="flex items-center justify-between mb-1">
+              <label className="font-bold text-slate-700 block">
+                প্রিপারেশন (Preparation / Form):
+              </label>
+              <span className="text-[10px] font-bold text-teal-800 bg-teal-50 px-2 py-0.5 rounded border border-teal-200">
+                {profile.categoryLabelBn}
+              </span>
+            </div>
             <div className="flex flex-wrap gap-1">
               {DOSAGE_FORMS.map((form) => (
                 <button
                   key={form}
                   type="button"
-                  onClick={() => setDosageForm(form)}
+                  onClick={() => handleFormChange(form)}
                   className={`px-2.5 py-1 rounded-md text-xs font-bold border transition-all ${
                     dosageForm === form
                       ? 'bg-teal-700 text-white border-teal-700 shadow-2xs'
@@ -205,6 +235,34 @@ export function AddCustomMedicineDialog({
               ))}
             </div>
           </div>
+
+          {/* Route of Administration if relevant */}
+          {profile.routeOptions && profile.routeOptions.length > 1 && (
+            <div className="p-2 rounded-lg bg-teal-50/50 border border-teal-200/80 space-y-1">
+              <label className="text-[11px] font-bold text-teal-900 flex items-center gap-1">
+                <Syringe className="h-3 w-3 text-teal-600" /> রুট অফ অ্যাডমিনিস্ট্রেশন (রুট বেছে নিন):
+              </label>
+              <div className="flex flex-wrap gap-1">
+                {profile.routeOptions.map((r) => {
+                  const isSelected = (route || profile.defaultRoute) === r;
+                  return (
+                    <button
+                      key={r}
+                      type="button"
+                      onClick={() => setRoute(r)}
+                      className={`text-[10px] font-bold px-2 py-0.5 rounded border transition-all ${
+                        isSelected
+                          ? 'bg-teal-800 text-white border-teal-800'
+                          : 'bg-white text-slate-700 border-slate-200 hover:bg-teal-50'
+                      }`}
+                    >
+                      {isSelected ? '✓ ' : ''}{r}
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+          )}
 
           {/* Strength (Power) */}
           <div>
@@ -272,6 +330,7 @@ export function AddCustomMedicineDialog({
                 <option value="Before Meal">Before Meal (খাওয়ার আগে)</option>
                 <option value="With Meal">With Meal (খাবারের সাথে)</option>
                 <option value="Anytime">Anytime (যেকোনো সময়)</option>
+                <option value="প্রযোজ্য নয়">প্রযোজ্য নয় (বাহ্যিক / রুট)</option>
               </select>
             </div>
           </div>
@@ -302,32 +361,49 @@ export function AddCustomMedicineDialog({
             </div>
           </div>
 
-          {/* Special Instructions & Manufacturer */}
-          <div className="grid grid-cols-2 gap-2">
-            <div>
-              <label className="font-bold text-slate-700 block mb-1">
-                বিশেষ নির্দেশনা:
+          {/* Special Instructions & Presets */}
+          <div>
+            <div className="flex items-center justify-between mb-1">
+              <label className="font-bold text-slate-700 block">
+                বিশেষ নির্দেশনা ও রুট (Special Instructions):
               </label>
-              <input
-                type="text"
-                value={instructions}
-                onChange={(e) => setInstructions(e.target.value)}
-                placeholder="যেমন: কুসুম গরম পানি সহ"
-                className="w-full h-8 px-2.5 rounded-lg border border-slate-300 text-xs focus:border-teal-600 outline-none"
-              />
+              <span className="text-[10px] text-slate-400">নিচের অপশনে ক্লিক করুন বা লিখুন</span>
             </div>
-            <div>
-              <label className="font-bold text-slate-700 block mb-1">
-                প্রস্তুতকারক কোম্পানি:
-              </label>
-              <input
-                type="text"
-                value={manufacturer}
-                onChange={(e) => setManufacturer(e.target.value)}
-                placeholder="যেমন: Square, Incepta"
-                className="w-full h-8 px-2.5 rounded-lg border border-slate-300 text-xs focus:border-teal-600 outline-none"
-              />
-            </div>
+            <input
+              type="text"
+              value={instructions}
+              onChange={(e) => setInstructions(e.target.value)}
+              placeholder={profile.defaultSpecialInstructions || 'যেমন: আক্রান্ত স্থানে দিনে ২ বার / পায়ুপথে / শিরায় (IV)'}
+              className="w-full h-8 px-2.5 rounded-lg border border-slate-300 text-xs focus:border-teal-600 outline-none mb-1"
+            />
+            {profile.instructionPresets && profile.instructionPresets.length > 0 && (
+              <div className="flex flex-wrap gap-1 mb-2">
+                {profile.instructionPresets.map((pr, pIdx) => (
+                  <button
+                    key={pIdx}
+                    type="button"
+                    onClick={() => setInstructions(pr.text)}
+                    className="px-1.5 py-0.5 rounded text-[10px] bg-teal-50 hover:bg-teal-100 text-teal-800 border border-teal-200 font-medium"
+                  >
+                    + {pr.label}
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
+
+          {/* Manufacturer */}
+          <div>
+            <label className="font-bold text-slate-700 block mb-1">
+              প্রস্তুতকারক কোম্পানি:
+            </label>
+            <input
+              type="text"
+              value={manufacturer}
+              onChange={(e) => setManufacturer(e.target.value)}
+              placeholder="যেমন: Square, Incepta, Beximco"
+              className="w-full h-8 px-2.5 rounded-lg border border-slate-300 text-xs focus:border-teal-600 outline-none"
+            />
           </div>
 
           {/* Auto-Save to Catalog Checkbox */}

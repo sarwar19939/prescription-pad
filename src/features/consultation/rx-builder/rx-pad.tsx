@@ -13,6 +13,7 @@ import { db } from '@/db/localDb';
 import { generateUUID } from '@/lib/uuid';
 import { calculateSmartDose } from '@/services/dosingEngine';
 import { getDrugGuideline } from '@/services/drugGuidelinesService';
+import { detectMedicineCategory, getCategoryDosageProfile } from '@/services/medicineRouteService';
 import { toBengaliNumerals } from '@/lib/prescriptionFormatters';
 import { MedicineSearch } from './medicine-search';
 import { ProtocolTemplatesDialog } from './protocol-templates-dialog';
@@ -60,18 +61,26 @@ export function RxPad({ patient, encounterId }: { patient: Patient; encounterId:
 
     // Synchronize MedEx patient administration guidelines (when & how to take)
     const guide = getDrugGuideline(brand || generic);
+    const category = detectMedicineCategory(form, brand, generic);
+    const profile = getCategoryDosageProfile(category, brand, generic);
 
     const initialSchedule = smart.hasAdjustment && smart.schedule
       ? smart.schedule
-      : (guide?.standardSchedule || '1+0+1');
+      : (guide?.standardSchedule || profile.defaultSchedule || '1+0+1');
 
     const initialMealTiming = smart.hasAdjustment && smart.meal_timing
       ? smart.meal_timing
-      : (guide?.standardMealTiming || 'After Meal');
+      : (guide?.standardMealTiming || profile.defaultMealTiming || 'After Meal');
 
     const initialInstructions = smart.hasAdjustment && smart.special_instructions
       ? smart.special_instructions
-      : '';
+      : (profile.defaultSpecialInstructions || '');
+
+    const initialDuration = smart.hasAdjustment && smart.duration
+      ? smart.duration
+      : (profile.defaultDuration || '7 Days');
+
+    const initialRoute = profile.defaultRoute || '';
 
     const row: PrescriptionItem = {
       id: generateUUID(),
@@ -84,8 +93,9 @@ export function RxPad({ patient, encounterId }: { patient: Patient; encounterId:
       strength: smart.hasAdjustment && smart.strength ? smart.strength : str,
       schedule: initialSchedule,
       meal_timing: initialMealTiming,
-      duration: smart.hasAdjustment && smart.duration ? smart.duration : '7 Days',
-      special_instructions: '',
+      duration: initialDuration,
+      special_instructions: initialInstructions,
+      route: initialRoute,
       created_at: ts,
       updated_at: ts,
       sync_status: 'pending',

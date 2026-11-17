@@ -13,6 +13,7 @@ import { TagInput } from '@/components/tag-input';
 import { Badge } from '@/components/ui/badge';
 import { analyzeVitals } from '@/services/vitalsService';
 import { ProtocolTemplatesDialog } from './protocol-templates-dialog';
+import { VITAL_PRESETS } from './clinical-oe-section';
 import type { Encounter, Patient, Vitals as VitalsT } from '@/types/schema';
 
 const COMPLAINT_SUGGESTIONS = [
@@ -36,6 +37,7 @@ const VITAL_FIELDS: Array<{ key: keyof VitalsT; label: string; unit: string; pla
 ];
 
 export function NotesVitals({ encounter, patient }: { encounter: Encounter; patient?: Patient }) {
+  const [activeVitalTab, setActiveVitalTab] = useState<keyof VitalsT>('bp');
   const [localVitals, setLocalVitals] = useState<VitalsT>({
     bp: encounter.vitals?.bp || '', pulse: encounter.vitals?.pulse || '', temp: encounter.vitals?.temp || '', weight: encounter.vitals?.weight || '', spo2: encounter.vitals?.spo2 || '',
   });
@@ -154,17 +156,64 @@ export function NotesVitals({ encounter, patient }: { encounter: Encounter; pati
           {VITAL_FIELDS.map((f) => (
             <label key={f.key} className="grid gap-1.5 text-xs font-semibold text-slate-600">
               <span className="flex items-center justify-between">
-                <span>{f.label}</span>
+                <span className="cursor-pointer hover:text-teal-700" onClick={() => setActiveVitalTab(f.key)}>
+                  {f.label}
+                </span>
                 <span className="font-normal text-slate-400">{f.unit}</span>
               </span>
               <input
-                className={vitalCell}
+                className={`${vitalCell} ${activeVitalTab === f.key ? 'border-teal-600 ring-2 ring-teal-500/30' : ''}`}
                 placeholder={f.placeholder}
                 value={localVitals[f.key]}
                 onChange={(e) => setVital(f.key, e.target.value)}
+                onFocus={() => setActiveVitalTab(f.key)}
               />
             </label>
           ))}
+        </div>
+
+        {/* 1-Click Fast Vitals Presets (ক্লিক করলেই দ্রুত বিপি বা অন্যান্য ভাইটাল ইনপুট হবে) */}
+        <div className="mt-2.5 rounded-xl border border-slate-200 bg-slate-50/80 p-2.5 space-y-1.5 text-xs">
+          <div className="flex items-center justify-between flex-wrap gap-1">
+            <div className="flex items-center gap-1">
+              <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wide">প্রিসেট:</span>
+              {(['bp', 'pulse', 'temp', 'spo2', 'weight'] as Array<keyof VitalsT>).map((k) => (
+                <button
+                  key={k}
+                  type="button"
+                  onClick={() => setActiveVitalTab(k)}
+                  className={`text-[10px] font-bold px-2 py-0.5 rounded-md transition-all ${
+                    activeVitalTab === k
+                      ? 'bg-teal-700 text-white shadow-2xs'
+                      : 'bg-white text-slate-600 border border-slate-200 hover:bg-slate-100'
+                  }`}
+                >
+                  {k === 'bp' ? 'BP (বিপি)' : k === 'pulse' ? 'Pulse' : k === 'temp' ? 'জ্বর (Temp)' : k === 'spo2' ? 'SpO₂' : 'Weight'}
+                </button>
+              ))}
+            </div>
+            <span className="text-[10px] text-slate-400">ক্লিক করে প্রিসেট বসান অথবা টাইপ করুন</span>
+          </div>
+
+          <div className="flex flex-wrap items-center gap-1 pt-1">
+            {VITAL_PRESETS[activeVitalTab].map((p) => {
+              const isCurrent = localVitals[activeVitalTab] === p.value;
+              return (
+                <button
+                  key={p.value}
+                  type="button"
+                  onClick={() => setVital(activeVitalTab, p.value)}
+                  className={`text-[11px] font-semibold px-2.5 py-0.5 rounded-md border transition-all ${
+                    isCurrent
+                      ? 'bg-teal-800 text-white border-teal-800 font-bold shadow-2xs'
+                      : 'bg-white text-slate-700 border-slate-200 hover:border-teal-500 hover:bg-teal-50'
+                  }`}
+                >
+                  {isCurrent ? '✓ ' : ''}{p.label}
+                </button>
+              );
+            })}
+          </div>
         </div>
 
         {/* AI Clinical Vitals Interpretation Banner */}

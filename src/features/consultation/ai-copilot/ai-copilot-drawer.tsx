@@ -12,6 +12,7 @@ import { Loader2, ShieldAlert, Sparkles, Stethoscope } from 'lucide-react';
 import { db } from '@/db/localDb';
 import { generateUUID } from '@/lib/uuid';
 import { cleanBrandName, normalizeDosageForm } from '@/lib/prescriptionFormatters';
+import { detectMedicineCategory, getCategoryDosageProfile } from '@/services/medicineRouteService';
 import { ensureTodayEncounter } from '../copy-rx';
 import { suggestClinicalTrack, type AIProvider, type ClinicalTrackResult, type SuggestedMedication } from '@/services/aiClinicalCopilot';
 import { applyFullPrescriptionToEncounter, generateFullPrescription, type FullPrescriptionPackage } from '@/services/aiPrescriptionService';
@@ -145,6 +146,9 @@ export function AICopilotDrawer({
       const rawBrand = med.suggested_brand || med.generic_name;
       const cleanBrand = cleanBrandName(rawBrand) || rawBrand;
       const cleanForm = normalizeDosageForm(med.dosage_form);
+      const category = detectMedicineCategory(cleanForm, cleanBrand, med.generic_name);
+      const profile = getCategoryDosageProfile(category, cleanBrand, med.generic_name);
+
       await db.prescription_items.add({
         id: generateUUID(),
         tenant_id: patient.tenant_id,
@@ -154,10 +158,11 @@ export function AICopilotDrawer({
         generic_name: med.generic_name,
         dosage_form: cleanForm,
         strength: med.strength || 'Standard',
-        schedule: med.schedule || '1+0+1',
-        meal_timing: 'After Meal',
-        duration: med.duration || '7 Days',
-        special_instructions: '',
+        schedule: med.schedule || profile.defaultSchedule || '1+0+1',
+        meal_timing: profile.defaultMealTiming || 'After Meal',
+        duration: med.duration || profile.defaultDuration || '7 Days',
+        special_instructions: profile.defaultSpecialInstructions || '',
+        route: profile.defaultRoute || '',
         created_at: ts,
         updated_at: ts,
         sync_status: 'pending',
@@ -177,6 +182,9 @@ export function AICopilotDrawer({
         const rawBrand = med.suggested_brand || med.generic_name;
         const cleanBrand = cleanBrandName(rawBrand) || rawBrand;
         const cleanForm = normalizeDosageForm(med.dosage_form);
+        const category = detectMedicineCategory(cleanForm, cleanBrand, med.generic_name);
+        const profile = getCategoryDosageProfile(category, cleanBrand, med.generic_name);
+
         return {
           id: generateUUID(),
           tenant_id: patient.tenant_id,
@@ -186,10 +194,11 @@ export function AICopilotDrawer({
           generic_name: med.generic_name,
           dosage_form: cleanForm,
           strength: med.strength || 'Standard',
-          schedule: med.schedule || '1+0+1',
-          meal_timing: 'After Meal' as const,
-          duration: med.duration || '7 Days',
-          special_instructions: '',
+          schedule: med.schedule || profile.defaultSchedule || '1+0+1',
+          meal_timing: profile.defaultMealTiming || 'After Meal',
+          duration: med.duration || profile.defaultDuration || '7 Days',
+          special_instructions: profile.defaultSpecialInstructions || '',
+          route: profile.defaultRoute || '',
           created_at: ts,
           updated_at: ts,
           sync_status: 'pending' as const,

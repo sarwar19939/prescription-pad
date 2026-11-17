@@ -4,8 +4,8 @@
  * PadTypographyColumns — MS Word-style Column Width Customization,
  * Typography Font Scaling, and Degrees Multi-line Paragraph Formatting.
  */
-import { Columns3, GraduationCap, Type } from 'lucide-react';
-import type { ColumnRatio, NameFontSize, Tenant } from '@/types/schema';
+import { Columns3, GraduationCap, TextQuote, Type } from 'lucide-react';
+import type { ColumnRatio, NameFontSize, PadFontSize, Tenant } from '@/types/schema';
 import { formatDegreesList, getPadTheme } from '@/lib/prescriptionTheme';
 
 interface PadTypographyColumnsProps {
@@ -18,6 +18,13 @@ const COLUMN_RATIOS: Array<{ id: ColumnRatio; label: string; desc: string }> = [
   { id: '30_70', label: '৩০% / ৭০%', desc: 'স্ট্যান্ডার্ড চেম্বার রেশিও' },
   { id: '35_65', label: '৩৫% / ৬৫%', desc: 'লক্ষণ ও পরীক্ষার জন্য বাড়তি জায়গা' },
   { id: '40_60', label: '৪০% / ৬০%', desc: 'উভয় কলাম প্রায় সম-অনুপাতে' },
+];
+
+const PAD_FONT_SIZES: Array<{ id: PadFontSize; label: string; pxLabel: string; desc: string }> = [
+  { id: 'compact', label: 'ছোট (Compact)', pxLabel: '১০px', desc: 'ছোট কাগজ বা বেশি ওষুধের জন্য' },
+  { id: 'standard', label: 'সাধারণ (Standard)', pxLabel: '১২px', desc: 'ঝকঝকে ও স্পষ্ট (সুপারিশকৃত)' },
+  { id: 'large', label: 'বড় (Large)', pxLabel: '১৩.৫px', desc: 'রোগীর সহজে পড়ার উপযোগী' },
+  { id: 'xl', label: 'অতিরিক্ত বড় (XL)', pxLabel: '১৫px', desc: 'সর্বোচ্চ স্পষ্ট ও বড় ফন্ট' },
 ];
 
 export function PadTypographyColumns({ tenant, onPatch }: PadTypographyColumnsProps) {
@@ -135,6 +142,46 @@ export function PadTypographyColumns({ tenant, onPatch }: PadTypographyColumnsPr
             <option value="large">বড় (Large - 22px)</option>
             <option value="xl">অতিরিক্ত বড় (Extra Large - 26px)</option>
           </select>
+        </div>
+      </div>
+
+      {/* 4. Prescription Body Writing Font Size (প্রেসক্রিপশনে ওষুধ ও লেখার মূল ফন্ট সাইজ ছোট/বড় করার অপশন) */}
+      <div className="space-y-2 pt-2 border-t border-slate-100">
+        <div className="flex items-center justify-between">
+          <label className="text-xs font-bold text-slate-800 flex items-center gap-1.5 uppercase tracking-wide">
+            <TextQuote className="h-4 w-4 text-teal-600" /> ৬. প্রেসক্রিপশনে লেখার ফন্ট সাইজ (ওষুধ, লক্ষণ ও পরামর্শের মাপ):
+          </label>
+          <span className="text-[11px] text-teal-800 font-semibold bg-teal-50 px-2 py-0.5 rounded border border-teal-200">
+            {PAD_FONT_SIZES.find((s) => s.id === (tenant.pad_font_size || 'standard'))?.pxLabel}
+          </span>
+        </div>
+        <p className="text-[11px] text-slate-500">
+          প্রেসক্রিপশনের মুদ্রিত টেক্সট, ওষুধের নাম, ডোজের বিবরণ ও পরামর্শের সাইজ ছোট বা বড় করুন:
+        </p>
+        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-2">
+          {PAD_FONT_SIZES.map((fs) => {
+            const isSelected = (tenant.pad_font_size || 'standard') === fs.id;
+            return (
+              <button
+                key={fs.id}
+                type="button"
+                onClick={() => onPatch({ pad_font_size: fs.id })}
+                className={`p-2.5 rounded-xl border-2 text-left transition-all ${
+                  isSelected
+                    ? 'border-teal-600 bg-teal-50/60 font-bold text-teal-950 shadow-2xs ring-2 ring-teal-500/20'
+                    : 'border-slate-200 bg-white hover:bg-slate-50 text-slate-700'
+                }`}
+              >
+                <div className="flex items-center justify-between">
+                  <span className="text-xs font-bold text-slate-900">{fs.label}</span>
+                  <span className="text-[10px] font-mono font-bold text-teal-700 bg-white px-1.5 py-0.5 rounded border border-slate-200">
+                    {fs.pxLabel}
+                  </span>
+                </div>
+                <div className="text-[10px] text-slate-500 mt-1 leading-snug">{fs.desc}</div>
+              </button>
+            );
+          })}
         </div>
       </div>
     </div>

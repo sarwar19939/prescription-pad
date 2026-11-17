@@ -141,6 +141,29 @@ export function EncounterPad({ patient }: { patient: Patient }) {
             <Save className="h-4 w-4 mr-1.5" /> সংরক্ষণ করুন
           </Button>
           <div className="flex items-center gap-1.5">
+            {/* Quick Font Size Switcher for Print & Preview */}
+            <div className="hidden sm:flex items-center gap-1 bg-slate-100 rounded-xl px-2 py-1 border border-slate-200 text-xs">
+              <span className="text-[10px] font-bold text-slate-500">ফন্ট:</span>
+              <select
+                value={tenant?.pad_font_size || 'standard'}
+                onChange={(e) => {
+                  if (tenant) {
+                    void db.tenants.update(tenant.id, {
+                      pad_font_size: e.target.value as any,
+                      updated_at: new Date().toISOString(),
+                    });
+                  }
+                }}
+                className="bg-transparent font-bold text-slate-800 text-[11px] outline-none cursor-pointer"
+                title="প্রেসক্রিপশনে লিখার ফন্ট সাইজ ছোট বা বড় করুন"
+              >
+                <option value="compact">ছোট (১০px)</option>
+                <option value="standard">সাধারণ (১২px)</option>
+                <option value="large">বড় (১৩.৫px)</option>
+                <option value="xl">অতিরিক্ত বড় (১৫px)</option>
+              </select>
+            </div>
+
             <Button
               size="sm"
               variant="outline"

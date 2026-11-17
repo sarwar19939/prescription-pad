@@ -23,6 +23,52 @@ const VITAL_FIELDS: Array<{ key: keyof VitalsT; label: string; unit: string; pla
   { key: 'spo2', label: 'SpO₂', unit: '%', placeholder: '98' },
 ];
 
+export const VITAL_PRESETS: Record<keyof VitalsT, Array<{ label: string; value: string }>> = {
+  bp: [
+    { label: '120/80 (Normal)', value: '120/80' },
+    { label: '110/70', value: '110/70' },
+    { label: '130/80', value: '130/80' },
+    { label: '130/90', value: '130/90' },
+    { label: '140/90 (HTN-1)', value: '140/90' },
+    { label: '150/90', value: '150/90' },
+    { label: '150/100 (HTN-2)', value: '150/100' },
+    { label: '100/60 (Low)', value: '100/60' },
+  ],
+  pulse: [
+    { label: '72 bpm', value: '72' },
+    { label: '76 bpm', value: '76' },
+    { label: '80 bpm', value: '80' },
+    { label: '84 bpm', value: '84' },
+    { label: '90 bpm', value: '90' },
+    { label: '100 bpm', value: '100' },
+  ],
+  temp: [
+    { label: '98.4°F (Normal)', value: '98.4' },
+    { label: '99°F', value: '99' },
+    { label: '100°F (Fever)', value: '100' },
+    { label: '101°F', value: '101' },
+    { label: '102°F (High)', value: '102' },
+    { label: '103°F', value: '103' },
+  ],
+  spo2: [
+    { label: '99%', value: '99' },
+    { label: '98% (Normal)', value: '98' },
+    { label: '97%', value: '97' },
+    { label: '95%', value: '95' },
+    { label: '92% (Low)', value: '92' },
+  ],
+  weight: [
+    { label: '45 kg', value: '45' },
+    { label: '50 kg', value: '50' },
+    { label: '55 kg', value: '55' },
+    { label: '60 kg', value: '60' },
+    { label: '65 kg', value: '65' },
+    { label: '70 kg', value: '70' },
+    { label: '75 kg', value: '75' },
+    { label: '80 kg', value: '80' },
+  ],
+};
+
 export const TOP_OE_CHIPS = [
   'Chest: Clear', 'Throat: Congested', 'Abdomen: Soft', 'Heart: S1 S2 Normal',
   'Anemia: Nil', 'Jaundice: Absent', 'Oedema: Nil', 'Dehydration: None',
@@ -41,6 +87,7 @@ export function ClinicalOeSection({ encounter }: { encounter: Encounter }) {
   const [showAllOe, setShowAllOe] = useState(false);
   const [selectedOeTab, setSelectedOeTab] = useState(0);
   const [oeSearchInput, setOeSearchInput] = useState('');
+  const [activeVitalTab, setActiveVitalTab] = useState<keyof VitalsT>('bp');
 
   const [localVitals, setLocalVitals] = useState<VitalsT>({
     bp: encounter.vitals?.bp || '', pulse: encounter.vitals?.pulse || '',
@@ -182,23 +229,71 @@ export function ClinicalOeSection({ encounter }: { encounter: Encounter }) {
         </div>
       </div>
 
-      {/* Vitals Grid */}
+      {/* Vitals Grid with Free-Text Typing */}
       <div className="grid grid-cols-5 gap-1.5">
         {VITAL_FIELDS.map((f) => (
           <label key={f.key} className="grid gap-0.5 text-[10px] font-semibold text-slate-600">
             <span className="flex items-center justify-between">
-              <span>{f.label}</span>
+              <span className="cursor-pointer hover:text-teal-700" onClick={() => setActiveVitalTab(f.key)}>
+                {f.label}
+              </span>
               <span className="font-normal text-slate-400 text-[9px]">{f.unit}</span>
             </span>
             <input
               type="text"
               value={localVitals[f.key]}
               onChange={(e) => setVital(f.key, e.target.value)}
+              onFocus={() => setActiveVitalTab(f.key)}
               placeholder={f.placeholder}
-              className={cell}
+              className={`${cell} ${activeVitalTab === f.key ? 'border-teal-600 ring-1 ring-teal-500/30' : ''}`}
             />
           </label>
         ))}
+      </div>
+
+      {/* Vitals 1-Click Fast Presets (বিপি, পালস, জ্বর, অক্সিজেন ক্লিক করলেই ইনপুট হবে, আবার ইচ্ছামতো লিখতেও পারবেন) */}
+      <div className="rounded-lg bg-slate-50/90 border border-slate-200 p-2 space-y-1.5 text-xs">
+        <div className="flex items-center justify-between gap-1 flex-wrap">
+          <div className="flex items-center gap-1">
+            <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wide">প্রিসেট:</span>
+            {(['bp', 'pulse', 'temp', 'spo2', 'weight'] as Array<keyof VitalsT>).map((k) => (
+              <button
+                key={k}
+                type="button"
+                onClick={() => setActiveVitalTab(k)}
+                className={`text-[10px] font-bold px-1.5 py-0.5 rounded transition-all ${
+                  activeVitalTab === k
+                    ? 'bg-teal-700 text-white shadow-2xs'
+                    : 'bg-white text-slate-600 border border-slate-200 hover:bg-slate-100'
+                }`}
+              >
+                {k === 'bp' ? 'BP (বিপি)' : k === 'pulse' ? 'Pulse' : k === 'temp' ? 'জ্বর (Temp)' : k === 'spo2' ? 'SpO₂' : 'Weight'}
+              </button>
+            ))}
+          </div>
+          <span className="text-[9px] text-slate-400 hidden sm:inline">১-ক্লিকে সেট করুন বা ঘরে টাইপ করুন</span>
+        </div>
+
+        {/* Selected Vital Preset Chips */}
+        <div className="flex flex-wrap items-center gap-1 pt-0.5">
+          {VITAL_PRESETS[activeVitalTab].map((p) => {
+            const isCurrent = localVitals[activeVitalTab] === p.value;
+            return (
+              <button
+                key={p.value}
+                type="button"
+                onClick={() => setVital(activeVitalTab, p.value)}
+                className={`text-[10px] font-semibold px-2 py-0.5 rounded-md border transition-all ${
+                  isCurrent
+                    ? 'bg-teal-800 text-white border-teal-800 font-bold shadow-2xs'
+                    : 'bg-white text-slate-700 border-slate-200 hover:border-teal-500 hover:bg-teal-50'
+                }`}
+              >
+                {isCurrent ? '✓ ' : ''}{p.label}
+              </button>
+            );
+          })}
+        </div>
       </div>
 
       {vitalAnalysis.alerts.length > 0 && (
