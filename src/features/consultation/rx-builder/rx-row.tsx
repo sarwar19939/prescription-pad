@@ -13,7 +13,7 @@
  */
 import { useEffect, useState } from 'react';
 import { useLiveQuery } from 'dexie-react-hooks';
-import { ChevronDown, ChevronUp, Sparkles, Stethoscope, Syringe, Trash2 } from 'lucide-react';
+import { Syringe, Trash2 } from 'lucide-react';
 
 import { db } from '@/db/localDb';
 import {
@@ -67,7 +67,6 @@ export function RxRow({
   const [showTapering, setShowTapering] = useState(
     Boolean(item.tapering_steps && item.tapering_steps.length > 0)
   );
-  const [showPresets, setShowPresets] = useState(false);
 
   const category = detectMedicineCategory(item.dosage_form, item.brand_name, item.generic_name);
   const profile = getCategoryDosageProfile(category, item.brand_name, item.generic_name);
@@ -381,17 +380,8 @@ export function RxRow({
             />
           </div>
 
-          {/* Presets & Tapering Toggles */}
+          {/* Tapering Toggle */}
           <div className="flex items-center gap-1.5">
-            <button
-              type="button"
-              onClick={() => setShowPresets(!showPresets)}
-              className="text-[11px] font-bold text-teal-800 bg-teal-50 hover:bg-teal-100 border border-teal-200 px-2 py-1 rounded-md flex items-center gap-0.5 transition-colors"
-            >
-              <Sparkles className="h-3 w-3 text-teal-600" />
-              {showPresets ? 'নির্দেশনা বন্ধ' : '+ নির্দেশনা অপশন'}
-            </button>
-
             <button
               type="button"
               onClick={() => setShowTapering(!showTapering)}
@@ -403,75 +393,7 @@ export function RxRow({
         </div>
       )}
 
-      {/* 4. Special Instructions & Quick Presets (ক্রিম মাখার নিয়ম, সাপোজিটরি, ইনজেকশন বা সিরাপের দ্রুত প্রিসেট) */}
-      <div className="space-y-1.5 pt-1.5 border-t border-slate-100">
-        <div className="flex items-center justify-between gap-2">
-          <label className="text-[11px] font-bold text-slate-700 flex items-center gap-1">
-            <Stethoscope className="h-3 w-3 text-teal-600" />
-            নির্দেশনা ও ব্যবহারের নিয়ম (Special Instructions / Administration):
-          </label>
-          <span className="text-[10px] text-slate-400">লিখুন বা নিচের অপশনে ক্লিক করুন</span>
-        </div>
-
-        <input
-          type="text"
-          value={item.special_instructions || ''}
-          onChange={(e) => write({ special_instructions: e.target.value })}
-          placeholder={
-            profile.defaultSpecialInstructions ||
-            'যেমন: আক্রান্ত স্থানে দিনে ২ বার লাগাবেন / পায়ুপথে / শিরায় (IV) পুশ করবেন...'
-          }
-          className="w-full h-8 px-2.5 rounded-lg border border-slate-300 text-xs font-medium text-slate-900 placeholder:text-slate-400 focus:border-teal-600 focus:ring-1 focus:ring-teal-500/30 outline-none"
-        />
-
-        {/* Quick Dose Units (for non-liquid categories if any) */}
-        {!isLiquid && profile.quickDoseUnits && profile.quickDoseUnits.length > 0 && (
-          <div className="flex flex-wrap items-center gap-1 pt-0.5">
-            <span className="text-[10px] font-bold text-slate-400 uppercase">মাত্রা:</span>
-            {profile.quickDoseUnits.map((u) => (
-              <button
-                key={u}
-                type="button"
-                onClick={() => {
-                  const cur = (item.special_instructions || '').trim();
-                  const updated = cur ? `${u} করে — ${cur}` : `${u} করে দিনে ৩ বার খাবারের পরে`;
-                  write({ special_instructions: updated });
-                }}
-                className="text-[10px] font-semibold bg-sky-50 hover:bg-sky-100 text-sky-800 border border-sky-200 px-2 py-0.5 rounded transition-colors"
-              >
-                + {u}
-              </button>
-            ))}
-          </div>
-        )}
-
-        {/* Form-Specific Quick Instruction Presets Drawer / Chips */}
-        {(showPresets || (profile.instructionPresets && profile.instructionPresets.length > 0)) && (
-          <div className="flex flex-wrap items-center gap-1 pt-1">
-            <span className="text-[10px] font-bold text-teal-800 uppercase tracking-wider">দ্রুত অপশন:</span>
-            {profile.instructionPresets.map((pr, pIdx) => {
-              const isActive = (item.special_instructions || '').includes(pr.text);
-              return (
-                <button
-                  key={pIdx}
-                  type="button"
-                  onClick={() => write({ special_instructions: pr.text })}
-                  className={`text-[10px] font-medium px-2 py-0.5 rounded border transition-all ${
-                    isActive
-                      ? 'bg-teal-700 text-white border-teal-700 font-bold shadow-2xs'
-                      : 'bg-white hover:bg-teal-50 text-slate-700 border-slate-200 hover:border-teal-300'
-                  }`}
-                  title={pr.text}
-                >
-                  {isActive ? '✓ ' : '+ '}{pr.label}
-                </button>
-              );
-            })}
-          </div>
-        )}
-      </div>
-
-      {/* 5. Live Rx Preview (প্রেসক্রিপশনে যেভাবে মুদ্রিত হবে) */}
+      {/* 4. Live Rx Preview (প্রেসক্রিপশনে যেভাবে মুদ্রিত হবে) */}
       {dosageDetails && (
         <div className="rounded-lg bg-slate-50 border border-slate-200/80 px-2.5 py-1.5 text-[11px] font-medium text-slate-700 flex items-center justify-between gap-2">
           <div className="truncate">

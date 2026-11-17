@@ -17,7 +17,7 @@ export function sanitizeSpecialInstructions(instructions?: string | null): strin
   if (!instructions) return '';
   const text = instructions.trim();
   if (
-    /pediatric patient|paediatric patient|switched to oral|weight-based pediatric|titrated morning regimen|optimal 30 mins before|patient \(age:\s*\d+/i.test(
+    /pediatric patient|paediatric patient|switched to oral|weight-based pediatric|titrated morning regimen|optimal 30 mins before|patient \(age:\s*\d+|স্ক্যাবিস সারা শরীরে|ঘাড় থেকে পায়ের পাতা|পরিবারের সবার একসাথে|গরম পানিতে কাপড় ধোয়া|বোতল ভালো করে ঝাঁকিয়ে|আক্রান্ত স্থান পরিষ্কার করে|লক্ষণ ভালো হওয়ার পরও|জ্বর ১০১°F এর বেশি|তীব্র ব্যথায় পায়ুপথে|প্রতি রাতে শোবার সময়|যোনিপথে ব্যবহার|শিরায় \(IV\) ধীরে ধীরে|১-২ ফোঁটা করে|১-২ পাফ করে|খাবারের ৩০-৬০ মিনিট পূর্বে|খাবারের ঠিক পরপরই|চিবিয়ে সেবনযোগ্য|চুষে খাবার|Take with full glass|Take 30 to 60|Take regularly|Take once daily|Take in the evening|খাওয়ার ১ ঘণ্টা পূর্বে|৭ দিনের পূর্ণ কোর্স|খাওয়ার ১৫-৩০ মিনিট পূর্বে|খাওয়ার মাঝে সেব্য/i.test(
       text
     )
   ) {
@@ -308,26 +308,25 @@ export function formatSubcontinentRxLine(item: Partial<PrescriptionItem>): {
 
     const parts: string[] = [];
 
-    // Schedule / Frequency
+    // Schedule / Frequency (e.g. দিনে ২ বার, রাতে ১ বার)
     if (sched) {
       parts.push(sched);
     }
 
-    // Instructions or Route
-    if (instructions) {
-      if (!instructions.includes(sched)) {
-        parts.push(instructions);
-      } else {
-        parts.length = 0;
-        parts.push(instructions);
-      }
-    } else if (route && route !== 'প্রযোজ্য নয়' && route !== 'Topical') {
+    // Route (e.g. আক্রান্ত স্থানে (ত্বকে), সারা শরীরে)
+    if (route && route !== 'প্রযোজ্য নয়' && route !== 'Topical') {
       parts.push(route);
     } else if (category === 'topical') {
-      parts.push('আক্রান্ত স্থানে পাতলা করে লাগাবেন');
+      parts.push('আক্রান্ত স্থানে');
     }
 
+    // Duration (e.g. ৭ দিন, ১৪ দিন)
     if (dur) parts.push(dur);
+
+    if (instructions && instructions !== sched && instructions !== route) {
+      parts.push(instructions);
+    }
+
     dosageDetails = parts.filter(Boolean).join(' — ');
   } else if (category === 'syrup' || form === 'Syr' || form === 'Susp') {
     // Syrups & Liquid Suspensions: Clean spoon/ml and frequency display

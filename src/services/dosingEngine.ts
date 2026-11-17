@@ -64,10 +64,7 @@ export function calculateSmartDose(
         schedule: '১ বার (রাতে)',
         meal_timing: undefined,
         duration: '১ দিন (৭ দিন পর পুনরায়)',
-        special_instructions:
-          patientAge < 1
-            ? 'সারা শরীরে (মাথা ও মুখমণ্ডল বাদে) হালকাভাবে মেখে ৮-১২ ঘণ্টা পর ধুয়ে ফেলুন। ৭ দিন পর পুনরায় ১ বার ব্যবহার করুন।'
-            : 'সারা শরীরে (ঘাড় থেকে পায়ের পাতা পর্যন্ত) মেখে ৮-১২ ঘণ্টা পর সাবান দিয়ে ধুয়ে ফেলুন। পরিবারের সবার একসাথে ব্যবহার করা উচিত।',
+        special_instructions: '',
         reason: 'স্ক্যাবিস পারমেথ্রিন ৫% সারা শরীরে ওভারনাইট অ্যাপ্লিকেশন।',
         badge: 'Scabies Protocol',
       };
@@ -92,7 +89,7 @@ export function calculateSmartDose(
         schedule: 'দিনে ২ বার',
         meal_timing: undefined,
         duration: '১৪-২১ দিন',
-        special_instructions: 'আক্রান্ত স্থান পরিষ্কার ও শুকনা করে পাতলা করে লাগাবেন (লক্ষণ ভালো হওয়ার পরও ৭ দিন চালিয়ে যান)',
+        special_instructions: '',
         reason: 'টপিক্যাল অ্যান্টিফাংগাল ত্বকের সংক্রমণ প্রটোকল।',
         badge: 'Topical Antifungal',
       };
@@ -117,7 +114,7 @@ export function calculateSmartDose(
         schedule: 'রাতে ১ বার',
         meal_timing: undefined,
         duration: '৭-১০ দিন',
-        special_instructions: 'আক্রান্ত স্থানে সামান্য পরিমাণ পাতলা করে লাগাবেন (চোখে বা মুখে লাগানো নিষেধ; দীর্ঘমেয়াদে ব্যবহার অনুচিত)',
+        special_instructions: '',
         reason: 'টপিক্যাল কর্টিকোস্টেরয়েড স্কিন অ্যাপ্লিকেশন।',
         badge: 'Topical Steroid',
       };
@@ -141,7 +138,7 @@ export function calculateSmartDose(
           schedule: `${toBengaliNumerals(drops)} ফোঁটা করে দিনে ৩-৪ বার (জ্বর আসলে SOS)`,
           meal_timing: 'After Meal',
           duration: '3 Days',
-          special_instructions: 'জ্বর বেশি হলে সেব্য',
+          special_instructions: '',
           reason: 'Paediatric infant drops calibrated for age < 1.',
           badge: 'Infant Drops',
         };
@@ -158,7 +155,7 @@ export function calculateSmartDose(
           schedule: `${spoonStr} চামচ (${toBengaliNumerals(ml)} মি.লি.) করে দিনে ৩-৪ বার (জ্বর আসলে SOS)`,
           meal_timing: 'After Meal',
           duration: '3 Days',
-          special_instructions: 'জ্বর বেশি হলে সেব্য',
+          special_instructions: '',
           reason: `Pediatric weight ${weight}kg: calibrated 15 mg/kg per dose.`,
           badge: `Pediatric ${doseMg}mg (~${ml}ml)`,
         };
@@ -183,7 +180,7 @@ export function calculateSmartDose(
         schedule: `${spoonText} করে দিনে ৩-৪ বার (জ্বর আসলে SOS)`,
         meal_timing: 'After Meal',
         duration: '3 Days',
-        special_instructions: 'জ্বর বেশি হলে সেব্য',
+        special_instructions: '',
         reason: 'Age-appropriate pediatric oral suspension.',
         badge: 'Pediatric Syrup',
       };
@@ -197,7 +194,7 @@ export function calculateSmartDose(
         schedule: '1+1+1+1 (every 6 hrs)',
         meal_timing: 'After Meal',
         duration: '3-5 Days',
-        special_instructions: 'Take with full glass of water during fever. Max 4g/day.',
+        special_instructions: '',
         reason: `Active fever detected (${temp}°F). QDS adult schedule indicated.`,
         badge: 'Fever SOS Dosing',
       };
@@ -213,7 +210,7 @@ export function calculateSmartDose(
       schedule: '1+0+1',
       meal_timing: 'Before Meal',
       duration: '14 Days',
-      special_instructions: 'Take 30 to 60 minutes before breakfast and dinner',
+      special_instructions: '',
       reason: 'Gastric acid suppression: optimal 30 mins before meals.',
       badge: 'Before Meal (PPI)',
     };
@@ -229,7 +226,7 @@ export function calculateSmartDose(
       schedule: highDose ? '1+0+1' : '1+0+0',
       meal_timing: 'After Meal',
       duration: '30 Days',
-      special_instructions: 'Take regularly every morning after breakfast. Monitor BP weekly.',
+      special_instructions: '',
       reason: isHighBP ? `Stage 2 Hypertension (BP ${sbp}/${dbp} mmHg). Titrated morning regimen.` : 'Daily cardiovascular maintenance dose.',
       badge: isHighBP ? `HTN Titrated (${sbp}/${dbp})` : 'Morning Regimen',
     };
@@ -244,7 +241,7 @@ export function calculateSmartDose(
       schedule: '0+0+1',
       meal_timing: 'After Meal',
       duration: '30 Days',
-      special_instructions: 'Take once daily at bedtime (peak cholesterol synthesis occurs at night)',
+      special_instructions: '',
       reason: 'Statins have maximal hepatic efficacy when taken at bedtime.',
       badge: 'Bedtime Statin',
     };
@@ -260,7 +257,7 @@ export function calculateSmartDose(
       schedule: '0+0+1',
       meal_timing: 'After Meal',
       duration: '14-30 Days',
-      special_instructions: 'Take in the evening or at bedtime',
+      special_instructions: '',
       reason: 'Leukotriene receptor antagonist: evening administration recommended.',
       badge: isPediatric ? `Pediatric ${pediatricDose}` : 'Evening Dose',
     };
@@ -277,7 +274,7 @@ export function calculateSmartDose(
         schedule: `${azithroSpoon} করে দিনে ১ বার`,
         meal_timing: 'Before Meal',
         duration: '৩-৫ দিন',
-        special_instructions: 'খাওয়ার ১ ঘণ্টা পূর্বে অথবা ২ ঘণ্টা পরে সেব্য',
+        special_instructions: '',
         reason: `Pediatric Azithromycin calibrated for age ${patientAge} yrs.`,
         badge: 'Pediatric 200mg/5ml OD',
       };
@@ -289,7 +286,7 @@ export function calculateSmartDose(
       schedule: '1+0+0',
       meal_timing: 'Before Meal',
       duration: '5 Days',
-      special_instructions: 'খাওয়ার ১ ঘণ্টা পূর্বে অথবা ২ ঘণ্টা পরে সেব্য',
+      special_instructions: '',
       reason: 'Macrolide once-daily 5-day course.',
       badge: 'Once Daily 5-Day',
     };
@@ -306,7 +303,7 @@ export function calculateSmartDose(
         schedule: `${cefSpoon} করে দিনে ২ বার`,
         meal_timing: 'After Meal',
         duration: '৭ দিন',
-        special_instructions: '৭ দিনের পূর্ণ কোর্স সম্পন্ন করুন',
+        special_instructions: '',
         reason: `Pediatric Cefixime calibrated for age ${patientAge} yrs.`,
         badge: 'Pediatric Cefixime',
       };
@@ -318,7 +315,7 @@ export function calculateSmartDose(
       schedule: '1+0+1',
       meal_timing: 'After Meal',
       duration: '7 Days',
-      special_instructions: '৭ দিনের পূর্ণ কোর্স সম্পন্ন করুন',
+      special_instructions: '',
       reason: 'Standard 3rd-generation cephalosporin regimen.',
       badge: 'Cefixime 7-Day',
     };
@@ -336,7 +333,7 @@ export function calculateSmartDose(
         schedule: isDrop ? '১০-১৫ ফোঁটা করে দিনে ৩ বার' : `${dompSpoon} করে দিনে ৩ বার`,
         meal_timing: 'Before Meal',
         duration: '৩-৫ দিন',
-        special_instructions: isDrop ? 'খাওয়ার ১৫-৩০ মিনিট পূর্বে সেব্য' : 'বমি বা বমি বমি ভাব হলে খাওয়ার ১৫-৩০ মিনিট পূর্বে সেব্য',
+        special_instructions: '',
         reason: isDrop ? 'Pediatric drops before feeding.' : 'Pediatric syrup before meals.',
         badge: isDrop ? 'Pediatric Drop' : 'Pediatric Syrup',
       };
@@ -348,7 +345,7 @@ export function calculateSmartDose(
       schedule: '1+0+1',
       meal_timing: 'Before Meal',
       duration: '7 Days',
-      special_instructions: 'খাওয়ার ১৫-৩০ মিনিট পূর্বে সেব্য',
+      special_instructions: '',
       reason: 'Upper GI prokinetic motility agent.',
       badge: 'Before Meal',
     };
@@ -363,7 +360,7 @@ export function calculateSmartDose(
       schedule: '1+0+1',
       meal_timing: 'With Meal',
       duration: '30 Days',
-      special_instructions: 'খাওয়ার মাঝে সেব্য',
+      special_instructions: '',
       reason: 'First-line biguanide insulin sensitizer.',
       badge: 'With Meal',
     };

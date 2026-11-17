@@ -158,7 +158,7 @@ export function ProtocolTemplatesDialog({
           schedule: m.schedule || (isNonOral ? prof.defaultSchedule : '1+0+1'),
           meal_timing: isNonOral ? undefined : ((m.meal_timing as MealTiming) || 'After Meal'),
           duration: m.duration || prof.defaultDuration || '7 Days',
-          special_instructions: m.special_instructions || prof.defaultSpecialInstructions || '',
+          special_instructions: m.special_instructions || '',
           route: prof.defaultRoute || '',
           created_at: now,
           updated_at: now,

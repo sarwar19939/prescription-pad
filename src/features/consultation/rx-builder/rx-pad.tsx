@@ -87,9 +87,7 @@ export function RxPad({ patient, encounterId }: { patient: Patient; encounterId:
       ? undefined
       : (smart.hasAdjustment && smart.meal_timing ? smart.meal_timing : (guide?.standardMealTiming || profile.defaultMealTiming || 'After Meal'));
 
-    const initialInstructions = smart.hasAdjustment && smart.special_instructions
-      ? smart.special_instructions
-      : (profile.defaultSpecialInstructions || '');
+    const initialInstructions = '';
 
     const initialDuration = smart.hasAdjustment && smart.duration
       ? smart.duration

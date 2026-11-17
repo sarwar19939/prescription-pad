@@ -111,7 +111,6 @@ export function AddCustomMedicineDialog({
       setMealTiming(prof.defaultMealTiming);
       setDuration(prof.defaultDuration);
       setRoute(prof.defaultRoute);
-      if (prof.defaultSpecialInstructions) setInstructions(prof.defaultSpecialInstructions);
     }
   }, [initialBrand]);
 
@@ -123,9 +122,6 @@ export function AddCustomMedicineDialog({
     setMealTiming(prof.defaultMealTiming);
     setDuration(prof.defaultDuration);
     setRoute(prof.defaultRoute);
-    if (!instructions || instructions === profile.defaultSpecialInstructions) {
-      setInstructions(prof.defaultSpecialInstructions);
-    }
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -413,31 +409,16 @@ export function AddCustomMedicineDialog({
           <div>
             <div className="flex items-center justify-between mb-1">
               <label className="font-bold text-slate-700 block">
-                বিশেষ নির্দেশনা ও রুট (Special Instructions):
+                বিশেষ নির্দেশনা ও রুট (ঐচ্ছিক):
               </label>
-              <span className="text-[10px] text-slate-400">নিচের অপশনে ক্লিক করুন বা লিখুন</span>
             </div>
             <input
               type="text"
               value={instructions}
               onChange={(e) => setInstructions(e.target.value)}
-              placeholder={profile.defaultSpecialInstructions || 'যেমন: আক্রান্ত স্থানে দিনে ২ বার / পায়ুপথে / শিরায় (IV)'}
+              placeholder="যেমন: আক্রান্ত স্থানে / পায়ুপথে / শিরায় (IV)"
               className="w-full h-8 px-2.5 rounded-lg border border-slate-300 text-xs focus:border-teal-600 outline-none mb-1"
             />
-            {profile.instructionPresets && profile.instructionPresets.length > 0 && (
-              <div className="flex flex-wrap gap-1 mb-2">
-                {profile.instructionPresets.map((pr, pIdx) => (
-                  <button
-                    key={pIdx}
-                    type="button"
-                    onClick={() => setInstructions(pr.text)}
-                    className="px-1.5 py-0.5 rounded text-[10px] bg-teal-50 hover:bg-teal-100 text-teal-800 border border-teal-200 font-medium"
-                  >
-                    + {pr.label}
-                  </button>
-                ))}
-              </div>
-            )}
           </div>
 
           {/* Manufacturer */}
