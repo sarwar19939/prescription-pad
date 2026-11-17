@@ -329,8 +329,30 @@ export function formatSubcontinentRxLine(item: Partial<PrescriptionItem>): {
 
     if (dur) parts.push(dur);
     dosageDetails = parts.filter(Boolean).join(' — ');
+  } else if (category === 'syrup' || form === 'Syr' || form === 'Susp') {
+    // Syrups & Liquid Suspensions: Clean spoon/ml and frequency display
+    let cleanSched = sched;
+    const rawSched = (item.schedule || '').trim();
+    if (/^(1\+1\+1|1\s*\+\s*1\s*\+\s*1)$/.test(rawSched)) {
+      cleanSched = '১ চামচ (৫ মি.লি.) করে দিনে ৩ বার';
+    } else if (/^(1\+0\+1|1\s*\+\s*0\s*\+\s*1|1\+1)$/.test(rawSched)) {
+      cleanSched = '১ চামচ (৫ মি.লি.) করে দিনে ২ বার';
+    } else if (/^(1\+0\+0|0\+0\+1|1\s*\+\s*0\s*\+\s*0)$/.test(rawSched)) {
+      cleanSched = '১ চামচ (৫ মি.লি.) করে দিনে ১ বার';
+    } else if (/^(1\+1\+1\+1)$/.test(rawSched)) {
+      cleanSched = '১ চামচ (৫ মি.লি.) করে দিনে ৪ বার';
+    }
+
+    const meal = formatSubcontinentMealTiming(item.meal_timing);
+    const parts: string[] = [cleanSched];
+    if (meal) parts.push(meal);
+    if (dur) parts.push(dur);
+    if (instructions && !cleanSched.includes(instructions) && !instructions.includes(cleanSched)) {
+      parts.push(instructions);
+    }
+    dosageDetails = parts.filter(Boolean).join(' — ');
   } else {
-    // Oral formulations (Tablets, Capsules, Syrups, Sachets)
+    // Oral solid formulations (Tablets, Capsules, Sachets)
     const meal = formatSubcontinentMealTiming(item.meal_timing);
     const parts = [sched, meal, dur].filter(Boolean);
     if (instructions) {

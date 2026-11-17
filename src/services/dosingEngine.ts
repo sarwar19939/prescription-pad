@@ -5,7 +5,7 @@
 import type { MealTiming, Patient, PrescriptionItem, Vitals } from '@/types/schema';
 import { parseBP } from './vitalsService';
 import { detectMedicineCategory } from './medicineRouteService';
-import { normalizeDosageForm } from '@/lib/prescriptionFormatters';
+import { normalizeDosageForm, toBengaliNumerals } from '@/lib/prescriptionFormatters';
 
 export interface DoseProposal {
   hasAdjustment: boolean;
@@ -131,29 +131,31 @@ export function calculateSmartDose(
   // 1. Paracetamol / Acetaminophen (Ace, Napa, Fast, Parapyrol)
   if (name.includes('paracetamol') || name.includes('napa') || name.includes('ace') || name.includes('fast')) {
     if (isPediatric) {
-      if (isInfant || (weight !== null && weight < 10)) {
+      if (isInfant || (weight !== null && weight < 10) || patientAge < 1) {
         const doseMg = weight !== null ? Math.round(weight * 15) : 60;
-        const drops = Math.round((doseMg / 80) * 0.8 * 20);
+        const drops = Math.round((doseMg / 80) * 0.8 * 20) || 12;
         return {
           hasAdjustment: true,
           dosage_form: 'Drop',
           strength: '80mg/0.8ml',
-          schedule: '1+1+1 (every 6-8 hrs SOS)',
+          schedule: `${toBengaliNumerals(drops)} ফোঁটা করে দিনে ৩-৪ বার (জ্বর আসলে SOS)`,
           meal_timing: 'After Meal',
           duration: '3 Days',
-          special_instructions: 'জ্বর আসলে সেব্য',
-          reason: 'Paediatric infant drops calibrated for age < 2.',
+          special_instructions: 'জ্বর বেশি হলে সেব্য',
+          reason: 'Paediatric infant drops calibrated for age < 1.',
           badge: 'Infant Drops',
         };
       }
       if (weight !== null) {
         const doseMg = Math.round(weight * 15);
         const ml = Math.round((doseMg / 120) * 5 * 10) / 10;
+        const spoons = Math.round((ml / 5) * 10) / 10;
+        const spoonStr = spoons === 0.5 ? 'আধা' : toBengaliNumerals(spoons);
         return {
           hasAdjustment: true,
           dosage_form: 'Syr',
           strength: '120mg/5ml',
-          schedule: '1+1+1 (every 6-8 hrs SOS)',
+          schedule: `${spoonStr} চামচ (${toBengaliNumerals(ml)} মি.লি.) করে দিনে ৩-৪ বার (জ্বর আসলে SOS)`,
           meal_timing: 'After Meal',
           duration: '3 Days',
           special_instructions: 'জ্বর বেশি হলে সেব্য',
@@ -161,14 +163,27 @@ export function calculateSmartDose(
           badge: `Pediatric ${doseMg}mg (~${ml}ml)`,
         };
       }
+
+      // Age-based calibration when weight is not entered
+      let spoonText = '১ চামচ (৫ মি.লি.)';
+      if (patientAge < 2) {
+        spoonText = 'আধা চামচ (২.৫ মি.লি.)';
+      } else if (patientAge <= 5) {
+        spoonText = '১ চামচ (৫ মি.লি.)';
+      } else if (patientAge <= 8) {
+        spoonText = '১.৫ চামচ (৭.৫ মি.লি.)';
+      } else {
+        spoonText = '২ চামচ (১০ মি.লি.)';
+      }
+
       return {
         hasAdjustment: true,
         dosage_form: 'Syr',
         strength: '120mg/5ml',
-        schedule: '1+1+1 (SOS)',
+        schedule: `${spoonText} করে দিনে ৩-৪ বার (জ্বর আসলে SOS)`,
         meal_timing: 'After Meal',
         duration: '3 Days',
-        special_instructions: 'জ্বর বা ব্যথায় সেব্য',
+        special_instructions: 'জ্বর বেশি হলে সেব্য',
         reason: 'Age-appropriate pediatric oral suspension.',
         badge: 'Pediatric Syrup',
       };
@@ -253,18 +268,18 @@ export function calculateSmartDose(
 
   // 6. Antibiotics (Azithromycin, Cefixime, Amoxicillin, Cipro)
   if (name.includes('azithromycin') || name.includes('zithrin') || name.includes('azalide')) {
-    if (isPediatric && weight !== null) {
-      const azithroMg = Math.round(weight * 10);
+    if (isPediatric) {
+      const azithroSpoon = patientAge < 5 ? '১ চামচ (৫ মি.লি.)' : '১.৫ চামচ (৭.৫ মি.লি.)';
       return {
         hasAdjustment: true,
         dosage_form: 'Syr',
         strength: '200mg/5ml',
-        schedule: '1+0+0',
+        schedule: `${azithroSpoon} করে দিনে ১ বার`,
         meal_timing: 'Before Meal',
-        duration: '3-5 Days',
+        duration: '৩-৫ দিন',
         special_instructions: 'খাওয়ার ১ ঘণ্টা পূর্বে অথবা ২ ঘণ্টা পরে সেব্য',
-        reason: `Pediatric Azithromycin 10mg/kg for weight ${weight}kg.`,
-        badge: `10mg/kg (${azithroMg}mg OD)`,
+        reason: `Pediatric Azithromycin calibrated for age ${patientAge} yrs.`,
+        badge: 'Pediatric 200mg/5ml OD',
       };
     }
     return {
@@ -282,19 +297,18 @@ export function calculateSmartDose(
 
   // 7. Cefixime (Cef-3, Triocim, Denavir)
   if (name.includes('cefixime') || name.includes('cef-3') || name.includes('triocim')) {
-    if (isPediatric && weight !== null) {
-      const cefMg = Math.round(weight * 8);
-      const ml = Math.round((cefMg / 100) * 5 * 10) / 10;
+    if (isPediatric) {
+      const cefSpoon = patientAge < 5 ? '১ চামচ (৫ মি.লি.)' : '১.৫ চামচ (৭.৫ মি.লি.)';
       return {
         hasAdjustment: true,
         dosage_form: 'Syr',
         strength: '100mg/5ml',
-        schedule: '1+0+1',
+        schedule: `${cefSpoon} করে দিনে ২ বার`,
         meal_timing: 'After Meal',
-        duration: '7 Days',
+        duration: '৭ দিন',
         special_instructions: '৭ দিনের পূর্ণ কোর্স সম্পন্ন করুন',
-        reason: `Pediatric Cefixime 8mg/kg for weight ${weight}kg.`,
-        badge: `8mg/kg (~${ml}ml/day)`,
+        reason: `Pediatric Cefixime calibrated for age ${patientAge} yrs.`,
+        badge: 'Pediatric Cefixime',
       };
     }
     return {
@@ -313,14 +327,15 @@ export function calculateSmartDose(
   // 8. Antiemetic / Domperidone (Omidon, Motigut)
   if (name.includes('domperidone') || name.includes('omidon') || name.includes('motigut')) {
     if (isPediatric) {
-      const isDrop = isInfant || (weight !== null && weight < 10);
+      const isDrop = isInfant || patientAge < 1;
+      const dompSpoon = patientAge < 5 ? '১ চামচ (৫ মি.লি.)' : '১.৫ চামচ (৭.৫ মি.লি.)';
       return {
         hasAdjustment: true,
         dosage_form: isDrop ? 'Drop' : 'Syr',
         strength: isDrop ? '5mg/ml' : '5mg/5ml',
-        schedule: '1+0+1',
+        schedule: isDrop ? '১০-১৫ ফোঁটা করে দিনে ৩ বার' : `${dompSpoon} করে দিনে ৩ বার`,
         meal_timing: 'Before Meal',
-        duration: '3-5 Days',
+        duration: '৩-৫ দিন',
         special_instructions: isDrop ? 'খাওয়ার ১৫-৩০ মিনিট পূর্বে সেব্য' : 'বমি বা বমি বমি ভাব হলে খাওয়ার ১৫-৩০ মিনিট পূর্বে সেব্য',
         reason: isDrop ? 'Pediatric drops before feeding.' : 'Pediatric syrup before meals.',
         badge: isDrop ? 'Pediatric Drop' : 'Pediatric Syrup',
@@ -356,16 +371,18 @@ export function calculateSmartDose(
 
   // 10. General Pediatric Fallback (strictly for oral tablets/capsules under 12 years)
   if (isPediatric && category === 'oral_solid') {
+    const isDrop = isInfant || patientAge < 1;
+    const fallbackSpoon = patientAge < 5 ? '১ চামচ (৫ মি.লি.)' : '১.৫ চামচ (৭.৫ মি.লি.)';
     return {
       hasAdjustment: true,
-      dosage_form: isInfant ? 'Drop' : 'Syr',
+      dosage_form: isDrop ? 'Drop' : 'Syr',
       strength: med.strength || '',
-      schedule: '1+0+1',
+      schedule: isDrop ? '১০-১৫ ফোঁটা করে দিনে ৩ বার' : `${fallbackSpoon} করে দিনে ৩ বার`,
       meal_timing: 'After Meal',
-      duration: '7 Days',
+      duration: '৭ দিন',
       special_instructions: '',
       reason: 'Switched to oral liquid formulation for pediatric safety.',
-      badge: isInfant ? 'Pediatric Drops' : 'Pediatric Syrup',
+      badge: isDrop ? 'Pediatric Drops' : 'Pediatric Syrup',
     };
   }
 

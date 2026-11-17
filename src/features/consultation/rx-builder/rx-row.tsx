@@ -29,6 +29,7 @@ import { checkMedicineWithCatalog, type SafetyWarning } from './safety';
 import { SafetyBanners } from './safety-banners';
 import { parseShorthand } from './shorthand';
 import { TaperingDosePanel } from './tapering-dose-panel';
+import { LiquidDosingPanel } from './liquid-dosing-panel';
 import type { DosageForm, MealTiming, Patient, PrescriptionItem, Vitals } from '@/types/schema';
 import { Button } from '@/components/ui/button';
 
@@ -191,6 +192,13 @@ export function RxRow({
       ? 'bg-indigo-100 text-indigo-900 border-indigo-300'
       : 'bg-slate-100 text-slate-700 border-slate-200';
 
+  const isLiquid =
+    category === 'syrup' ||
+    category === 'drops' ||
+    cleanForm === 'Syr' ||
+    cleanForm === 'Susp' ||
+    cleanForm === 'Drop';
+
   const { dosageDetails } = formatSubcontinentRxLine(item);
 
   return (
@@ -284,112 +292,116 @@ export function RxRow({
         </div>
       )}
 
-      {/* 3. Primary Dose Controls (শিডিউল, খাবার সময়/রুট, মেয়াদ ও শর্টহ্যান্ড) */}
-      <div className="flex flex-wrap items-center gap-2 pt-1 border-t border-slate-100 text-xs">
-        {/* Bengali Shorthand / Frequency Badge */}
-        <span className="font-bold text-teal-800 bg-teal-50 border border-teal-200 px-2.5 py-1 rounded-md text-xs">
-          {category === 'topical'
-            ? (item.schedule || profile.defaultSchedule || 'দিনে ২ বার')
-            : (formatSubcontinentSchedule(item.schedule) || '১ + ০ + ১')}
-        </span>
+      {/* 3. Primary Dose Controls: Liquid/Pediatric Panel for Syrups/Drops vs Standard Controls */}
+      {isLiquid ? (
+        <LiquidDosingPanel item={item} patient={patient} onUpdate={write} />
+      ) : (
+        <div className="flex flex-wrap items-center gap-2 pt-1 border-t border-slate-100 text-xs">
+          {/* Bengali Shorthand / Frequency Badge */}
+          <span className="font-bold text-teal-800 bg-teal-50 border border-teal-200 px-2.5 py-1 rounded-md text-xs">
+            {category === 'topical'
+              ? (item.schedule || profile.defaultSchedule || 'দিনে ২ বার')
+              : (formatSubcontinentSchedule(item.schedule) || '১ + ০ + ১')}
+          </span>
 
-        {/* Schedule / Frequency Input */}
-        <input
-          className="h-8 w-28 rounded-lg border border-slate-300 px-2 text-center font-medium font-mono text-teal-900 text-xs outline-none focus:border-teal-600 focus:ring-1 focus:ring-teal-500/30"
-          placeholder={profile.defaultSchedule || '1+0+1'}
-          value={item.schedule}
-          onChange={(e) => write({ schedule: e.target.value })}
-          title="শিডিউল (যেমন: দিনে ২ বার, রাতে ১ বার, 1+0+1)"
-        />
-
-        {/* Quick Frequency Chips for Topical Preparations */}
-        {category === 'topical' && (
-          <div className="flex items-center gap-1">
-            {(profile.categoryLabelBn.includes('স্ক্যাবিস')
-              ? ['১ বার (রাতে)', '৭ দিন পর পুনরায়', 'প্রয়োজনমতো']
-              : ['দিনে ২ বার', 'দিনে ৩ বার', 'রাতে ১ বার', 'প্রয়োজনমতো']
-            ).map((q) => (
-              <button
-                key={q}
-                type="button"
-                onClick={() => write({ schedule: q })}
-                className={`text-[11px] font-semibold px-2 py-1 rounded-md border transition-all ${
-                  item.schedule === q
-                    ? 'bg-teal-700 text-white border-teal-700 shadow-2xs'
-                    : 'bg-slate-50 text-slate-700 border-slate-200 hover:bg-teal-50 hover:border-teal-300'
-                }`}
-              >
-                {q}
-              </button>
-            ))}
-          </div>
-        )}
-
-        {/* Meal Timing / Route: STRICTLY Oral gets Meal Timing, non-oral displays route */}
-        {category === 'oral_solid' || category === 'syrup' ? (
-          <select
-            className="h-8 rounded-lg border border-slate-300 bg-white px-2.5 text-xs font-medium text-slate-800 outline-none focus:border-teal-600 focus:ring-1 focus:ring-teal-500/30"
-            value={item.meal_timing || 'After Meal'}
-            onChange={(e) => write({ meal_timing: e.target.value as MealTiming })}
-          >
-            {STANDARD_MEAL_OPTIONS.filter((opt) => opt.value !== 'প্রযোজ্য নয়').map((opt) => (
-              <option key={opt.value} value={opt.value}>
-                {opt.label}
-              </option>
-            ))}
-          </select>
-        ) : (
-          <div className="flex items-center gap-1.5 h-8 px-2.5 rounded-lg bg-teal-50/70 border border-teal-200 text-xs font-semibold text-teal-900">
-            <span className="text-[10px] text-teal-600 uppercase">রুট:</span>
-            <span>{item.route || profile.defaultRoute || 'বাহ্যিক (ত্বকে)'}</span>
-          </div>
-        )}
-
-        {/* Duration input */}
-        <input
-          className="h-8 w-24 rounded-lg border border-slate-300 px-2 text-center font-medium text-slate-800 text-xs outline-none focus:border-teal-600 focus:ring-1 focus:ring-teal-500/30"
-          placeholder={profile.defaultDuration || '7 Days'}
-          value={item.duration}
-          onChange={(e) => write({ duration: e.target.value })}
-          title="মেয়াদ (যেমন: 7 Days, 14 Days, চলবে)"
-        />
-
-        {/* Quick Shorthand input */}
-        <div className="flex items-center gap-1 flex-1 min-w-[150px]">
+          {/* Schedule / Frequency Input */}
           <input
-            className="h-8 w-full rounded-lg border border-teal-200 bg-teal-50/30 px-2.5 text-xs text-slate-800 placeholder:text-slate-400 outline-none focus:border-teal-600 focus:bg-white"
-            placeholder={category === 'topical' ? 'শর্টহ্যান্ড (যেমন: "দিনে ২ বার ৭ দিন")' : 'শর্টহ্যান্ড (যেমন: "bd pc 7d" বা "1+0+1")'}
-            value={cmd}
-            onChange={(e) => setCmd(e.target.value)}
-            onKeyDown={(e) => {
-              if (e.key === 'Enter') {
-                e.preventDefault();
-                void applyCommand();
-              }
-            }}
+            className="h-8 w-28 rounded-lg border border-slate-300 px-2 text-center font-medium font-mono text-teal-900 text-xs outline-none focus:border-teal-600 focus:ring-1 focus:ring-teal-500/30"
+            placeholder={profile.defaultSchedule || '1+0+1'}
+            value={item.schedule}
+            onChange={(e) => write({ schedule: e.target.value })}
+            title="শিডিউল (যেমন: দিনে ২ বার, রাতে ১ বার, 1+0+1)"
           />
-        </div>
 
-        {/* Presets & Tapering Toggles */}
-        <div className="flex items-center gap-1.5">
-          <button
-            type="button"
-            onClick={() => setShowPresets(!showPresets)}
-            className="text-[11px] font-bold text-teal-800 bg-teal-50 hover:bg-teal-100 border border-teal-200 px-2 py-1 rounded-md flex items-center gap-0.5 transition-colors"
-          >
-            <Sparkles className="h-3 w-3 text-teal-600" />
-            {showPresets ? 'নির্দেশনা বন্ধ' : '+ নির্দেশনা অপশন'}
-          </button>
+          {/* Quick Frequency Chips for Topical Preparations */}
+          {category === 'topical' && (
+            <div className="flex items-center gap-1">
+              {(profile.categoryLabelBn.includes('স্ক্যাবিস')
+                ? ['১ বার (রাতে)', '৭ দিন পর পুনরায়', 'প্রয়োজনমতো']
+                : ['দিনে ২ বার', 'দিনে ৩ বার', 'রাতে ১ বার', 'প্রয়োজনমতো']
+              ).map((q) => (
+                <button
+                  key={q}
+                  type="button"
+                  onClick={() => write({ schedule: q })}
+                  className={`text-[11px] font-semibold px-2 py-1 rounded-md border transition-all ${
+                    item.schedule === q
+                      ? 'bg-teal-700 text-white border-teal-700 shadow-2xs'
+                      : 'bg-slate-50 text-slate-700 border-slate-200 hover:bg-teal-50 hover:border-teal-300'
+                  }`}
+                >
+                  {q}
+                </button>
+              ))}
+            </div>
+          )}
 
-          <button
-            type="button"
-            onClick={() => setShowTapering(!showTapering)}
-            className="text-[11px] font-medium text-slate-500 hover:text-teal-700 underline px-1"
-          >
-            {showTapering ? 'ট্যাপারিং বন্ধ' : '+ ট্যাপারিং'}
-          </button>
+          {/* Meal Timing / Route: STRICTLY Oral gets Meal Timing, non-oral displays route */}
+          {category === 'oral_solid' ? (
+            <select
+              className="h-8 rounded-lg border border-slate-300 bg-white px-2.5 text-xs font-medium text-slate-800 outline-none focus:border-teal-600 focus:ring-1 focus:ring-teal-500/30"
+              value={item.meal_timing || 'After Meal'}
+              onChange={(e) => write({ meal_timing: e.target.value as MealTiming })}
+            >
+              {STANDARD_MEAL_OPTIONS.filter((opt) => opt.value !== 'প্রযোজ্য নয়').map((opt) => (
+                <option key={opt.value} value={opt.value}>
+                  {opt.label}
+                </option>
+              ))}
+            </select>
+          ) : (
+            <div className="flex items-center gap-1.5 h-8 px-2.5 rounded-lg bg-teal-50/70 border border-teal-200 text-xs font-semibold text-teal-900">
+              <span className="text-[10px] text-teal-600 uppercase">রুট:</span>
+              <span>{item.route || profile.defaultRoute || 'বাহ্যিক (ত্বকে)'}</span>
+            </div>
+          )}
+
+          {/* Duration input */}
+          <input
+            className="h-8 w-24 rounded-lg border border-slate-300 px-2 text-center font-medium text-slate-800 text-xs outline-none focus:border-teal-600 focus:ring-1 focus:ring-teal-500/30"
+            placeholder={profile.defaultDuration || '7 Days'}
+            value={item.duration}
+            onChange={(e) => write({ duration: e.target.value })}
+            title="মেয়াদ (যেমন: 7 Days, 14 Days, চলবে)"
+          />
+
+          {/* Quick Shorthand input */}
+          <div className="flex items-center gap-1 flex-1 min-w-[150px]">
+            <input
+              className="h-8 w-full rounded-lg border border-teal-200 bg-teal-50/30 px-2.5 text-xs text-slate-800 placeholder:text-slate-400 outline-none focus:border-teal-600 focus:bg-white"
+              placeholder={category === 'topical' ? 'শর্টহ্যান্ড (যেমন: "দিনে ২ বার ৭ দিন")' : 'শর্টহ্যান্ড (যেমন: "bd pc 7d" বা "1+0+1")'}
+              value={cmd}
+              onChange={(e) => setCmd(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter') {
+                  e.preventDefault();
+                  void applyCommand();
+                }
+              }}
+            />
+          </div>
+
+          {/* Presets & Tapering Toggles */}
+          <div className="flex items-center gap-1.5">
+            <button
+              type="button"
+              onClick={() => setShowPresets(!showPresets)}
+              className="text-[11px] font-bold text-teal-800 bg-teal-50 hover:bg-teal-100 border border-teal-200 px-2 py-1 rounded-md flex items-center gap-0.5 transition-colors"
+            >
+              <Sparkles className="h-3 w-3 text-teal-600" />
+              {showPresets ? 'নির্দেশনা বন্ধ' : '+ নির্দেশনা অপশন'}
+            </button>
+
+            <button
+              type="button"
+              onClick={() => setShowTapering(!showTapering)}
+              className="text-[11px] font-medium text-slate-500 hover:text-teal-700 underline px-1"
+            >
+              {showTapering ? 'ট্যাপারিং বন্ধ' : '+ ট্যাপারিং'}
+            </button>
+          </div>
         </div>
-      </div>
+      )}
 
       {/* 4. Special Instructions & Quick Presets (ক্রিম মাখার নিয়ম, সাপোজিটরি, ইনজেকশন বা সিরাপের দ্রুত প্রিসেট) */}
       <div className="space-y-1.5 pt-1.5 border-t border-slate-100">
@@ -412,8 +424,8 @@ export function RxRow({
           className="w-full h-8 px-2.5 rounded-lg border border-slate-300 text-xs font-medium text-slate-900 placeholder:text-slate-400 focus:border-teal-600 focus:ring-1 focus:ring-teal-500/30 outline-none"
         />
 
-        {/* Quick Dose Units (for Syrups: 1 spoon, 2 spoons, 5ml, 10ml) */}
-        {profile.quickDoseUnits && profile.quickDoseUnits.length > 0 && (
+        {/* Quick Dose Units (for non-liquid categories if any) */}
+        {!isLiquid && profile.quickDoseUnits && profile.quickDoseUnits.length > 0 && (
           <div className="flex flex-wrap items-center gap-1 pt-0.5">
             <span className="text-[10px] font-bold text-slate-400 uppercase">মাত্রা:</span>
             {profile.quickDoseUnits.map((u) => (
