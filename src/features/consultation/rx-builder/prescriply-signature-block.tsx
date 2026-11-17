@@ -10,8 +10,8 @@ import type { Tenant } from '@/types/schema';
 import { getPadTheme } from '@/lib/prescriptionTheme';
 
 export function PrescriplySignatureBlock({ tenant }: { tenant?: Tenant | null }) {
-  const doctorName = tenant?.doctor_name || 'ডাঃ গোলাম সারোয়ার';
-  const designation = tenant?.specialty || tenant?.degrees || 'জেনারেল ফিজিশিয়ান';
+  const doctorName = tenant?.doctor_name || 'চিকিৎসকের স্বাক্ষর';
+  const designation = tenant?.specialty || tenant?.degrees || 'চিকিৎসক';
   const specialNotes = tenant?.special_notes;
   const theme = getPadTheme(tenant?.pad_layout_style);
 

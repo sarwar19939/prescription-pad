@@ -21,13 +21,13 @@ import { PrescriptionPadSetupCard } from '@/features/settings/prescription-pad-s
 import { PrintCalibrationCard } from '@/features/settings/print-calibration-card';
 
 const CLINICAL_FIELDS: Array<{ key: keyof Tenant; label: string; placeholder?: string }> = [
-  { key: 'clinic_name', label: 'Clinic / Practice Name', placeholder: 'বসিরবানিয়া চেম্বার' },
-  { key: 'doctor_name', label: 'Doctor Full Name', placeholder: 'ডাঃ গোলাম সারোয়ার' },
-  { key: 'degrees', label: 'Degrees & Qualifications', placeholder: 'MBBS, FCPS' },
-  { key: 'specialty', label: 'Specialty', placeholder: 'General Physician' },
-  { key: 'reg_number', label: 'Medical Registration Number', placeholder: 'BMDC-A-12345' },
+  { key: 'clinic_name', label: 'Clinic / Practice Name', placeholder: 'যেমন: সেন্ট্রাল ক্লিনিক ও চেম্বার' },
+  { key: 'doctor_name', label: 'Doctor Full Name', placeholder: 'যেমন: ডাঃ মোঃ ...' },
+  { key: 'degrees', label: 'Degrees & Qualifications', placeholder: 'MBBS, FCPS, BCS (Health)' },
+  { key: 'specialty', label: 'Specialty', placeholder: 'General Physician / মেডিসিন বিশেষজ্ঞ' },
+  { key: 'reg_number', label: 'Medical Registration Number', placeholder: 'A-12345 (BM&DC)' },
   { key: 'phone', label: 'Clinic Contact Phone', placeholder: '01700-000000' },
-  { key: 'address', label: 'Clinic Physical Address', placeholder: 'বসিরবানিয়া, পার্বতীপুর, দিনাজপুর' },
+  { key: 'address', label: 'Clinic Physical Address', placeholder: 'চেম্বার বা হাসপাতালের ঠিকানা' },
 ];
 
 export default function SettingsPage() {

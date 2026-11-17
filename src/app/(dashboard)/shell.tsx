@@ -112,8 +112,8 @@ export function DashboardSidebar() {
     router.push('/login');
   };
 
-  const doctorDisplayName = tenant?.doctor_name || session?.doctorName || 'ডাঃ গোলাম সারোয়ার';
-  const clinicDisplayName = tenant?.clinic_name || session?.clinicName || 'বসিরবানিয়া চেম্বার';
+  const doctorDisplayName = tenant?.doctor_name || session?.doctorName || 'চিকিৎসক';
+  const clinicDisplayName = tenant?.clinic_name || session?.clinicName || 'চেম্বার';
 
   return (
     <aside className="hidden md:flex w-64 shrink-0 flex-col justify-between border-r border-slate-200/80 bg-white p-5">
@@ -178,17 +178,22 @@ export function DashboardHeader() {
   const router = useRouter();
 
   useEffect(() => {
+    const currentSession = getCachedSession();
+    if (!currentSession || !currentSession.tenantId) {
+      router.replace('/login');
+      return;
+    }
     void ensureMedexSeeded(tenantId);
     void seedInitialData();
-  }, [tenantId]);
+  }, [tenantId, router]);
 
   const handleLogout = async () => {
     await logoutDoctor();
     router.push('/login');
   };
 
-  const doctorDisplayName = tenant?.doctor_name || session?.doctorName || 'ডাঃ গোলাম সারোয়ার';
-  const clinicDisplayName = tenant?.clinic_name || session?.clinicName || 'বসিরবানিয়া চেম্বার';
+  const doctorDisplayName = tenant?.doctor_name || session?.doctorName || 'চিকিৎসক';
+  const clinicDisplayName = tenant?.clinic_name || session?.clinicName || 'চেম্বার';
 
   return (
     <>

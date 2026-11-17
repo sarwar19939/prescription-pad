@@ -9,7 +9,7 @@ import { Suspense, useEffect, useState } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { AlertCircle, CloudOff, Loader2, Sparkles, Stethoscope, UserCheck } from 'lucide-react';
 
-import { getCachedSession, loginDoctor, signUpDoctor } from '@/services/auth';
+import { getCachedSession, loginAsDrSarwar, loginDoctor, signUpDoctor } from '@/services/auth';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
@@ -70,6 +70,16 @@ function LoginFormContent() {
     router.push('/patients');
   };
 
+  const handleQuickDrSarwar = async () => {
+    setLoading(true);
+    try {
+      await loginAsDrSarwar();
+      router.push('/patients');
+    } finally {
+      setLoading(false);
+    }
+  };
+
   return (
     <div className="flex min-h-screen items-center justify-center bg-slate-50 p-4">
       <Card className="w-full max-w-md border-slate-200 shadow-xl bg-white rounded-2xl">
@@ -108,7 +118,7 @@ function LoginFormContent() {
                   : 'text-slate-600 hover:text-slate-900'
               }`}
             >
-              নতুন রেজিস্ট্রেশন (Sign Up)
+              Create Clinic Workspace (রেজিস্ট্রেশন)
             </button>
           </div>
         </CardHeader>
@@ -238,6 +248,17 @@ function LoginFormContent() {
                 ? 'নতুন ডাক্তার বন্ধু? এখানে ক্লিক করে নতুন চেম্বার খুলুন'
                 : 'অলরেডি অ্যাকাউন্ট আছে? এখানে ক্লিক করে লগইন করুন'}
             </button>
+
+            <div className="w-full pt-3 border-t border-slate-100 flex flex-col items-center">
+              <button
+                type="button"
+                onClick={handleQuickDrSarwar}
+                className="text-[11px] font-semibold text-slate-600 hover:text-teal-800 bg-slate-50 hover:bg-slate-100 border border-slate-200 px-3 py-1.5 rounded-lg transition-colors flex items-center gap-1.5"
+              >
+                <Stethoscope className="h-3.5 w-3.5 text-teal-600" />
+                ডাঃ গোলাম সারোয়ার চেম্বারে সরাসরি প্রবেশ (Quick Access)
+              </button>
+            </div>
           </CardFooter>
         </form>
       </Card>

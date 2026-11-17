@@ -87,13 +87,37 @@ export async function runSync(options?: { force?: boolean }): Promise<SyncResult
 
   try {
     // -------------------------------------------------------------
-    // 1. PUSH PHASE: local 'pending' -> cloud
+    // 1. PUSH PHASE: local 'pending' -> cloud (tenant-isolated)
     // -------------------------------------------------------------
-    const pendingTenants = await db.tenants.where('sync_status').equals('pending').toArray();
-    const pendingPatients = await db.patients.where('sync_status').equals('pending').toArray();
-    const pendingEncounters = await db.encounters.where('sync_status').equals('pending').toArray();
-    const pendingRxItems = await db.prescription_items.where('sync_status').equals('pending').toArray();
-    const pendingReports = await db.investigation_reports.where('sync_status').equals('pending').toArray();
+    const pendingTenants = await db.tenants
+      .where('id')
+      .equals(tenantId)
+      .and((t) => t.sync_status === 'pending')
+      .toArray();
+
+    const pendingPatients = await db.patients
+      .where('tenant_id')
+      .equals(tenantId)
+      .and((p) => p.sync_status === 'pending')
+      .toArray();
+
+    const pendingEncounters = await db.encounters
+      .where('tenant_id')
+      .equals(tenantId)
+      .and((e) => e.sync_status === 'pending')
+      .toArray();
+
+    const pendingRxItems = await db.prescription_items
+      .where('tenant_id')
+      .equals(tenantId)
+      .and((i) => i.sync_status === 'pending')
+      .toArray();
+
+    const pendingReports = await db.investigation_reports
+      .where('tenant_id')
+      .equals(tenantId)
+      .and((r) => r.sync_status === 'pending')
+      .toArray();
 
     // Push Tenants
     if (pendingTenants.length > 0) {
@@ -153,6 +177,20 @@ export async function runSync(options?: { force?: boolean }): Promise<SyncResult
     // 2. PULL PHASE: cloud records updated > last_sync -> local Dexie
     // -------------------------------------------------------------
     const lastSync = getLastSyncTimestamp(tenantId);
+
+    // Pull Tenant profile
+    const { data: remoteTenant, error: errTenant } = await client
+      .from('tenants')
+      .select('*')
+      .eq('id', tenantId)
+      .gt('updated_at', lastSync)
+      .maybeSingle();
+
+    if (errTenant) errors.push(`Tenant pull error: ${errTenant.message}`);
+    else if (remoteTenant) {
+      await db.tenants.put({ ...(remoteTenant as Tenant), sync_status: 'synced' as const });
+      pulledCount += 1;
+    }
 
     // Pull Patients
     const { data: remotePatients, error: errPatients } = await client

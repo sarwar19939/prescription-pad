@@ -66,7 +66,7 @@ export function PadTypographyColumns({ tenant, onPatch }: PadTypographyColumnsPr
               লাইভ প্রিভিউ (প্রেসক্রিপশন হেডারে যেভাবে আসবে):
             </div>
             <div className="text-sm font-black text-slate-900">
-              {tenant.doctor_name || 'ডাঃ গোলাম সারোয়ার'}
+              {tenant.doctor_name || 'চিকিৎসকের নাম'}
             </div>
             <div className="space-y-0.5">
               {degreeLines.map((line, idx) => (
