@@ -5,11 +5,54 @@
  * If the device goes offline after logging in once, the cached session and
  * tenant_id persist in localStorage so the doctor is never locked out.
  */
+import Dexie from 'dexie';
 import { getSupabaseClient } from '@/db/supabase';
-import { db } from '@/db/localDb';
+import { db, LOCAL_DB_NAME } from '@/db/localDb';
 import { generateUUID } from '@/lib/uuid';
 import { DEFAULT_TENANT_ID } from '@/db/seedData';
 import type { Tenant } from '@/types/schema';
+
+/**
+ * Safely persists a tenant to local Dexie, recovering gracefully from QuotaExceededError
+ * or corrupted IndexedDB backing stores without throwing fatal crashes.
+ */
+async function safePutTenant(tenant: Tenant): Promise<void> {
+  try {
+    await db.tenants.put(tenant);
+  } catch (err: any) {
+    console.warn('Could not write tenant to local Dexie:', err);
+    if (err?.name === 'QuotaExceededError' || err?.message?.includes('backing store')) {
+      try {
+        await Dexie.delete(LOCAL_DB_NAME);
+        await db.open();
+        await db.tenants.put(tenant);
+      } catch (recoveryErr) {
+        console.warn('Dexie quota recovery attempt failed (disk may be full):', recoveryErr);
+      }
+    }
+  }
+}
+
+/**
+ * Safely reads a tenant from local Dexie, recovering gracefully from QuotaExceededError.
+ */
+async function safeGetTenant(tenantId: string): Promise<Tenant | undefined> {
+  try {
+    return await db.tenants.get(tenantId);
+  } catch (err: any) {
+    console.warn('Could not read tenant from local Dexie:', err);
+    if (err?.name === 'QuotaExceededError' || err?.message?.includes('backing store')) {
+      try {
+        await Dexie.delete(LOCAL_DB_NAME);
+        await db.open();
+        return await db.tenants.get(tenantId);
+      } catch (recoveryErr) {
+        console.warn('Dexie recovery on get failed:', recoveryErr);
+      }
+    }
+    return undefined;
+  }
+}
 
 const SESSION_STORAGE_KEY = 'medrecord_auth_session';
 
@@ -129,7 +172,7 @@ export async function loginDoctor(email: string, password: string): Promise<Auth
   const metaClinicName = (data.user.user_metadata?.clinic_name as string) || 'আমার চেম্বার';
 
   // Ensure this doctor's tenant is present in local Dexie!
-  let tenant = await db.tenants.get(tenantId);
+  let tenant = await safeGetTenant(tenantId);
   if (!tenant) {
     // Fetch from Supabase tenants table
     const { data: remoteTenant } = await client
@@ -140,7 +183,7 @@ export async function loginDoctor(email: string, password: string): Promise<Auth
 
     if (remoteTenant) {
       tenant = remoteTenant as Tenant;
-      await db.tenants.put(tenant);
+      await safePutTenant(tenant);
     } else {
       const ts = new Date().toISOString();
       tenant = {
@@ -162,8 +205,12 @@ export async function loginDoctor(email: string, password: string): Promise<Auth
         created_at: ts,
         updated_at: ts,
       };
-      await db.tenants.put(tenant);
-      await client.from('tenants').upsert(tenant);
+      await safePutTenant(tenant);
+      try {
+        await client.from('tenants').upsert(tenant);
+      } catch (upsertErr) {
+        console.warn('Could not upsert tenant to Supabase:', upsertErr);
+      }
     }
   }
 
@@ -171,8 +218,8 @@ export async function loginDoctor(email: string, password: string): Promise<Auth
     userId: data.user.id,
     email: data.user.email || trimmedEmail,
     tenantId,
-    doctorName: tenant.doctor_name || metaDoctorName,
-    clinicName: tenant.clinic_name || metaClinicName,
+    doctorName: tenant?.doctor_name || metaDoctorName,
+    clinicName: tenant?.clinic_name || metaClinicName,
     cachedAt: new Date().toISOString(),
   };
 
@@ -193,8 +240,8 @@ export async function signUpDoctor(
   const client = getSupabaseClient();
   const newTenantId = generateUUID();
   const ts = new Date().toISOString();
+  const trimmedEmail = email.trim().toLowerCase();
 
-  // Create local tenant immediately in Dexie (offline-first)
   const localTenant: Tenant = {
     id: newTenantId,
     tenant_id: newTenantId,
@@ -214,36 +261,42 @@ export async function signUpDoctor(
     created_at: ts,
     updated_at: ts,
   };
-  await db.tenants.put(localTenant);
 
   const session: AuthSession = {
     userId: newTenantId,
-    email: email.trim().toLowerCase(),
+    email: trimmedEmail,
     tenantId: newTenantId,
     doctorName: localTenant.doctor_name,
     clinicName: localTenant.clinic_name,
     cachedAt: ts,
   };
 
+  // 1. Supabase Cloud Signup (Online priority)
   if (client && navigator.onLine) {
-    try {
-      const { data, error } = await client.auth.signUp({
-        email: email.trim().toLowerCase(),
-        password,
-        options: {
-          data: {
-            tenant_id: newTenantId,
-            clinic_name: localTenant.clinic_name,
-            doctor_name: localTenant.doctor_name,
-            specialty: localTenant.specialty,
-            degrees: localTenant.degrees,
-          },
+    const { data, error } = await client.auth.signUp({
+      email: trimmedEmail,
+      password,
+      options: {
+        data: {
+          tenant_id: newTenantId,
+          clinic_name: localTenant.clinic_name,
+          doctor_name: localTenant.doctor_name,
+          specialty: localTenant.specialty,
+          degrees: localTenant.degrees,
         },
-      });
-      if (error) console.warn('Supabase sign-up warning:', error.message);
-      if (data?.user) session.userId = data.user.id;
+      },
+    });
 
-      // Upsert into Supabase tenants table immediately
+    if (error) {
+      throw error;
+    }
+
+    if (data?.user) {
+      session.userId = data.user.id;
+    }
+
+    // Upsert into Supabase tenants table immediately
+    try {
       const { error: tenantErr } = await client.from('tenants').upsert(localTenant);
       if (tenantErr) {
         console.warn('Could not insert tenant to Supabase:', tenantErr.message);
@@ -252,6 +305,9 @@ export async function signUpDoctor(
       console.warn('Could not contact Supabase cloud during signup:', e);
     }
   }
+
+  // 2. Safe local Dexie persistence (does not crash cloud signup if disk quota error occurs)
+  await safePutTenant(localTenant);
 
   saveCachedSession(session);
   return session;
