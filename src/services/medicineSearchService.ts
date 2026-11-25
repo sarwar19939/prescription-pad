@@ -10,13 +10,14 @@
 import { db } from '@/db/localDb';
 import type { MedicineCatalog } from '@/types/schema';
 
-// Tier 1: Bangladesh Top 5 Standard Brands requested by doctors (Square, Beximco, Incepta, Healthcare, Acme)
+// Tier 1: Bangladesh Top Standard Brands requested by doctors (Square, Beximco, Incepta, Healthcare, Acme, Radiant)
 const TOP_TIER_MANUFACTURERS = [
   'square',
   'beximco',
   'incepta',
   'healthcare',
   'acme',
+  'radiant',
 ];
 
 // Tier 2: Top 20 Recognized National Pharmaceutical Companies

@@ -13,6 +13,7 @@ import { useEffect, useState } from 'react';
 import { Droplets, Sparkles, Utensils } from 'lucide-react';
 import { toBengaliNumerals } from '@/lib/prescriptionFormatters';
 import type { MealTiming, Patient, PrescriptionItem } from '@/types/schema';
+import { SmoothInput } from '@/components/ui/smooth-input';
 
 export type LiquidUnit = 'চামচ' | 'মি.লি.' | 'ফোঁটা';
 
@@ -290,10 +291,10 @@ export function LiquidDosingPanel({
         {/* E. Duration / কতদিন */}
         <div className="flex items-center gap-1">
           <label className="text-[11px] font-bold text-slate-600">মেয়াদ:</label>
-          <input
+          <SmoothInput
             type="text"
-            value={item.duration || '3 Days'}
-            onChange={(e) => onUpdate({ duration: e.target.value })}
+            value={item.duration ?? '3 Days'}
+            onCommit={(val) => onUpdate({ duration: val })}
             placeholder="3 Days"
             className="h-8 w-20 rounded-lg border border-sky-300 bg-white px-1.5 text-center font-bold text-slate-800 text-xs outline-none focus:border-sky-600"
           />

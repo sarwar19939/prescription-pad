@@ -3,8 +3,8 @@
  *
  * Synchronizes local Dexie.js (IndexedDB) with Supabase (PostgreSQL).
  * - Push: drains pending local records to Supabase using upsert.
- * - Pull: downloads remote changes since last_sync_timestamp for the current tenant.
- * - Lifecycle: runs on 'online' event, every 5 minutes, and on manual 'Sync Now'.
+ * - Pull: downloads remote changes since last_sync_timestamp with conflict resolution.
+ * - Conflict resolution: local 'pending' records with newer timestamps take priority.
  */
 import { db } from '@/db/localDb';
 import { getSupabaseClient } from '@/db/supabase';
@@ -14,19 +14,17 @@ import type {
   InvestigationReport,
   Patient,
   PrescriptionItem,
+  PrescriptionTemplate,
   Tenant,
 } from '@/types/schema';
+import {
+  FIVE_MINUTES_MS,
+  getLastSyncTimestamp,
+  setLastSyncTimestamp,
+  type SyncResult,
+} from './syncTypes';
 
-export interface SyncResult {
-  success: boolean;
-  pushedCount: number;
-  pulledCount: number;
-  errors: string[];
-  timestamp: string;
-}
-
-const SYNC_TIMESTAMP_PREFIX = 'medrecord_last_sync_';
-const FIVE_MINUTES_MS = 5 * 60 * 1000;
+export * from './syncTypes';
 
 let isSyncRunning = false;
 let syncIntervalId: ReturnType<typeof setInterval> | null = null;
@@ -41,14 +39,35 @@ function notify(data: any) {
   listeners.forEach((l) => l(data));
 }
 
-function getLastSyncTimestamp(tenantId: string): string {
-  if (typeof window === 'undefined') return new Date(0).toISOString();
-  return localStorage.getItem(`${SYNC_TIMESTAMP_PREFIX}${tenantId}`) || new Date(0).toISOString();
-}
+/**
+ * Merges pulled remote records into local Dexie while respecting local pending changes.
+ */
+async function mergeRemoteRecords<T extends { id: string; updated_at?: string; sync_status?: any }>(
+  table: any,
+  remoteRecords: T[],
+): Promise<number> {
+  if (!remoteRecords || remoteRecords.length === 0) return 0;
 
-function setLastSyncTimestamp(tenantId: string, ts: string): void {
-  if (typeof window === 'undefined') return;
-  localStorage.setItem(`${SYNC_TIMESTAMP_PREFIX}${tenantId}`, ts);
+  const ids = remoteRecords.map((r) => r.id);
+  const localExisting = await table.where('id').anyOf(ids).toArray();
+  const localMap = new Map<string, T>(localExisting.map((l: T) => [l.id, l]));
+
+  const toPut: T[] = [];
+  for (const remote of remoteRecords) {
+    const local = localMap.get(remote.id);
+    if (local && local.sync_status === 'pending') {
+      // Local has unpushed offline changes: keep local if newer or equal
+      const localTime = local.updated_at ? new Date(local.updated_at).getTime() : 0;
+      const remoteTime = remote.updated_at ? new Date(remote.updated_at).getTime() : 0;
+      if (localTime >= remoteTime) continue;
+    }
+    toPut.push({ ...remote, sync_status: 'synced' as const });
+  }
+
+  if (toPut.length > 0) {
+    await table.bulkPut(toPut);
+  }
+  return toPut.length;
 }
 
 /**
@@ -119,6 +138,12 @@ export async function runSync(options?: { force?: boolean }): Promise<SyncResult
       .and((r) => r.sync_status === 'pending')
       .toArray();
 
+    const pendingTemplates = await db.prescription_templates
+      .where('tenant_id')
+      .equals(tenantId)
+      .and((t) => t.sync_status === 'pending')
+      .toArray();
+
     // Push Tenants
     if (pendingTenants.length > 0) {
       const { error } = await client.from('tenants').upsert(pendingTenants);
@@ -159,7 +184,7 @@ export async function runSync(options?: { force?: boolean }): Promise<SyncResult
       }
     }
 
-    // Push Investigation Reports (omit Blob from Postgres upsert)
+    // Push Investigation Reports (strip Blob)
     if (pendingReports.length > 0) {
       const sanitizedReports = pendingReports.map((r) => {
         const { local_file_blob, ...rest } = r;
@@ -170,6 +195,16 @@ export async function runSync(options?: { force?: boolean }): Promise<SyncResult
       else {
         await db.investigation_reports.where('id').anyOf(pendingReports.map((r) => r.id)).modify({ sync_status: 'synced' });
         pushedCount += pendingReports.length;
+      }
+    }
+
+    // Push Prescription Templates
+    if (pendingTemplates.length > 0) {
+      const { error } = await client.from('prescription_templates').upsert(pendingTemplates);
+      if (error) errors.push(`Templates push error: ${error.message}`);
+      else {
+        await db.prescription_templates.where('id').anyOf(pendingTemplates.map((t) => t.id)).modify({ sync_status: 'synced' });
+        pushedCount += pendingTemplates.length;
       }
     }
 
@@ -198,13 +233,8 @@ export async function runSync(options?: { force?: boolean }): Promise<SyncResult
       .select('*')
       .eq('tenant_id', tenantId)
       .gt('updated_at', lastSync);
-
     if (errPatients) errors.push(`Patients pull error: ${errPatients.message}`);
-    else if (remotePatients && remotePatients.length > 0) {
-      const rows = (remotePatients as Patient[]).map((p) => ({ ...p, sync_status: 'synced' as const }));
-      await db.patients.bulkPut(rows);
-      pulledCount += rows.length;
-    }
+    else if (remotePatients) pulledCount += await mergeRemoteRecords(db.patients, remotePatients as Patient[]);
 
     // Pull Encounters
     const { data: remoteEncounters, error: errEncounters } = await client
@@ -212,13 +242,8 @@ export async function runSync(options?: { force?: boolean }): Promise<SyncResult
       .select('*')
       .eq('tenant_id', tenantId)
       .gt('updated_at', lastSync);
-
     if (errEncounters) errors.push(`Encounters pull error: ${errEncounters.message}`);
-    else if (remoteEncounters && remoteEncounters.length > 0) {
-      const rows = (remoteEncounters as Encounter[]).map((e) => ({ ...e, sync_status: 'synced' as const }));
-      await db.encounters.bulkPut(rows);
-      pulledCount += rows.length;
-    }
+    else if (remoteEncounters) pulledCount += await mergeRemoteRecords(db.encounters, remoteEncounters as Encounter[]);
 
     // Pull Prescription Items
     const { data: remoteItems, error: errItems } = await client
@@ -226,13 +251,8 @@ export async function runSync(options?: { force?: boolean }): Promise<SyncResult
       .select('*')
       .eq('tenant_id', tenantId)
       .gt('updated_at', lastSync);
-
     if (errItems) errors.push(`Prescription items pull error: ${errItems.message}`);
-    else if (remoteItems && remoteItems.length > 0) {
-      const rows = (remoteItems as PrescriptionItem[]).map((i) => ({ ...i, sync_status: 'synced' as const }));
-      await db.prescription_items.bulkPut(rows);
-      pulledCount += rows.length;
-    }
+    else if (remoteItems) pulledCount += await mergeRemoteRecords(db.prescription_items, remoteItems as PrescriptionItem[]);
 
     // Pull Investigation Reports
     const { data: remoteReports, error: errReports } = await client
@@ -240,13 +260,17 @@ export async function runSync(options?: { force?: boolean }): Promise<SyncResult
       .select('*')
       .eq('tenant_id', tenantId)
       .gt('updated_at', lastSync);
-
     if (errReports) errors.push(`Investigation reports pull error: ${errReports.message}`);
-    else if (remoteReports && remoteReports.length > 0) {
-      const rows = (remoteReports as InvestigationReport[]).map((r) => ({ ...r, sync_status: 'synced' as const }));
-      await db.investigation_reports.bulkPut(rows);
-      pulledCount += rows.length;
-    }
+    else if (remoteReports) pulledCount += await mergeRemoteRecords(db.investigation_reports, remoteReports as InvestigationReport[]);
+
+    // Pull Prescription Templates
+    const { data: remoteTemplates, error: errTemplates } = await client
+      .from('prescription_templates')
+      .select('*')
+      .eq('tenant_id', tenantId)
+      .gt('updated_at', lastSync);
+    if (errTemplates) errors.push(`Templates pull error: ${errTemplates.message}`);
+    else if (remoteTemplates) pulledCount += await mergeRemoteRecords(db.prescription_templates, remoteTemplates as PrescriptionTemplate[]);
 
     setLastSyncTimestamp(tenantId, syncStartTime);
   } catch (e) {
@@ -266,9 +290,7 @@ export async function runSync(options?: { force?: boolean }): Promise<SyncResult
 }
 
 /**
- * Initializes automatic background synchronization:
- * 1. Online event trigger
- * 2. 5-minute recurring timer
+ * Initializes automatic background synchronization.
  */
 export function startSyncScheduler(): () => void {
   if (typeof window === 'undefined') return () => {};
@@ -285,7 +307,6 @@ export function startSyncScheduler(): () => void {
     }, FIVE_MINUTES_MS);
   }
 
-  // Initial sync attempt on app mount if online
   if (navigator.onLine) {
     void runSync();
   }

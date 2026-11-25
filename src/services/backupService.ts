@@ -1,12 +1,11 @@
 /**
- * MedRecord — One-Click Local Database Backup & Restore Service.
+ * MedRecord — Offline-First Database Backup & Disaster Recovery.
  *
- * Provides doctors with instant, self-sovereign offline data protection:
- * - Export: dumps all Dexie tables into a timestamped JSON file (clinic-backup-YYYY-MM-DD.json).
- * - Restore: parses, validates, and safely bulk-restores records into Dexie.js.
+ * Provides single-click offline JSON export and schema-validated restore for IndexedDB.
+ * Enforces strict multi-tenant isolation: only the active doctor's records are exported
+ * or restored to prevent data leakage.
  */
 import { format } from 'date-fns';
-
 import { db, TABLE_NAMES } from '@/db/localDb';
 import { getCurrentTenantId } from './auth';
 import type {
@@ -23,7 +22,14 @@ export interface DatabaseBackupPayload {
   appName: 'MedRecord';
   exportDate: string;
   tenantId: string;
-  summary: Record<string, number>;
+  summary: {
+    tenants: number;
+    patients: number;
+    encounters: number;
+    prescription_items: number;
+    investigation_reports: number;
+    medicine_catalog: number;
+  };
   data: {
     tenants: Tenant[];
     patients: Patient[];
@@ -41,7 +47,7 @@ export interface RestoreResult {
 }
 
 /**
- * Dumps all clinic records from IndexedDB and triggers a .json download in the browser.
+ * Dumps all clinic records for the ACTIVE TENANT from IndexedDB and triggers a .json download.
  */
 export async function exportDatabaseBackup(): Promise<string> {
   const tenantId = getCurrentTenantId();
@@ -50,12 +56,12 @@ export async function exportDatabaseBackup(): Promise<string> {
 
   const [tenants, patients, encounters, prescription_items, reportsRaw, medicine_catalog] =
     await Promise.all([
-      db.tenants.toArray(),
-      db.patients.toArray(),
-      db.encounters.toArray(),
-      db.prescription_items.toArray(),
-      db.investigation_reports.toArray(),
-      db.medicine_catalog.toArray(),
+      db.tenants.where('id').equals(tenantId).or('tenant_id').equals(tenantId).toArray(),
+      db.patients.where('tenant_id').equals(tenantId).toArray(),
+      db.encounters.where('tenant_id').equals(tenantId).toArray(),
+      db.prescription_items.where('tenant_id').equals(tenantId).toArray(),
+      db.investigation_reports.where('tenant_id').equals(tenantId).toArray(),
+      db.medicine_catalog.where('tenant_id').equals(tenantId).toArray(),
     ]);
 
   // Strip non-serializable Blobs for clean JSON portability
@@ -105,8 +111,10 @@ export async function exportDatabaseBackup(): Promise<string> {
 
 /**
  * Validates and restores clinic records from an uploaded JSON backup file.
+ * Safely scopes restored records to the current active tenant.
  */
 export async function restoreDatabaseFromJSON(jsonText: string): Promise<RestoreResult> {
+  const currentTenantId = getCurrentTenantId();
   let parsed: any;
   try {
     parsed = JSON.parse(jsonText);
@@ -131,29 +139,65 @@ export async function restoreDatabaseFromJSON(jsonText: string): Promise<Restore
 
   try {
     await db.transaction('rw', TABLE_NAMES.map((t) => db[t]), async () => {
+      // 1. Tenants (update current tenant details if matching)
       if (Array.isArray(data.tenants) && data.tenants.length > 0) {
-        await db.tenants.bulkPut(data.tenants);
-        restoredCounts.tenants = data.tenants.length;
+        const scopedTenants = data.tenants.map((t) => ({
+          ...t,
+          id: currentTenantId,
+          tenant_id: currentTenantId,
+        }));
+        await db.tenants.bulkPut(scopedTenants);
+        restoredCounts.tenants = scopedTenants.length;
       }
+
+      // 2. Patients (ensure tenant_id belongs to current session)
       if (Array.isArray(data.patients) && data.patients.length > 0) {
-        await db.patients.bulkPut(data.patients);
-        restoredCounts.patients = data.patients.length;
+        const scopedPatients = data.patients.map((p) => ({
+          ...p,
+          tenant_id: currentTenantId,
+        }));
+        await db.patients.bulkPut(scopedPatients);
+        restoredCounts.patients = scopedPatients.length;
       }
+
+      // 3. Encounters
       if (Array.isArray(data.encounters) && data.encounters.length > 0) {
-        await db.encounters.bulkPut(data.encounters);
-        restoredCounts.encounters = data.encounters.length;
+        const scopedEncounters = data.encounters.map((e) => ({
+          ...e,
+          tenant_id: currentTenantId,
+        }));
+        await db.encounters.bulkPut(scopedEncounters);
+        restoredCounts.encounters = scopedEncounters.length;
       }
+
+      // 4. Prescription Items
       if (Array.isArray(data.prescription_items) && data.prescription_items.length > 0) {
-        await db.prescription_items.bulkPut(data.prescription_items);
-        restoredCounts.prescription_items = data.prescription_items.length;
+        const scopedRx = data.prescription_items.map((r) => ({
+          ...r,
+          tenant_id: currentTenantId,
+        }));
+        await db.prescription_items.bulkPut(scopedRx);
+        restoredCounts.prescription_items = scopedRx.length;
       }
+
+      // 5. Investigation Reports
       if (Array.isArray(data.investigation_reports) && data.investigation_reports.length > 0) {
-        await db.investigation_reports.bulkPut(data.investigation_reports);
-        restoredCounts.investigation_reports = data.investigation_reports.length;
+        const scopedReports = data.investigation_reports.map((r) => ({
+          ...r,
+          tenant_id: currentTenantId,
+        }));
+        await db.investigation_reports.bulkPut(scopedReports);
+        restoredCounts.investigation_reports = scopedReports.length;
       }
+
+      // 6. Medicine Catalog
       if (Array.isArray(data.medicine_catalog) && data.medicine_catalog.length > 0) {
-        await db.medicine_catalog.bulkPut(data.medicine_catalog);
-        restoredCounts.medicine_catalog = data.medicine_catalog.length;
+        const scopedMeds = data.medicine_catalog.map((m) => ({
+          ...m,
+          tenant_id: currentTenantId,
+        }));
+        await db.medicine_catalog.bulkPut(scopedMeds);
+        restoredCounts.medicine_catalog = scopedMeds.length;
       }
     });
 

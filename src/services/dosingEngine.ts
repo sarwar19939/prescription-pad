@@ -5,7 +5,11 @@
 import type { MealTiming, Patient, PrescriptionItem, Vitals } from '@/types/schema';
 import { parseBP } from './vitalsService';
 import { detectMedicineCategory } from './medicineRouteService';
-import { normalizeDosageForm, toBengaliNumerals } from '@/lib/prescriptionFormatters';
+import { normalizeDosageForm } from '@/lib/prescriptionFormatters';
+import {
+  calculateParacetamolDose,
+  calculateTopicalSpecialtyDose,
+} from './pediatricAntipyreticDosing';
 
 export interface DoseProposal {
   hasAdjustment: boolean;
@@ -36,11 +40,9 @@ export function calculateSmartDose(
   const isPediatric = patientAge < 12;
   const isInfant = patientAge < 2;
   const temp = parseNum(vitals?.temp);
-  const isFever = temp !== null && (temp > 45 ? temp >= 100 : temp >= 37.8);
+  const isFever = temp !== null && (temp >= 100 || (temp <= 45 && temp >= 38));
   const { sbp, dbp } = parseBP(vitals?.bp);
   const isHighBP = (sbp !== null && sbp >= 140) || (dbp !== null && dbp >= 90);
-  const pulse = parseNum(vitals?.pulse);
-  const isTachycardia = pulse !== null && pulse > 100;
 
   const category = detectMedicineCategory(med.dosage_form, med.brand_name, med.generic_name);
   const normalizedForm = normalizeDosageForm(med.dosage_form);
@@ -48,157 +50,14 @@ export function calculateSmartDose(
   // If medicine is non-oral (Topical, Suppository, Injection, Drops, Inhaler),
   // NEVER force it into Syrup or Drops! Keep its authentic form and topical/route instructions.
   if (category !== 'oral_solid' && category !== 'syrup') {
-    // Check for Scabies / Permethrin pediatric specifics
-    const isScabies =
-      name.includes('permethrin') ||
-      name.includes('scabex') ||
-      name.includes('lorex') ||
-      name.includes('permin') ||
-      name.includes('পারমিন');
-
-    if (isScabies) {
-      return {
-        hasAdjustment: true,
-        dosage_form: normalizedForm === 'Lotion' ? 'Lotion' : 'Cream',
-        strength: med.strength || '5% w/w',
-        schedule: '১ বার (রাতে)',
-        meal_timing: undefined,
-        duration: '১ দিন (৭ দিন পর পুনরায়)',
-        special_instructions: '',
-        reason: 'স্ক্যাবিস পারমেথ্রিন ৫% সারা শরীরে ওভারনাইট অ্যাপ্লিকেশন।',
-        badge: 'Scabies Protocol',
-      };
-    }
-
-    // Check for Antifungal creams (Afun, Clotrimazole, Fungidal, Econazole, Miconazole)
-    const isAntifungal =
-      name.includes('afun') ||
-      name.includes('এফান') ||
-      name.includes('clotrimazole') ||
-      name.includes('miconazole') ||
-      name.includes('econazole') ||
-      name.includes('ketoconazole') ||
-      name.includes('fungidal') ||
-      name.includes('candid');
-
-    if (isAntifungal) {
-      return {
-        hasAdjustment: true,
-        dosage_form: normalizedForm === 'Oint' ? 'Oint' : 'Cream',
-        strength: med.strength || '1%',
-        schedule: 'দিনে ২ বার',
-        meal_timing: undefined,
-        duration: '১৪-২১ দিন',
-        special_instructions: '',
-        reason: 'টপিক্যাল অ্যান্টিফাংগাল ত্বকের সংক্রমণ প্রটোকল।',
-        badge: 'Topical Antifungal',
-      };
-    }
-
-    // Check for Topical Steroids (Halovar, Halovate, Dermasol, Clobetasol, Betnovate)
-    const isTopicalSteroid =
-      name.includes('halovar') ||
-      name.includes('halovate') ||
-      name.includes('হ্যালোভার') ||
-      name.includes('হ্যালোভেট') ||
-      name.includes('halobetasol') ||
-      name.includes('clobetasol') ||
-      name.includes('dermasol') ||
-      name.includes('betnovate');
-
-    if (isTopicalSteroid) {
-      return {
-        hasAdjustment: true,
-        dosage_form: normalizedForm === 'Oint' ? 'Oint' : 'Cream',
-        strength: med.strength || '0.05%',
-        schedule: 'রাতে ১ বার',
-        meal_timing: undefined,
-        duration: '৭-১০ দিন',
-        special_instructions: '',
-        reason: 'টপিক্যাল কর্টিকোস্টেরয়েড স্কিন অ্যাপ্লিকেশন।',
-        badge: 'Topical Steroid',
-      };
-    }
-
-    // For any other topical / suppository / injection / drop / inhaler:
-    // DO NOT convert to Syr or Drop!
+    const topicalProposal = calculateTopicalSpecialtyDose(name, normalizedForm, med.strength);
+    if (topicalProposal) return topicalProposal;
     return { hasAdjustment: false };
   }
 
   // 1. Paracetamol / Acetaminophen (Ace, Napa, Fast, Parapyrol)
   if (name.includes('paracetamol') || name.includes('napa') || name.includes('ace') || name.includes('fast')) {
-    if (isPediatric) {
-      if (isInfant || (weight !== null && weight < 10) || patientAge < 1) {
-        const doseMg = weight !== null ? Math.round(weight * 15) : 60;
-        const drops = Math.round((doseMg / 80) * 0.8 * 20) || 12;
-        return {
-          hasAdjustment: true,
-          dosage_form: 'Drop',
-          strength: '80mg/0.8ml',
-          schedule: `${toBengaliNumerals(drops)} ফোঁটা করে দিনে ৩-৪ বার (জ্বর আসলে SOS)`,
-          meal_timing: 'After Meal',
-          duration: '3 Days',
-          special_instructions: '',
-          reason: 'Paediatric infant drops calibrated for age < 1.',
-          badge: 'Infant Drops',
-        };
-      }
-      if (weight !== null) {
-        const doseMg = Math.round(weight * 15);
-        const ml = Math.round((doseMg / 120) * 5 * 10) / 10;
-        const spoons = Math.round((ml / 5) * 10) / 10;
-        const spoonStr = spoons === 0.5 ? 'আধা' : toBengaliNumerals(spoons);
-        return {
-          hasAdjustment: true,
-          dosage_form: 'Syr',
-          strength: '120mg/5ml',
-          schedule: `${spoonStr} চামচ (${toBengaliNumerals(ml)} মি.লি.) করে দিনে ৩-৪ বার (জ্বর আসলে SOS)`,
-          meal_timing: 'After Meal',
-          duration: '3 Days',
-          special_instructions: '',
-          reason: `Pediatric weight ${weight}kg: calibrated 15 mg/kg per dose.`,
-          badge: `Pediatric ${doseMg}mg (~${ml}ml)`,
-        };
-      }
-
-      // Age-based calibration when weight is not entered
-      let spoonText = '১ চামচ (৫ মি.লি.)';
-      if (patientAge < 2) {
-        spoonText = 'আধা চামচ (২.৫ মি.লি.)';
-      } else if (patientAge <= 5) {
-        spoonText = '১ চামচ (৫ মি.লি.)';
-      } else if (patientAge <= 8) {
-        spoonText = '১.৫ চামচ (৭.৫ মি.লি.)';
-      } else {
-        spoonText = '২ চামচ (১০ মি.লি.)';
-      }
-
-      return {
-        hasAdjustment: true,
-        dosage_form: 'Syr',
-        strength: '120mg/5ml',
-        schedule: `${spoonText} করে দিনে ৩-৪ বার (জ্বর আসলে SOS)`,
-        meal_timing: 'After Meal',
-        duration: '3 Days',
-        special_instructions: '',
-        reason: 'Age-appropriate pediatric oral suspension.',
-        badge: 'Pediatric Syrup',
-      };
-    }
-
-    if (isFever) {
-      return {
-        hasAdjustment: true,
-        dosage_form: 'Tab',
-        strength: med.strength || '500mg',
-        schedule: '1+1+1+1 (every 6 hrs)',
-        meal_timing: 'After Meal',
-        duration: '3-5 Days',
-        special_instructions: '',
-        reason: `Active fever detected (${temp}°F). QDS adult schedule indicated.`,
-        badge: 'Fever SOS Dosing',
-      };
-    }
+    return calculateParacetamolDose(patientAge, weight, isPediatric, isInfant, isFever, temp, med.strength);
   }
 
   // 2. PPIs / Antacids (Omeprazole, Esomeprazole, Pantoprazole, Rabeprazole, Seclo, Maxpro, Sergel)
@@ -252,7 +111,7 @@ export function calculateSmartDose(
     const pediatricDose = patient.age < 6 ? '4mg' : patient.age < 15 ? '5mg' : '10mg';
     return {
       hasAdjustment: true,
-      dosage_form: isPediatric ? 'Tab' : 'Tab',
+      dosage_form: 'Tab',
       strength: isPediatric ? pediatricDose : (med.strength || '10mg'),
       schedule: '0+0+1',
       meal_timing: 'After Meal',

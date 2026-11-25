@@ -32,6 +32,7 @@ import { TaperingDosePanel } from './tapering-dose-panel';
 import { LiquidDosingPanel } from './liquid-dosing-panel';
 import type { DosageForm, MealTiming, Patient, PrescriptionItem, Vitals } from '@/types/schema';
 import { Button } from '@/components/ui/button';
+import { SmoothInput } from '@/components/ui/smooth-input';
 
 const STANDARD_MEAL_OPTIONS: Array<{ value: MealTiming; label: string }> = [
   { value: 'After Meal', label: 'খাবারের পরে (ভরা পেটে)' },
@@ -304,11 +305,11 @@ export function RxRow({
           </span>
 
           {/* Schedule / Frequency Input */}
-          <input
+          <SmoothInput
             className="h-8 w-28 rounded-lg border border-slate-300 px-2 text-center font-medium font-mono text-teal-900 text-xs outline-none focus:border-teal-600 focus:ring-1 focus:ring-teal-500/30"
             placeholder={profile.defaultSchedule || '1+0+1'}
-            value={item.schedule}
-            onChange={(e) => write({ schedule: e.target.value })}
+            value={item.schedule || ''}
+            onCommit={(val) => write({ schedule: val })}
             title="শিডিউল (যেমন: দিনে ২ বার, রাতে ১ বার, 1+0+1)"
           />
 
@@ -356,11 +357,11 @@ export function RxRow({
           )}
 
           {/* Duration input */}
-          <input
+          <SmoothInput
             className="h-8 w-24 rounded-lg border border-slate-300 px-2 text-center font-medium text-slate-800 text-xs outline-none focus:border-teal-600 focus:ring-1 focus:ring-teal-500/30"
             placeholder={profile.defaultDuration || '7 Days'}
-            value={item.duration}
-            onChange={(e) => write({ duration: e.target.value })}
+            value={item.duration || ''}
+            onCommit={(val) => write({ duration: val })}
             title="মেয়াদ (যেমন: 7 Days, 14 Days, চলবে)"
           />
 
